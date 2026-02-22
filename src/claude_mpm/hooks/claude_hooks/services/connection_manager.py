@@ -193,7 +193,7 @@ class ConnectionManagerService:
         if self.connection_pool:
             try:
                 # Emit to Socket.IO server directly
-                self.connection_pool.emit("mpm_event", claude_event_data)
+                self.connection_pool.emit("claude_event", claude_event_data)
                 if DEBUG:
                     _log(f"✅ Emitted via connection pool: {event}")
                 return  # Success - no need for fallback
