@@ -364,6 +364,33 @@ class MessagingDatabase:
                 for row in cursor.fetchall()
             ]
 
+    def list_all_sessions(self) -> List[Dict]:
+        """
+        List all sessions regardless of status.
+
+        Returns:
+            List of session dictionaries
+        """
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                """
+                SELECT * FROM sessions
+                ORDER BY last_active DESC
+                """
+            )
+            return [
+                {
+                    "session_id": row["session_id"],
+                    "project_path": row["project_path"],
+                    "project_name": row["project_name"],
+                    "started_at": row["started_at"],
+                    "last_active": row["last_active"],
+                    "status": row["status"],
+                    "pid": row["pid"],
+                }
+                for row in cursor.fetchall()
+            ]
+
     def cleanup_stale_sessions(self, timeout_minutes: int = 60) -> int:
         """
         Mark stale sessions as inactive.

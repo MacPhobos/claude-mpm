@@ -109,4 +109,15 @@ def add_messages_subparser(subparsers) -> argparse.ArgumentParser:
         "check", help="Check for new messages (quick status)"
     )
 
+    # Sessions command
+    sessions_parser = messages_subparsers.add_parser(
+        "sessions", help="List registered messaging sessions"
+    )
+    sessions_parser.add_argument(
+        "--all",
+        action="store_true",
+        default=False,
+        help="Show all sessions (including inactive/stale)",
+    )
+
     return messages_parser
