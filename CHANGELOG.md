@@ -1,5 +1,21 @@
 ## v5.9.26 (2026-02-22)
 
+### Feat
+
+- integrate cross-project messages with native task system
+- Stop hook surfaces unread messages as actionable startup tasks
+- add directory shortcuts service for messaging system
+
+### Fix
+
+- message CLI bugs - path validation, full IDs, sessions subcommand
+
+### Refactor
+
+- Stop hook directly blocks Claude when unread messages exist
+
+## v5.9.26 (2026-02-22)
+
 ### Fix
 
 - align version files to 5.9.24
