@@ -1,3 +1,22 @@
+## v5.9.27 (2026-02-22)
+
+### Feat
+
+- integrate cross-project messages with native task system
+- Stop hook surfaces unread messages as actionable startup tasks
+- add directory shortcuts service for messaging system
+
+### Fix
+
+- dashboard tools and files views not receiving events
+- dashboard agents view only showing PM and Code Analyzer
+- make MCP optional dependency imports lazy to prevent test failures
+- message CLI bugs - path validation, full IDs, sessions subcommand
+
+### Refactor
+
+- Stop hook directly blocks Claude when unread messages exist
+
 ## v5.9.26 (2026-02-22)
 
 ### Feat
