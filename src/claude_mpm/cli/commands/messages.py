@@ -10,6 +10,7 @@ DESIGN:
 - Integration with UnifiedPathManager for project detection
 """
 
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -30,6 +31,26 @@ class MessagesCommand(BaseCommand):
         super().__init__("messages")
         self.path_manager = UnifiedPathManager()
         self.message_service = MessageService(self.path_manager.project_root)
+
+    @staticmethod
+    def _resolve_body(args) -> Optional[str]:
+        """Resolve message body from --body, --body-file, or stdin.
+
+        Priority: --body-file > --body
+        --body-file '-' reads from stdin.
+
+        Returns:
+            Resolved body text, or None if no body provided.
+        """
+        body_file = getattr(args, "body_file", None)
+        if body_file:
+            if body_file == "-":
+                return sys.stdin.read().strip()
+            path = Path(body_file)
+            if not path.exists():
+                return None
+            return path.read_text(encoding="utf-8").strip()
+        return getattr(args, "body", None)
 
     def validate_args(self, args) -> Optional[str]:
         """Validate command arguments."""
@@ -52,8 +73,15 @@ class MessagesCommand(BaseCommand):
         if args.message_command == "send":
             if not hasattr(args, "to_project") or not args.to_project:
                 return "Missing required argument: --to-project"
-            if not hasattr(args, "body") or not args.body:
-                return "Missing required argument: --body"
+            body = self._resolve_body(args)
+            if not body:
+                return "Missing required argument: --body or --body-file"
+
+        # Validate reply command body
+        if args.message_command == "reply":
+            body = self._resolve_body(args)
+            if not body:
+                return "Missing required argument: --body or --body-file"
 
         # Validate read/archive/reply commands
         if args.message_command in ["read", "archive", "reply"]:
@@ -103,13 +131,20 @@ class MessagesCommand(BaseCommand):
                     f"Target path is not an MPM project (no .claude-mpm directory): {to_project}"
                 )
 
+            # Resolve body from --body or --body-file
+            body = self._resolve_body(args)
+            if not body:
+                return CommandResult.error_result(
+                    "Missing message body: use --body or --body-file"
+                )
+
             # Send message
             message = self.message_service.send_message(
                 to_project=str(to_project),
                 to_agent=getattr(args, "to_agent", "pm"),
                 message_type=getattr(args, "type", "task"),
                 subject=getattr(args, "subject", "Message from Claude MPM"),
-                body=args.body,
+                body=body,
                 priority=getattr(args, "priority", "normal"),
                 from_agent=getattr(args, "from_agent", "pm"),
                 attachments=getattr(args, "attachments", None),
@@ -263,13 +298,17 @@ class MessagesCommand(BaseCommand):
     def _reply_to_message(self, args) -> CommandResult:
         """Reply to a message."""
         try:
-            if not hasattr(args, "body") or not args.body:
-                return CommandResult.error_result("Missing required argument: --body")
+            # Resolve body from --body or --body-file
+            body = self._resolve_body(args)
+            if not body:
+                return CommandResult.error_result(
+                    "Missing reply body: use --body or --body-file"
+                )
 
             reply = self.message_service.reply_to_message(
                 original_message_id=args.message_id,
                 subject=getattr(args, "subject", "Re: Your message"),
-                body=args.body,
+                body=body,
                 from_agent=getattr(args, "from_agent", "pm"),
             )
 
