@@ -946,8 +946,10 @@ class EventHandlers:
             # Response tracking is optional
             pass
 
-        # Check for unread cross-project messages before session ends
+        # Check for unread cross-project messages and write pending task file
         try:
+            import json as _json
+
             from claude_mpm.core.unified_paths import UnifiedPathManager
             from claude_mpm.services.communication.message_service import MessageService
 
@@ -956,6 +958,48 @@ class EventHandlers:
             unread = service.list_messages(status="unread")
             if unread:
                 _log(f"📬 {len(unread)} unread cross-project message(s) at session end")
+
+                # Write pending inbox task file for next session startup
+                config_dir = project_root / ".claude-mpm"
+                config_dir.mkdir(parents=True, exist_ok=True)
+                task_file = config_dir / "pending-inbox-task.json"
+
+                # Only overwrite if there are MORE unread messages than existing
+                should_write = True
+                if task_file.exists():
+                    try:
+                        existing = _json.loads(task_file.read_text(encoding="utf-8"))
+                        existing_count = existing.get("unread_count", 0)
+                        if len(unread) <= existing_count:
+                            should_write = False
+                    except Exception:  # nosec B110
+                        # Corrupt file, overwrite it
+                        pass
+
+                if should_write:
+                    messages_summary = []
+                    for msg in unread:
+                        messages_summary.append(
+                            {
+                                "id": msg.id,
+                                "from_project": msg.from_project,
+                                "subject": msg.subject,
+                                "priority": msg.priority,
+                                "type": msg.type,
+                                "to_agent": msg.to_agent,
+                                "created_at": msg.created_at.isoformat(),
+                            }
+                        )
+                    task_data = {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "unread_count": len(unread),
+                        "messages": messages_summary,
+                    }
+                    task_file.write_text(
+                        _json.dumps(task_data, indent=2), encoding="utf-8"
+                    )
+                    if DEBUG:
+                        _log(f"Wrote pending inbox task: {len(unread)} messages")
         except Exception as e:
             if DEBUG:
                 _log(f"Message check on stop error: {e}")

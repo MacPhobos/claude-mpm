@@ -4,12 +4,14 @@ Startup display banner for Claude MPM.
 Shows welcome message, version info, ASCII art, and what's new section.
 """
 
+import json
 import os
 import re
 import shutil
 import subprocess  # nosec B404 - required for git operations
+from collections import Counter
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple
 
 from claude_mpm.utils.git_analyzer import is_git_repository
 
@@ -269,6 +271,55 @@ def _count_deployed_agents() -> int:
         return 0
 
 
+def _check_pending_inbox() -> Optional[Tuple[int, str]]:
+    """
+    Check for pending inbox task file from a previous session's Stop hook.
+
+    Reads `.claude-mpm/pending-inbox-task.json`, formats a notification line
+    grouped by source project, and deletes the file after reading.
+
+    Returns:
+        Tuple of (unread_count, formatted_notification) or None if no pending messages.
+        Example notification: "2 from CTO, 1 from other-project"
+    """
+    try:
+        task_file = Path.cwd() / ".claude-mpm" / "pending-inbox-task.json"
+        if not task_file.exists():
+            return None
+
+        data = json.loads(task_file.read_text(encoding="utf-8"))
+        messages = data.get("messages", [])
+        unread_count = data.get("unread_count", 0)
+
+        if not messages or unread_count == 0:
+            # Clean up empty/zero file
+            task_file.unlink(missing_ok=True)
+            return None
+
+        # Group messages by source project, using basename for readability
+        project_counts: Counter = Counter()
+        for msg in messages:
+            from_project = msg.get("from_project", "unknown")
+            # Use basename of path for display (e.g., "/Users/x/CTO" -> "CTO")
+            project_name = Path(from_project).name if from_project else "unknown"
+            project_counts[project_name] += 1
+
+        # Format: "2 from CTO, 1 from other-project"
+        parts = []
+        for project_name, count in project_counts.most_common():
+            parts.append(f"{count} from {project_name}")
+        notification = ", ".join(parts)
+
+        # Delete the file (consumed)
+        task_file.unlink(missing_ok=True)
+
+        return (unread_count, notification)
+
+    except Exception:
+        # Silent failure - don't block startup
+        return None
+
+
 def _format_two_column_line(
     left: str, right: str, left_panel_width: int, right_panel_width: int
 ) -> str:
@@ -370,6 +421,38 @@ def display_startup_banner(
         separator = "-" * right_panel_width
         lines.append(
             _format_two_column_line("", separator, left_panel_width, right_panel_width)
+        )
+
+    # Pending inbox messages section (from previous session's Stop hook)
+    pending_inbox = _check_pending_inbox()
+    inbox_hint = ""
+    if pending_inbox:
+        unread_count, notification = pending_inbox
+        inbox_line = f"\U0001f4ec {unread_count} unread message{'s' if unread_count != 1 else ''}: {notification}"
+        # Truncate if too long for right panel
+        max_inbox_width = right_panel_width - 2
+        if len(inbox_line) > max_inbox_width:
+            inbox_line = inbox_line[: max_inbox_width - 3] + "..."
+        lines.append(
+            _format_two_column_line("", inbox_line, left_panel_width, right_panel_width)
+        )
+        lines.append(
+            _format_two_column_line(
+                "",
+                "  Run: /mpm-inbox to read messages",
+                left_panel_width,
+                right_panel_width,
+            )
+        )
+        # Add separator after inbox section
+        separator = "-" * right_panel_width
+        lines.append(
+            _format_two_column_line("", separator, left_panel_width, right_panel_width)
+        )
+        # Build hint for stdout (printed after banner for agent visibility)
+        inbox_hint = (
+            f"ACTION REQUIRED: {unread_count} unread cross-project message(s) "
+            f"({notification}). Use /mpm-inbox or `claude-mpm message list` to read them."
         )
 
     # Line 1: Empty left | "Recent activity" right
@@ -576,6 +659,11 @@ def display_startup_banner(
         print(line)
     print(bottom_line)
     print()  # Empty line after banner
+
+    # Print inbox action hint after banner (visible to PM agent in stdout)
+    if inbox_hint:
+        print(f"{inbox_hint}")
+        print()
 
 
 def should_show_banner(args) -> bool:
