@@ -186,6 +186,9 @@ class EventHandlers:
         self._delegation_detector = delegation_detector
         self._event_log = event_log
 
+        # Track whether inbox has been checked this session (once per session)
+        self._inbox_checked = False
+
     @property
     def log_manager(self) -> Optional[Any]:
         """Get log manager (injected or lazy loaded)."""
@@ -227,6 +230,12 @@ class EventHandlers:
         # Skip /mpm commands to reduce noise unless debug is enabled
         if prompt.startswith("/mpm") and not DEBUG:
             return
+
+        # Check for pending inbox messages (first prompt only)
+        # Outputs system-reminder to stdout so Claude sees cross-project messages
+        if not self._inbox_checked:
+            self._inbox_checked = True
+            self._output_pending_inbox_context(event.get("cwd", ""))
 
         # Detect and save @alias for sticky project context
         self._save_project_alias_if_present(prompt)
@@ -622,6 +631,63 @@ class EventHandlers:
             if DEBUG:
                 _log(f"Failed to capture PM directive: {e}")
             # Non-fatal: memory capture is optional
+
+    def _output_pending_inbox_context(self, working_dir: str) -> None:
+        """Output pending inbox task as a single system-reminder for Claude.
+
+        Reads the pending-inbox-task.json written by the Stop hook and outputs
+        ONE task instruction telling the agent to read and act on messages.
+        File is deleted after being consumed (one-shot delivery).
+        """
+        try:
+            if not working_dir:
+                working_dir = str(Path.cwd())
+
+            task_file = Path(working_dir) / ".claude-mpm" / "pending-inbox-task.json"
+            if not task_file.exists():
+                return
+
+            data = json.loads(task_file.read_text(encoding="utf-8"))
+            messages = data.get("messages", [])
+            unread_count = data.get("unread_count", 0)
+
+            if not messages or unread_count == 0:
+                task_file.unlink(missing_ok=True)
+                return
+
+            # Group by source project for summary
+            from collections import Counter
+
+            sources = Counter(
+                Path(m.get("from_project", "unknown")).name for m in messages
+            )
+            source_summary = ", ".join(
+                f"{count} from {name}" for name, count in sources.most_common()
+            )
+
+            # Check for high priority messages
+            high_priority = [
+                m for m in messages if m.get("priority") in ("high", "urgent")
+            ]
+            priority_note = (
+                f" ({len(high_priority)} high priority)" if high_priority else ""
+            )
+
+            # Output ONE task instruction — Claude Code picks this up via TaskCreate
+            print(
+                f"📬 {unread_count} unread cross-project message(s){priority_note}: "
+                f"{source_summary}. "
+                f"Create a task to read and act on them: "
+                f"`claude-mpm message list --status unread`",
+                flush=True,
+            )
+
+            # Delete the file (consumed)
+            task_file.unlink(missing_ok=True)
+
+        except Exception:  # nosec B110
+            # Non-fatal: inbox context is optional, never block the hook
+            pass
 
     def _get_git_branch(self, working_dir: Optional[str] = None) -> str:
         """Get git branch for the given directory with caching."""

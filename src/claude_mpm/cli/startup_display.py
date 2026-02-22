@@ -425,7 +425,6 @@ def display_startup_banner(
 
     # Pending inbox messages section (from previous session's Stop hook)
     pending_inbox = _check_pending_inbox()
-    inbox_hint = ""
     if pending_inbox:
         unread_count, notification = pending_inbox
         inbox_line = f"\U0001f4ec {unread_count} unread message{'s' if unread_count != 1 else ''}: {notification}"
@@ -449,11 +448,7 @@ def display_startup_banner(
         lines.append(
             _format_two_column_line("", separator, left_panel_width, right_panel_width)
         )
-        # Build hint for stdout (printed after banner for agent visibility)
-        inbox_hint = (
-            f"ACTION REQUIRED: {unread_count} unread cross-project message(s) "
-            f"({notification}). Use /mpm-inbox or `claude-mpm message list` to read them."
-        )
+        # Agent-visible hint is handled by UserPromptSubmit hook, not stdout
 
     # Line 1: Empty left | "Recent activity" right
     lines.append(
@@ -659,11 +654,6 @@ def display_startup_banner(
         print(line)
     print(bottom_line)
     print()  # Empty line after banner
-
-    # Print inbox action hint after banner (visible to PM agent in stdout)
-    if inbox_hint:
-        print(f"{inbox_hint}")
-        print()
 
 
 def should_show_banner(args) -> bool:
