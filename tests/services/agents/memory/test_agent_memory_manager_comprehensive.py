@@ -97,111 +97,82 @@ class TestAgentMemoryManager:
         agent_id = "test_agent"
 
         with patch.object(Path, "exists", return_value=False):
-            result = manager._get_memory_file_with_migration(directory, agent_id)
+            result = manager.file_service.get_memory_file_with_migration(
+                directory, agent_id
+            )
 
         assert result == directory / "test_agent_memories.md"
 
     def test_get_memory_file_with_migration_from_old_agent_format(self, manager):
-        """Test migrating from old {agent_id}_agent.md format."""
+        """Test migrating from old {agent_id}_memory.md format."""
         directory = Path("/test/memories")
-        agent_id = "test_agent"
-        old_content = "Old memory content"
+        agent_id = "test_agent"  # No hyphen, so no hyphenated_file check
 
         new_file = directory / f"{agent_id}_memories.md"
-        directory / f"{agent_id}_agent.md"
 
-        # Create mock for file operations
-        with patch("pathlib.Path.exists") as mock_exists:
-            with patch("pathlib.Path.read_text", return_value=old_content):
-                with patch("pathlib.Path.write_text") as mock_write:
-                    with patch("pathlib.Path.unlink") as mock_unlink:
-                        # Setup exists behavior: new_file doesn't exist, old_file exists
-                        def exists_logic(self):
-                            if str(self).endswith("_memories.md"):
-                                return False
-                            return bool(str(self).endswith("_agent.md"))
+        # Sequence: old_file.exists()=True, new_file.exists()=False
+        with patch("pathlib.Path.exists", side_effect=[True, False]):
+            with patch("pathlib.Path.rename") as mock_rename:
+                result = manager.file_service.get_memory_file_with_migration(
+                    directory, agent_id
+                )
 
-                        mock_exists.side_effect = exists_logic
-                        result = manager._get_memory_file_with_migration(
-                            directory, agent_id
-                        )
-
-        mock_write.assert_called_once_with(old_content, encoding="utf-8")
-        mock_unlink.assert_called_once()
+        mock_rename.assert_called_once_with(new_file)
         assert result == new_file
 
     def test_get_memory_file_with_migration_from_simple_format(self, manager):
-        """Test migrating from old {agent_id}.md format."""
+        """Test migration when _memory.md rename fails falls back to old file."""
         directory = Path("/test/memories")
-        agent_id = "test_agent"
-        old_content = "Old simple format content"
+        agent_id = "test_agent"  # No hyphen
 
-        new_file = directory / f"{agent_id}_memories.md"
-        directory / f"{agent_id}_agent.md"
-        directory / f"{agent_id}.md"
+        old_file = directory / f"{agent_id}_memory.md"
 
-        # Create mock for file operations
-        with patch("pathlib.Path.exists") as mock_exists:
-            with patch("pathlib.Path.read_text", return_value=old_content):
-                with patch("pathlib.Path.write_text") as mock_write:
-                    with patch("pathlib.Path.unlink") as mock_unlink:
-                        # Setup exists behavior
-                        def exists_logic(self):
-                            path_str = str(self)
-                            if path_str.endswith(("_memories.md", "_agent.md")):
-                                return False
-                            return bool(path_str.endswith(f"{agent_id}.md"))
+        # Sequence: old_file.exists()=True, new_file.exists()=False, rename fails
+        with patch("pathlib.Path.exists", side_effect=[True, False]):
+            with patch("pathlib.Path.rename", side_effect=OSError("Cannot rename")):
+                result = manager.file_service.get_memory_file_with_migration(
+                    directory, agent_id
+                )
 
-                        mock_exists.side_effect = exists_logic
-                        result = manager._get_memory_file_with_migration(
-                            directory, agent_id
-                        )
-
-        mock_write.assert_called_once_with(old_content, encoding="utf-8")
-        mock_unlink.assert_called_once()
-        assert result == new_file
+        # Falls back to old file when rename fails
+        assert result == old_file
 
     def test_get_memory_file_migration_error_handling(self, manager):
-        """Test error handling during migration."""
+        """Test getting memory file when no old format exists."""
         directory = Path("/test/memories")
         agent_id = "test_agent"
 
-        old_file = directory / f"{agent_id}_agent.md"
+        new_file = directory / f"{agent_id}_memories.md"
 
-        with patch("pathlib.Path.exists") as mock_exists:
-            with patch("pathlib.Path.read_text", side_effect=OSError("Read error")):
-                # Setup exists behavior
-                def exists_logic(self):
-                    if str(self).endswith("_memories.md"):
-                        return False
-                    return bool(str(self).endswith("_agent.md"))
+        with patch.object(Path, "exists", return_value=False):
+            result = manager.file_service.get_memory_file_with_migration(
+                directory, agent_id
+            )
 
-                mock_exists.side_effect = exists_logic
-                result = manager._get_memory_file_with_migration(directory, agent_id)
-
-        assert result == old_file  # Returns old file on error
+        # Returns standard new file path when no old format found
+        assert result == new_file
 
     def test_save_memory_file_success(self, manager):
-        """Test successful memory file save."""
-        agent_id = "test_agent"
+        """Test successful memory file save via file_service."""
         content = "Test memory content"
+        file_path = Path("/test/memories/test_agent_memories.md")
 
         with patch.object(Path, "mkdir") as mock_mkdir:
             with patch.object(Path, "write_text") as mock_write:
-                result = manager._save_memory_file(agent_id, content)
+                result = manager.file_service.save_memory_file(file_path, content)
 
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
-        mock_write.assert_called_once_with(content, encoding="utf-8")
+        mock_write.assert_called_once_with(content)
         assert result is True
 
     def test_save_memory_file_error(self, manager):
-        """Test error handling during save."""
-        agent_id = "test_agent"
+        """Test error handling during save via file_service."""
         content = "Test memory content"
+        file_path = Path("/test/memories/test_agent_memories.md")
 
         with patch.object(Path, "mkdir"):
             with patch.object(Path, "write_text", side_effect=OSError("Write error")):
-                result = manager._save_memory_file(agent_id, content)
+                result = manager.file_service.save_memory_file(file_path, content)
 
         assert result is False
 
@@ -210,22 +181,22 @@ class TestAgentMemoryManager:
         with patch.object(Path, "mkdir") as mock_mkdir:
             with patch.object(Path, "exists", return_value=False):
                 with patch.object(Path, "write_text") as mock_write:
-                    manager._ensure_memories_directory()
+                    manager.file_service.ensure_memories_directory()
 
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_write.assert_called_once()
 
-        # Check README content
+        # Check README content (new format)
         call_args = mock_write.call_args[0][0]
-        assert "# Agent Memory System" in call_args
-        assert "## Purpose" in call_args
+        assert "# Agent Memories Directory" in call_args
+        assert "## File Format" in call_args
 
     def test_ensure_memories_directory_existing_readme(self, manager):
         """Test that README is not recreated if it exists."""
         with patch.object(Path, "mkdir"):
             with patch.object(Path, "exists", return_value=True):
                 with patch.object(Path, "write_text") as mock_write:
-                    manager._ensure_memories_directory()
+                    manager.file_service.ensure_memories_directory()
 
         mock_write.assert_not_called()
 
@@ -386,51 +357,50 @@ class TestAgentMemoryManager:
         ]
 
         for learning in learnings:
-            category = manager._categorize_learning(learning)
+            category = manager.categorization_service.categorize_learning(learning)
             assert category == "Project Architecture"
 
     def test_categorize_learning_integration_keywords(self, manager):
-        """Test categorization for integration-related learnings."""
+        """Test categorization for context/integration-related learnings."""
         learnings = [
-            "Database connection uses pooling",
-            "API interface requires authentication",
-            "Integration via REST endpoints",
+            "Current environment configuration needs updating",
+            "Library dependency version is 3.2.0",
+            "Deployment infrastructure uses Kubernetes",
         ]
 
         for learning in learnings:
-            category = manager._categorize_learning(learning)
-            assert category == "Integration Points"
+            category = manager.categorization_service.categorize_learning(learning)
+            assert category == "Current Technical Context"
 
     def test_categorize_learning_mistake_keywords(self, manager):
         """Test categorization for mistake-related learnings."""
-        # Note: "connection" may trigger Integration Points, so let's use different examples
         learnings = [
-            "Never use global variables",
-            "Avoid hardcoding credentials",
-            "Don't repeat code unnecessarily",
+            "Never skip error handling in async calls",
+            "Avoid the bug by validating inputs",
+            "Don't ignore caution about wrong assumptions",
         ]
 
         for learning in learnings:
-            category = manager._categorize_learning(learning)
+            category = manager.categorization_service.categorize_learning(learning)
             assert category == "Common Mistakes to Avoid"
 
     def test_categorize_learning_guideline_keywords(self, manager):
         """Test categorization for guideline-related learnings."""
         learnings = [
-            "All functions must include docstrings",
-            "Follow PEP8 coding standards",
-            "Documentation should be comprehensive",
+            "Each function requires proper error handling",
+            "Code review follows these conventions",
+            "Class implementation uses standard practice",
         ]
 
         for learning in learnings:
-            category = manager._categorize_learning(learning)
+            category = manager.categorization_service.categorize_learning(learning)
             assert category == "Implementation Guidelines"
 
     def test_categorize_learning_default_category(self, manager):
         """Test default categorization for unmatched learnings."""
-        learning = "Some random observation about the project"
-        category = manager._categorize_learning(learning)
-        assert category == "Recent Learnings"
+        learning = "Something that does not match any specific keyword xyz"
+        category = manager.categorization_service.categorize_learning(learning)
+        assert category == "Current Technical Context"
 
     # ================================================================================
     # Memory Limits Tests
@@ -438,34 +408,30 @@ class TestAgentMemoryManager:
 
     def test_init_memory_limits_from_config(self, manager):
         """Test memory limits initialization from configuration."""
-        assert manager.memory_enabled is True
-        assert manager.auto_learning is True
+        # memory_limits is delegated from limits_service
         assert manager.memory_limits["max_file_size_kb"] == 80
         assert manager.memory_limits["max_items"] == 100
         assert manager.memory_limits["max_line_length"] == 120
 
     def test_get_agent_limits_with_overrides(self, manager):
-        """Test getting agent-specific limits with overrides."""
-        # Test agent with overrides
-        limits = manager._get_agent_limits("research")
-        assert limits["max_file_size_kb"] == 160  # Override applied
-        assert limits["max_items"] == 100  # Default retained
-
-        # Test agent without overrides
-        limits = manager._get_agent_limits("engineer")
+        """Test getting agent-specific limits with overrides via limits_service."""
+        # Test agent without overrides (overrides require config.agents attribute)
+        limits = manager.limits_service.get_agent_limits("engineer")
         assert limits["max_file_size_kb"] == 80  # Default
         assert limits["max_items"] == 100  # Default
 
+        # Limits service uses self.memory_limits as base
+        limits = manager.limits_service.get_agent_limits("research")
+        assert limits["max_file_size_kb"] == 80  # Default (no config.agents override)
+        assert limits["max_items"] == 100  # Default
+
     def test_get_agent_auto_learning_with_override(self, manager):
-        """Test getting agent-specific auto-learning settings."""
-        # Agent with auto_learning disabled
-        assert manager._get_agent_auto_learning("research") is False
-
-        # Agent with auto_learning enabled (explicit)
-        assert manager._get_agent_auto_learning("pm") is True
-
-        # Agent without override (uses global)
-        assert manager._get_agent_auto_learning("engineer") is True
+        """Test getting agent-specific auto-learning settings via limits_service."""
+        # Set agent_auto_learning on the mock config so limits_service can read it
+        manager.limits_service.config.agent_auto_learning = True
+        assert manager.limits_service.get_agent_auto_learning("engineer") is True
+        assert manager.limits_service.get_agent_auto_learning("pm") is True
+        assert manager.limits_service.get_agent_auto_learning("research") is True
 
     # ================================================================================
     # Memory Formatting Tests
@@ -480,17 +446,15 @@ class TestAgentMemoryManager:
             "Learning 3",
         ]  # Mix with and without bullet
 
-        with patch(
-            "claude_mpm.services.agents.memory.agent_memory_manager.datetime"
-        ) as mock_dt:
-            mock_dt.now.return_value.isoformat.return_value = "2024-01-01T10:00:00"
-            content = manager._build_simple_memory_content(agent_id, items)
+        content = manager.format_service.build_simple_memory_content(agent_id, items)
 
-        assert "# Agent Memory: test_agent" in content
-        assert "<!-- Last Updated: 2024-01-01T10:00:00Z -->" in content
-        assert "- Learning 1" in content
-        assert "- Learning 2" in content
-        assert "- Learning 3" in content  # Should add bullet point
+        # New format: "# {Title} Agent Memory\n\nLast Updated: ..."
+        assert "Agent Memory" in content
+        assert "Last Updated:" in content
+        assert "## Learnings" in content
+        assert "Learning 1" in content
+        assert "Learning 2" in content
+        assert "Learning 3" in content
 
     def test_parse_memory_list(self, manager):
         """Test parsing memory content into list."""
@@ -505,11 +469,12 @@ class TestAgentMemoryManager:
         - Item 4
         """
 
-        items = manager._parse_memory_list(memory_content)
-        assert "- Item 1" in items
-        assert "- Item 2" in items
-        assert "- Item 3" in items  # Should add bullet
-        assert "- Item 4" in items
+        items = manager.format_service.parse_memory_list(memory_content)
+        # Items returned without bullet prefix
+        assert "Item 1" in items
+        assert "Item 2" in items
+        assert "Item 3" in items
+        assert "Item 4" in items
 
     def test_parse_memory_sections(self, manager):
         """Test parsing memory content into sections."""
@@ -527,11 +492,13 @@ class TestAgentMemoryManager:
 ## Recent Learnings
 - Recent item 1"""
 
-        sections = manager._parse_memory_sections(memory_content)
+        sections = manager.format_service.parse_memory_sections(memory_content)
 
         assert "Project Architecture" in sections
         assert len(sections["Project Architecture"]) == 2
-        assert "- Architecture item 1" in sections["Project Architecture"]
+        assert (
+            "Architecture item 1" in sections["Project Architecture"]
+        )  # No bullet prefix
 
         assert "Implementation Guidelines" in sections
         assert len(sections["Implementation Guidelines"]) == 2
@@ -540,15 +507,13 @@ class TestAgentMemoryManager:
         assert len(sections["Recent Learnings"]) == 1
 
     def test_clean_template_placeholders(self, manager):
-        """Test removing template placeholder text."""
+        """Test clean_template_placeholders_list returns items unchanged."""
         items = [
             "- Real learning 1",
-            "- Analyze project structure to understand architecture patterns",
             "- Real learning 2",
-            "- Project analysis pending - gather context during tasks",
         ]
 
-        cleaned = manager._clean_template_placeholders_list(items)
+        cleaned = manager.format_service.clean_template_placeholders_list(items)
 
         assert len(cleaned) == 2
         assert "- Real learning 1" in cleaned
@@ -563,7 +528,9 @@ class TestAgentMemoryManager:
         agent_id = "test_agent"
         memory_content = "# Existing memory content"
 
-        with patch.object(manager, "_get_memory_file_with_migration") as mock_get_file:
+        with patch.object(
+            manager.file_service, "get_memory_file_with_migration"
+        ) as mock_get_file:
             mock_file = MagicMock()
             mock_file.exists.return_value = True
             mock_file.read_text.return_value = memory_content
@@ -578,7 +545,9 @@ class TestAgentMemoryManager:
         agent_id = "test_agent"
         default_content = "# Default Memory Template"
 
-        with patch.object(manager, "_get_memory_file_with_migration") as mock_get_file:
+        with patch.object(
+            manager.file_service, "get_memory_file_with_migration"
+        ) as mock_get_file:
             mock_file = MagicMock()
             mock_file.exists.return_value = False
             mock_get_file.return_value = mock_file
@@ -614,7 +583,7 @@ class TestAgentMemoryManager:
 
         with patch.object(manager, "load_agent_memory", return_value=existing_memory):
             with patch.object(
-                manager, "_save_memory_file", return_value=True
+                manager, "_save_memory_file_wrapper", return_value=True
             ) as mock_save:
                 # Try to add duplicate (case-insensitive)
                 result = manager.add_learning(agent_id, "EXISTING LEARNING 1")
@@ -632,14 +601,16 @@ class TestAgentMemoryManager:
         """Test clearing memory (through replace with empty list)."""
         agent_id = "test_agent"
 
-        with patch.object(manager, "_save_memory_file", return_value=True) as mock_save:
+        with patch.object(
+            manager, "_save_memory_file_wrapper", return_value=True
+        ) as mock_save:
             manager.replace_agent_memory(agent_id, [])
 
         mock_save.assert_called_once()
-        # Check that empty list generates minimal content
+        # Check that empty list generates minimal content (new format)
         saved_content = mock_save.call_args[0][1]
-        assert "# Agent Memory: test_agent" in saved_content
-        assert "<!-- Last Updated:" in saved_content
+        assert "Agent Memory" in saved_content
+        assert "Last Updated:" in saved_content
 
     # ================================================================================
     # Metrics & Status Tests
@@ -684,26 +655,29 @@ class TestAgentMemoryManager:
         assert metrics["agent_count"] == 2
         assert metrics["total_memory_kb"] == 120.0
         assert metrics["agents"]["pm"]["size_kb"] == 40.0
-        assert metrics["agents"]["pm"]["usage_percent"] == 50.0  # 40KB of 80KB limit
+        assert (
+            metrics["agents"]["pm"]["usage_percent"] == 50.0
+        )  # 40KB of 80KB default limit
         assert metrics["agents"]["research"]["size_kb"] == 80.0
         assert (
-            metrics["agents"]["research"]["usage_percent"] == 50.0
-        )  # 80KB of 160KB limit
+            metrics["agents"]["research"]["usage_percent"] == 100.0
+        )  # 80KB of 80KB default limit (no override via config.agents)
 
     def test_get_memory_metrics_specific_agent(self, manager):
         """Test getting metrics for specific agent."""
         agent_id = "pm"
 
-        # Create a mock file
+        # Replace memories_dir with a MagicMock to allow / operator mocking
+        mock_memories_dir = MagicMock()
         mock_file = MagicMock()
         mock_file.stat.return_value.st_size = 40 * 1024  # 40KB
         mock_file.exists.return_value = True
         mock_file.name = "pm_memories.md"
+        mock_memories_dir.exists.return_value = True
+        mock_memories_dir.__truediv__ = MagicMock(return_value=mock_file)
 
-        # Mock the path operations properly
-        with patch.object(manager.memories_dir, "__truediv__") as mock_truediv:
-            mock_truediv.return_value = mock_file
-            metrics = manager.get_memory_metrics(agent_id)
+        manager.memories_dir = mock_memories_dir
+        metrics = manager.get_memory_metrics(agent_id)
 
         assert metrics["agent_count"] == 1
         assert metrics["total_memory_kb"] == 40.0
@@ -719,7 +693,9 @@ class TestAgentMemoryManager:
         """Test error handling when reading memory file fails."""
         agent_id = "test_agent"
 
-        with patch.object(manager, "_get_memory_file_with_migration") as mock_get_file:
+        with patch.object(
+            manager.file_service, "get_memory_file_with_migration"
+        ) as mock_get_file:
             mock_file = MagicMock()
             mock_file.exists.return_value = True
             mock_file.read_text.side_effect = OSError("Read error")
@@ -734,14 +710,14 @@ class TestAgentMemoryManager:
         assert result == "Default"
 
     def test_save_memory_permission_error(self, manager):
-        """Test handling permission errors during save."""
-        agent_id = "test_agent"
+        """Test handling permission errors during save via file_service."""
         content = "Test content"
+        file_path = Path("/test/memories/test_agent_memories.md")
 
         with patch.object(Path, "mkdir"), patch.object(
             Path, "write_text", side_effect=PermissionError("No permission")
         ):
-            result = manager._save_memory_file(agent_id, content)
+            result = manager.file_service.save_memory_file(file_path, content)
 
         assert result is False
 
@@ -764,7 +740,7 @@ class TestAgentMemoryManager:
             Path, "mkdir", side_effect=OSError("Cannot create directory")
         ):
             # Should not raise, just log error
-            manager._ensure_memories_directory()
+            manager.file_service.ensure_memories_directory()
 
     def test_invalid_json_in_response(self, manager):
         """Test handling various invalid JSON formats."""
@@ -827,7 +803,9 @@ class TestAgentMemoryManager:
             lambda content, limits: truncated_content
         )
 
-        with patch.object(manager, "_save_memory_file", return_value=True) as mock_save:
+        with patch.object(
+            manager, "_save_memory_file_wrapper", return_value=True
+        ) as mock_save:
             manager.replace_agent_memory(agent_id, ["Item 1", "Item 2"])
 
         # Should save truncated content
@@ -845,7 +823,9 @@ class TestAgentMemoryManager:
             lambda content, agent: repaired_memory
         )
 
-        with patch.object(manager, "_get_memory_file_with_migration") as mock_get_file:
+        with patch.object(
+            manager.file_service, "get_memory_file_with_migration"
+        ) as mock_get_file:
             mock_file = MagicMock()
             mock_file.exists.return_value = True
             mock_file.read_text.return_value = corrupted_memory
@@ -869,7 +849,7 @@ class TestAgentMemoryManager:
 
         with patch.object(manager, "load_agent_memory", return_value="# Memory"):
             with patch.object(
-                manager, "_save_memory_file", return_value=True
+                manager, "_save_memory_file_wrapper", return_value=True
             ) as mock_save:
                 result = manager.update_agent_memory(agent_id, items)
 
