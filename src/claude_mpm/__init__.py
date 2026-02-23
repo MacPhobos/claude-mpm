@@ -29,7 +29,7 @@ try:
         if build_number.isdigit():
             # Use PEP 440 local version identifier format for development
             __version__ = f"{__version__}+build.{build_number}"
-except Exception:
+except Exception:  # nosec B110
     # Ignore any errors reading build number
     pass
 
@@ -54,7 +54,13 @@ def __getattr__(name):
         from .services.ticket_manager import TicketManager
 
         return TicketManager
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    # Allow normal submodule resolution for patch() targets
+    try:
+        import importlib
+
+        return importlib.import_module(f".{name}", __name__)
+    except ImportError:
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'") from None
 
 
 __all__ = [
