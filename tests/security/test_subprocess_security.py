@@ -10,7 +10,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from claude_mpm.utils.subprocess_utils import SubprocessError
+from claude_mpm.utils.subprocess_utils import (
+    SubprocessError,
+    run_command as run_subcommand,
+)
 
 
 class TestSubprocessSecurity:
@@ -59,17 +62,18 @@ class TestSubprocessSecurity:
         assert "test" in result
 
     @patch("subprocess.run")
-    def test_run_command_uses_safe_subprocess_call(self):
+    def test_run_command_uses_safe_subprocess_call(self, mock_run):
         """Test that run_command uses subprocess.run without shell=True."""
         mock_result = MagicMock()
         mock_result.stdout = "test output"
-        self.return_value = mock_result
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
 
         run_subcommand("echo test")
 
         # Verify subprocess.run was called with a list (not shell=True)
-        self.assert_called_once()
-        args, kwargs = self.call_args
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
 
         # First argument should be a list (from shlex.split)
         assert isinstance(args[0], list)

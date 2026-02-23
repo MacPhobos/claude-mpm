@@ -308,14 +308,16 @@ class TestGitVersionParsing:
             "v1.2.2|2023-06-10 10:00:00 +0000|Release v1.2.2\n"
             "v1.2.1|2023-06-05 10:00:00 +0000|Release v1.2.1\n"
         )
-        mock_run.return_value = Mock(returncode=0, stdout=git_output)
+        # First call returns tag listing, subsequent calls return commit hashes
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout=git_output),  # git for-each-ref
+            Mock(returncode=0, stdout="abc123\n"),  # rev-list for v1.2.3
+            Mock(returncode=0, stdout="def456\n"),  # rev-list for v1.2.2
+            Mock(returncode=0, stdout="ghi789\n"),  # rev-list for v1.2.1
+        ]
 
-        # Mock git rev-list for commit hashes
-        with patch("subprocess.run") as mock_rev_list:
-            mock_rev_list.return_value = Mock(returncode=0, stdout="abc123\n")
-
-            # Act
-            versions = version_parser._get_all_versions_from_git()
+        # Act
+        versions = version_parser._get_all_versions_from_git()
 
         # Assert
         assert len(versions) == 3
@@ -595,13 +597,15 @@ class TestVersionHistory:
             "v1.2.3|2023-06-15 10:00:00 +0000|Release v1.2.3\n"
             "v1.2.2|2023-06-10 10:00:00 +0000|Release v1.2.2\n"
         )
-        mock_run.return_value = Mock(returncode=0, stdout=git_output)
+        # First call returns tag listing, subsequent calls return commit hashes
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout=git_output),  # git for-each-ref
+            Mock(returncode=0, stdout="abc123\n"),  # rev-list for v1.2.3
+            Mock(returncode=0, stdout="def456\n"),  # rev-list for v1.2.2
+        ]
 
-        with patch("subprocess.run") as mock_rev_list:
-            mock_rev_list.return_value = Mock(returncode=0, stdout="abc123\n")
-
-            # Act
-            versions = version_parser.get_version_history()
+        # Act
+        versions = version_parser.get_version_history()
 
         # Assert
         assert len(versions) == 2
