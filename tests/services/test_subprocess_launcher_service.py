@@ -30,36 +30,36 @@ class TestSubprocessLauncherService:
             project_logger=mock_logger, websocket_server=mock_websocket
         )
 
-    def test_is_subprocess_mode_available(self):
+    def test_is_subprocess_mode_available(self, service):
         """Test checking if subprocess mode is available."""
         # This should return True on most Unix-like systems
-        result = self.is_subprocess_mode_available()
+        result = service.is_subprocess_mode_available()
 
         # The result depends on the platform, but the method should not crash
         assert isinstance(result, bool)
 
-    def test_create_subprocess_command_basic(self):
+    def test_create_subprocess_command_basic(self, service):
         """Test creating a basic subprocess command."""
         base_cmd = ["python", "-m", "claude"]
 
-        result = self.create_subprocess_command(base_cmd)
+        result = service.create_subprocess_command(base_cmd)
 
         assert result == base_cmd
         assert result is not base_cmd  # Should be a copy
 
-    def test_create_subprocess_command_with_additional_args(self):
+    def test_create_subprocess_command_with_additional_args(self, service):
         """Test creating subprocess command with additional arguments."""
         base_cmd = ["python", "-m", "claude"]
         additional_args = ["--verbose", "--debug"]
 
-        result = self.create_subprocess_command(base_cmd, additional_args)
+        result = service.create_subprocess_command(base_cmd, additional_args)
 
         expected = ["python", "-m", "claude", "--verbose", "--debug"]
         assert result == expected
 
-    def test_prepare_subprocess_environment_basic(self):
+    def test_prepare_subprocess_environment_basic(self, service):
         """Test preparing basic subprocess environment."""
-        result = self.prepare_subprocess_environment()
+        result = service.prepare_subprocess_environment()
 
         # Should include current environment
         assert isinstance(result, dict)
@@ -67,11 +67,11 @@ class TestSubprocessLauncherService:
         # Should include some common environment variables
         assert any(key in result for key in ["PATH", "HOME", "USER"])
 
-    def test_prepare_subprocess_environment_with_base_env(self):
+    def test_prepare_subprocess_environment_with_base_env(self, service):
         """Test preparing subprocess environment with base environment."""
         base_env = {"CUSTOM_VAR": "custom_value", "PATH": "/custom/path"}
 
-        result = self.prepare_subprocess_environment(base_env)
+        result = service.prepare_subprocess_environment(base_env)
 
         # Should include custom variables
         assert result["CUSTOM_VAR"] == "custom_value"
@@ -181,10 +181,10 @@ class TestSubprocessLauncherService:
         # The actual implementation uses termios.TCSADRAIN (which is 1)
         mock_tcsetattr.assert_called_with(sys.stdin, 1, mock_original_tty)
 
-    @patch("select.select")
-    @patch("os.read")
     @patch("os.write")
-    def test_handle_subprocess_io(self, mock_read, mock_select, service):
+    @patch("os.read")
+    @patch("select.select")
+    def test_handle_subprocess_io(self, mock_select, mock_read, mock_write, service):
         """Test subprocess I/O handling."""
         master_fd = 10
         mock_process = Mock()
@@ -202,11 +202,11 @@ class TestSubprocessLauncherService:
 
         # Verify data was read and written
         mock_read.assert_called_with(master_fd, 4096)
-        self.assert_called_with(sys.stdout.fileno(), b"Hello from subprocess\n")
+        mock_write.assert_called_with(sys.stdout.fileno(), b"Hello from subprocess\n")
 
-    @patch("select.select")
     @patch("os.read")
-    def test_handle_subprocess_io_eof(self, mock_select, service):
+    @patch("select.select")
+    def test_handle_subprocess_io_eof(self, mock_select, mock_read, service):
         """Test subprocess I/O handling with EOF."""
         master_fd = 10
         mock_process = Mock()
@@ -216,16 +216,16 @@ class TestSubprocessLauncherService:
         mock_select.return_value = ([master_fd], [], [])
 
         # Mock EOF (empty read)
-        self.return_value = b""
+        mock_read.return_value = b""
 
         service._handle_subprocess_io(master_fd, mock_process)
 
         # Should break on EOF
-        self.assert_called_once_with(master_fd, 4096)
+        mock_read.assert_called_once_with(master_fd, 4096)
 
-    @patch("select.select")
     @patch("os.read")
-    def test_handle_subprocess_io_os_error(self, mock_select, service):
+    @patch("select.select")
+    def test_handle_subprocess_io_os_error(self, mock_select, mock_read, service):
         """Test subprocess I/O handling with OS error."""
         master_fd = 10
         mock_process = Mock()
@@ -235,12 +235,12 @@ class TestSubprocessLauncherService:
         mock_select.return_value = ([master_fd], [], [])
 
         # Mock OS error
-        self.side_effect = OSError("Broken pipe")
+        mock_read.side_effect = OSError("Broken pipe")
 
         service._handle_subprocess_io(master_fd, mock_process)
 
         # Should handle the error gracefully
-        self.assert_called_once_with(master_fd, 4096)
+        mock_read.assert_called_once_with(master_fd, 4096)
 
     @patch("pty.openpty")
     @patch("subprocess.Popen")

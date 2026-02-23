@@ -97,21 +97,37 @@ class TestBaseCommand:
         # Config should be None initially
         assert self.command._config is None
 
-        # Accessing config should create instance
-        config = self.command.config
+        # Accessing config should create instance (mocking ConfigLoader)
+        mock_config = Mock()
+        with patch(
+            "claude_mpm.cli.shared.base_command.ConfigLoader"
+        ) as mock_loader_class:
+            mock_loader = Mock()
+            mock_loader.load_main_config.return_value = mock_config
+            mock_loader_class.return_value = mock_loader
+
+            config = self.command.config
+
         assert config is not None
-        assert isinstance(config, Config)
+        assert config is mock_config
         assert self.command._config is config
 
-        # Second access should return same instance
+        # Second access should return same instance (no new ConfigLoader call)
         config2 = self.command.config
         assert config2 is config
 
     def test_working_dir_default(self):
         """Test working directory default behavior."""
-        with patch("os.getcwd", return_value="/test/dir"):
-            working_dir = self.command.working_dir
-            assert working_dir == Path("/test/dir")
+        import os
+
+        # Reset cached working dir
+        self.command._working_dir = None
+        # Remove CLAUDE_MPM_USER_PWD from env and patch Path.cwd
+        clean_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_MPM_USER_PWD"}
+        with patch.dict("os.environ", clean_env, clear=True):
+            with patch("pathlib.Path.cwd", return_value=Path("/test/dir")):
+                working_dir = self.command.working_dir
+        assert working_dir == Path("/test/dir")
 
     def test_working_dir_from_env(self):
         """Test working directory from environment variable."""
@@ -158,14 +174,20 @@ class TestBaseCommand:
         """Test configuration loading with default behavior."""
         args = Namespace()
 
-        # Mock the Config class instead of the property
-        with patch("claude_mpm.cli.shared.command_base.Config") as mock_config_class:
-            mock_config = Mock()
-            mock_config_class.return_value = mock_config
+        # load_config uses ConfigLoader internally (not Config directly)
+        mock_config = Mock()
+        with patch(
+            "claude_mpm.cli.shared.base_command.ConfigLoader"
+        ) as mock_loader_class:
+            mock_loader = Mock()
+            mock_loader.load_main_config.return_value = mock_config
+            mock_loader_class.return_value = mock_loader
 
             self.command.load_config(args)
-            # Should create config instance
+
+            # Should create config via ConfigLoader
             assert self.command._config is mock_config
+            mock_loader.load_main_config.assert_called_once()
 
     def test_load_config_with_file(self):
         """Test configuration loading with specific file."""
@@ -175,16 +197,19 @@ class TestBaseCommand:
 
             args = Namespace(config=Path(tmp.name))
 
-            # Mock Config to avoid actual file loading complexity
+            # load_config with a file uses ConfigLoader.load_config(pattern, ...)
+            mock_config = Mock()
             with patch(
-                "claude_mpm.cli.shared.command_base.Config"
-            ) as mock_config_class:
-                mock_config = Mock()
-                mock_config_class.return_value = mock_config
+                "claude_mpm.cli.shared.base_command.ConfigLoader"
+            ) as mock_loader_class:
+                mock_loader = Mock()
+                mock_loader.load_config.return_value = mock_config
+                mock_loader_class.return_value = mock_loader
 
                 self.command.load_config(args)
-                mock_config_class.assert_called_once_with(config_file=Path(tmp.name))
+
                 assert self.command._config is mock_config
+                mock_loader.load_config.assert_called_once()
 
     def test_execute_success(self):
         """Test successful command execution."""
@@ -257,8 +282,10 @@ class TestBaseCommand:
         """Test printing result to file."""
         result = CommandResult.success_result("Test success")
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
-            args = Namespace(format="json", output=tmp.name)
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tmp:
+            output_path = Path(tmp.name)
+            # output must be a Path (implementation calls args.output.open())
+            args = Namespace(format="json", output=output_path)
 
             with patch(
                 "claude_mpm.cli.shared.output_formatters.format_output"
@@ -268,7 +295,7 @@ class TestBaseCommand:
                 self.command.print_result(result, args)
 
                 # Verify file was written
-                with tmp.name.open() as f:
+                with output_path.open() as f:
                     content = f.read()
                     assert content == '{"success": true}'
 

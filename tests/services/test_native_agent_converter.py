@@ -236,6 +236,11 @@ class TestNativeAgentConverter:
         if not templates_dir.exists():
             pytest.skip("Templates directory not available")
 
+        # Check if any JSON files exist in the templates directory
+        json_files = list(templates_dir.glob("*.json"))
+        if not json_files:
+            pytest.skip("No JSON agent templates found in templates directory")
+
         agents = converter.load_agents_from_templates(templates_dir)
 
         assert isinstance(agents, list)

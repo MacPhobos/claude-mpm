@@ -129,6 +129,7 @@ dev = [
  "types-requests>=2.25.0",
  "pytest-xdist>=3.8.0",
  "playwright>=1.40.0",
+ "pytest-timeout>=2.4.0",
 ]
 
 [tool.mypy]

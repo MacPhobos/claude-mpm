@@ -20,61 +20,41 @@ import pytest
 
 
 class TestEventEmission:
-    """Test event emission through SocketIO and EventBus."""
+    """Test event emission through connection manager."""
 
     def test_emit_socketio_event_with_pool(self):
-        """Test event emission with connection pool."""
+        """Test event emission delegates to connection_manager."""
         from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
 
         handler = ClaudeHookHandler()
-        mock_pool = MagicMock()
-        handler.connection_pool = mock_pool
+        mock_conn_mgr = MagicMock()
+        handler.connection_manager = mock_conn_mgr
 
         data = {"test": "data", "sessionId": "test-123"}
         handler._emit_socketio_event("/hook", "test_event", data)
 
-        # Should emit mpm_event with normalized data
-        mock_pool.emit.assert_called_once()
-        call_args = mock_pool.emit.call_args
-        assert call_args[0][0] == "mpm_event"
-        emitted_data = call_args[0][1]
-        assert emitted_data["type"] == "hook"
-        assert emitted_data["subtype"] == "test_event"
+        # Should delegate to connection_manager.emit_event
+        mock_conn_mgr.emit_event.assert_called_once_with("/hook", "test_event", data)
 
-    @patch("src.claude_mpm.hooks.claude_hooks.hook_handler.EVENTBUS_AVAILABLE", True)
+    @pytest.mark.skip(
+        reason="EventBus removed - hook handler now uses HTTP connection manager"
+    )
     def test_emit_socketio_event_with_eventbus(self):
         """Test event emission with EventBus."""
-        from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
-
-        handler = ClaudeHookHandler()
-        mock_bus = MagicMock()
-        handler.event_bus = mock_bus
-        handler.connection_pool = None
-
-        data = {"test": "data"}
-        handler._emit_socketio_event("/hook", "test_event", data)
-
-        # Should publish to EventBus
-        mock_bus.publish.assert_called_once()
-        call_args = mock_bus.publish.call_args
-        assert call_args[0][0] == "hook.test_event"
 
     def test_emit_socketio_event_dual_emission(self):
-        """Test dual emission to both SocketIO and EventBus."""
+        """Test emission delegates to connection manager."""
         from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
 
         handler = ClaudeHookHandler()
-        mock_pool = MagicMock()
-        mock_bus = MagicMock()
-        handler.connection_pool = mock_pool
-        handler.event_bus = mock_bus
+        mock_conn_mgr = MagicMock()
+        handler.connection_manager = mock_conn_mgr
 
         data = {"test": "data"}
         handler._emit_socketio_event("/hook", "test_event", data)
 
-        # Should emit to both
-        mock_pool.emit.assert_called_once()
-        mock_bus.publish.assert_called_once()
+        # Should call connection_manager.emit_event once
+        mock_conn_mgr.emit_event.assert_called_once()
 
     def test_emit_socketio_event_error_handling(self):
         """Test error handling in event emission."""
@@ -141,7 +121,9 @@ class TestSubagentStopProcessing:
             "cwd": "/test/path",
         }
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             with patch.object(handler, "_get_git_branch", return_value="main"):
                 handler.handle_subagent_stop(event)
 
@@ -151,7 +133,7 @@ class TestSubagentStopProcessing:
         assert call_args[1]["agent_name"] == "research"
         assert "Research AI trends" in call_args[1]["request"]
 
-        # Check event emission
+        # Check event emission - args are (namespace, event_name, data)
         mock_emit.assert_called_once()
         emitted_data = mock_emit.call_args[0][2]
         assert (
@@ -183,14 +165,16 @@ class TestSubagentStopProcessing:
             "reason": "completed",
         }
 
-        # Setup mocks
-        handler.response_tracking_manager = MagicMock()
-        handler.response_tracking_manager.response_tracking_enabled = True
+        # Setup mocks - must update both handler and subagent_processor
+        mock_rtm = MagicMock()
+        mock_rtm.response_tracking_enabled = True
         mock_tracker = MagicMock()
         mock_tracker.track_response.return_value = Path("/logs/response.json")
-        handler.response_tracking_manager.response_tracker = mock_tracker
+        mock_rtm.response_tracker = mock_tracker
+        handler.response_tracking_manager = mock_rtm
+        handler.subagent_processor.response_tracking_manager = mock_rtm
 
-        with patch.object(handler, "_emit_socketio_event"):
+        with patch.object(handler.subagent_processor.connection_manager, "emit_event"):
             handler.handle_subagent_stop(event)
 
         # Check that fuzzy match worked - request data was used and then cleaned up
@@ -216,7 +200,9 @@ class TestSubagentStopProcessing:
             "output": f'```json\n{{"MEMORIES": {json.dumps(memories)}}}\n```',
         }
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             handler.handle_subagent_stop(event)
 
         emitted_data = mock_emit.call_args[0][2]
@@ -237,7 +223,9 @@ class TestSubagentStopProcessing:
             "reason": "completed",
         }
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             handler.handle_subagent_stop(event1)
             assert mock_emit.called
 
@@ -248,7 +236,9 @@ class TestSubagentStopProcessing:
             "reason": "timeout",
         }
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             handler.handle_subagent_stop(event2)
             assert mock_emit.called
 
@@ -259,7 +249,9 @@ class TestSubagentStopProcessing:
             "output": "```json\n{ invalid json }\n```",
         }
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             handler.handle_subagent_stop(event3)
             assert mock_emit.called
             # Should still emit but without structured_response
@@ -277,7 +269,9 @@ class TestSubagentStopProcessing:
             "task": "Research market trends and competitor analysis",
         }
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             handler.handle_subagent_stop(event)
 
         emitted_data = mock_emit.call_args[0][2]
@@ -290,7 +284,9 @@ class TestSubagentStopProcessing:
             "task": "Refactor code base",
         }
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             handler.handle_subagent_stop(event2)
 
         emitted_data = mock_emit.call_args[0][2]

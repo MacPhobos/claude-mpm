@@ -271,10 +271,12 @@ class TestGitSkillSourceManager:
 
     def test_get_all_skills_with_skills(self, manager, temp_cache_dir):
         """Test get_all_skills returns skills from cache."""
-        # Create skill files in cache
+        # Create skill files in cache using SKILL.md convention in subdirectories
         for source_id in ["system", "custom"]:
             source_dir = temp_cache_dir / source_id
-            source_dir.mkdir(parents=True)
+            # Create skill in subdirectory (e.g. source_dir/my-skill/SKILL.md)
+            skill_subdir = source_dir / f"test-skill-{source_id}"
+            skill_subdir.mkdir(parents=True)
 
             skill_content = f"""---
 name: Skill from {source_id}
@@ -283,7 +285,7 @@ description: Test skill
 
 Content
 """
-            (source_dir / "skill.md").write_text(skill_content, encoding="utf-8")
+            (skill_subdir / "SKILL.md").write_text(skill_content, encoding="utf-8")
 
         skills = manager.get_all_skills()
 
@@ -319,9 +321,10 @@ Content from {source_id}
 
     def test_get_skills_by_source(self, manager, temp_cache_dir):
         """Test get_skills_by_source returns skills from specific source."""
-        # Create skill in system cache
+        # Create skill in system cache using proper SKILL.md in subdirectory
         system_dir = temp_cache_dir / "system"
-        system_dir.mkdir(parents=True)
+        skill_subdir = system_dir / "test-system-skill"
+        skill_subdir.mkdir(parents=True)
 
         skill_content = """---
 name: System Skill
@@ -330,7 +333,7 @@ description: Test
 
 Content
 """
-        (system_dir / "skill.md").write_text(skill_content, encoding="utf-8")
+        (skill_subdir / "SKILL.md").write_text(skill_content, encoding="utf-8")
 
         skills = manager.get_skills_by_source("system")
 

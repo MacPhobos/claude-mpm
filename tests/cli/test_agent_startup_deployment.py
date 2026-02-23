@@ -24,29 +24,53 @@ class TestAgentStartupDeployment:
 
         This test verifies the fix for the critical bug where agents were synced
         to cache but never deployed to the target directory.
+        NOTE: Implementation now uses perform_startup_reconciliation instead of
+        AgentDeploymentService directly.
         """
         from claude_mpm.cli.startup import sync_remote_agents_on_startup
+        from claude_mpm.services.agents.deployment.deployment_reconciler import (
+            DeploymentResult,
+        )
 
         with ExitStack() as stack:
             mock_sync_agents = stack.enter_context(
                 patch("claude_mpm.services.agents.startup_sync.sync_agents_on_startup")
             )
-            mock_deployment_service_class = stack.enter_context(
+            mock_reconcile = stack.enter_context(
                 patch(
-                    "claude_mpm.services.agents.deployment.agent_deployment.AgentDeploymentService"
+                    "claude_mpm.services.agents.deployment.startup_reconciliation.perform_startup_reconciliation",
+                    return_value=(
+                        DeploymentResult(
+                            deployed=["agent1", "agent2", "agent3"],
+                            removed=[],
+                            unchanged=[],
+                            errors=[],
+                        ),
+                        DeploymentResult(
+                            deployed=[], removed=[], unchanged=[], errors=[]
+                        ),
+                    ),
                 )
             )
             mock_progress_bar = stack.enter_context(
                 patch("claude_mpm.utils.progress.ProgressBar")
             )
+            # Mock ConfigLoader to return config with no active_profile
+            mock_config_loader = stack.enter_context(
+                patch("claude_mpm.core.shared.config_loader.ConfigLoader")
+            )
+            mock_main_config = MagicMock()
+            mock_main_config.get.return_value = None
+            mock_config_loader.return_value.load_main_config.return_value = (
+                mock_main_config
+            )
             tmp_dir = stack.enter_context(tempfile.TemporaryDirectory())
             # Setup mocks
             tmp_path = Path(tmp_dir)
-            cache_dir = tmp_path / ".claude-mpm" / "cache" / "remote-agents"
+            cache_dir = tmp_path / ".claude-mpm" / "cache" / "agents"
             cache_dir.mkdir(parents=True)
 
             # Create some agent MD files in cache to simulate synced agents
-            # Note: Code counts .md files, not .json files
             (cache_dir / "agent1.md").write_text("# Agent 1")
             (cache_dir / "agent2.md").write_text("# Agent 2")
             (cache_dir / "agent3.md").write_text("# Agent 3")
@@ -61,19 +85,6 @@ class TestAgentStartupDeployment:
                 "duration_ms": 1000,
             }
 
-            # Mock deployment service (Phase 2)
-            mock_deployment_service = MagicMock()
-            mock_deployment_service_class.return_value = mock_deployment_service
-
-            # Mock deploy_agents to return successful deployment
-            mock_deployment_service.deploy_agents.return_value = {
-                "deployed": ["agent1", "agent2"],
-                "updated": ["agent3"],
-                "skipped": [],
-                "errors": [],
-                "total": 3,
-            }
-
             # Mock progress bar
             mock_progress_instance = MagicMock()
             mock_progress_bar.return_value = mock_progress_instance
@@ -86,21 +97,8 @@ class TestAgentStartupDeployment:
                 # CRITICAL VERIFICATION: Phase 1 (Sync) was called
                 mock_sync_agents.assert_called_once()
 
-                # CRITICAL VERIFICATION: Phase 2 (Deployment) was called
-                # This is the bug fix - deployment service should be instantiated
-                mock_deployment_service_class.assert_called_once()
-
-                # CRITICAL VERIFICATION: deploy_agents was called with correct params
-                mock_deployment_service.deploy_agents.assert_called_once()
-
-                # Verify deployment was called with correct target directory
-                call_kwargs = mock_deployment_service.deploy_agents.call_args[1]
-                assert "target_dir" in call_kwargs
-                assert str(call_kwargs["target_dir"]).endswith(".claude/agents")
-
-                # Verify deployment mode is correct (version-aware updates)
-                assert call_kwargs["deployment_mode"] == "update"
-                assert call_kwargs["force_rebuild"] is False
+                # CRITICAL VERIFICATION: Phase 2 (Deployment via reconciliation) was called
+                mock_reconcile.assert_called_once()
 
                 # CRITICAL VERIFICATION: Progress bar was created for deployment
                 assert mock_progress_bar.called
@@ -147,18 +145,26 @@ class TestAgentStartupDeployment:
             mock_sync_agents = stack.enter_context(
                 patch("claude_mpm.services.agents.startup_sync.sync_agents_on_startup")
             )
-            mock_deployment_service_class = stack.enter_context(
+            # Mock the new reconciliation function to raise an exception
+            mock_reconcile = stack.enter_context(
                 patch(
-                    "claude_mpm.services.agents.deployment.agent_deployment.AgentDeploymentService"
+                    "claude_mpm.services.agents.deployment.startup_reconciliation.perform_startup_reconciliation",
+                    side_effect=Exception("Reconciliation failed"),
                 )
             )
-            mock_progress_bar = stack.enter_context(
-                patch("claude_mpm.utils.progress.ProgressBar")
+            # Mock ConfigLoader to return config with no active_profile
+            mock_config_loader = stack.enter_context(
+                patch("claude_mpm.core.shared.config_loader.ConfigLoader")
+            )
+            mock_main_config = MagicMock()
+            mock_main_config.get.return_value = None
+            mock_config_loader.return_value.load_main_config.return_value = (
+                mock_main_config
             )
             tmp_dir = stack.enter_context(tempfile.TemporaryDirectory())
             # Setup mocks
             tmp_path = Path(tmp_dir)
-            cache_dir = tmp_path / ".claude-mpm" / "cache" / "remote-agents"
+            cache_dir = tmp_path / ".claude-mpm" / "cache" / "agents"
             cache_dir.mkdir(parents=True)
 
             # Create agent in cache
@@ -174,17 +180,6 @@ class TestAgentStartupDeployment:
                 "duration_ms": 500,
             }
 
-            # Mock deployment service to raise exception
-            mock_deployment_service = MagicMock()
-            mock_deployment_service_class.return_value = mock_deployment_service
-            mock_deployment_service.deploy_agents.side_effect = Exception(
-                "Deployment failed"
-            )
-
-            # Mock progress bar
-            mock_progress_instance = MagicMock()
-            mock_progress_bar.return_value = mock_progress_instance
-
             # Mock Path.home()
             with patch("pathlib.Path.home", return_value=tmp_path):
                 # Run the function - should NOT raise exception
@@ -193,36 +188,60 @@ class TestAgentStartupDeployment:
                 # Verify sync was attempted
                 mock_sync_agents.assert_called_once()
 
-                # Deployment was attempted but failed gracefully
-                mock_deployment_service_class.assert_called_once()
-                mock_deployment_service.deploy_agents.assert_called_once()
+                # Reconciliation was attempted but failed gracefully
+                mock_reconcile.assert_called_once()
 
     def test_sync_remote_agents_skips_deployment_if_no_agents_in_cache(self):
-        """Verify deployment is skipped if cache is empty."""
+        """Verify reconciliation is called even if cache is empty (reconciler handles empty case).
+
+        NOTE: With the new reconciliation-based approach, perform_startup_reconciliation
+        IS called when sync succeeds (sources_synced > 0). The reconciler internally
+        handles the case where the cache is empty.
+        """
         from claude_mpm.cli.startup import sync_remote_agents_on_startup
+        from claude_mpm.services.agents.deployment.deployment_reconciler import (
+            DeploymentResult,
+        )
 
         with ExitStack() as stack:
             mock_sync_agents = stack.enter_context(
                 patch("claude_mpm.services.agents.startup_sync.sync_agents_on_startup")
             )
-            mock_deployment_service_class = stack.enter_context(
+            mock_reconcile = stack.enter_context(
                 patch(
-                    "claude_mpm.services.agents.deployment.agent_deployment.AgentDeploymentService"
+                    "claude_mpm.services.agents.deployment.startup_reconciliation.perform_startup_reconciliation",
+                    return_value=(
+                        DeploymentResult(
+                            deployed=[], removed=[], unchanged=[], errors=[]
+                        ),
+                        DeploymentResult(
+                            deployed=[], removed=[], unchanged=[], errors=[]
+                        ),
+                    ),
                 )
+            )
+            # Mock ConfigLoader to return config with no active_profile
+            mock_config_loader = stack.enter_context(
+                patch("claude_mpm.core.shared.config_loader.ConfigLoader")
+            )
+            mock_main_config = MagicMock()
+            mock_main_config.get.return_value = None
+            mock_config_loader.return_value.load_main_config.return_value = (
+                mock_main_config
             )
             tmp_dir = stack.enter_context(tempfile.TemporaryDirectory())
             # Setup mocks
             tmp_path = Path(tmp_dir)
-            cache_dir = tmp_path / ".claude-mpm" / "cache" / "remote-agents"
+            cache_dir = tmp_path / ".claude-mpm" / "cache" / "agents"
             cache_dir.mkdir(parents=True)
 
             # Cache directory exists but is EMPTY
 
-            # Mock sync returning success
+            # Mock sync returning success with sources_synced=1
             mock_sync_agents.return_value = {
                 "enabled": True,
                 "sources_synced": 1,
-                "total_downloaded": 0,  # No downloads
+                "total_downloaded": 0,  # No downloads but sources synced
                 "cache_hits": 0,
                 "errors": [],
                 "duration_ms": 200,
@@ -236,37 +255,60 @@ class TestAgentStartupDeployment:
                 # Verify sync was attempted
                 mock_sync_agents.assert_called_once()
 
-                # Deployment service IS instantiated, but deploy_agents should NOT be called
-                # if cache is empty (no agents to deploy)
-                mock_deployment_service_class.assert_called_once()
-                mock_deployment_service_class.return_value.deploy_agents.assert_not_called()
+                # Reconciliation IS called (sources_synced > 0) even with empty cache
+                mock_reconcile.assert_called_once()
 
     def test_sync_remote_agents_displays_deployment_errors_to_user(self):
-        """Verify deployment errors are displayed to the user, not just logged.
+        """Verify deployment errors are displayed to the user when on a TTY.
 
-        This test verifies the fix for the issue where deployment errors were
-        logged but never shown to the user, making it appear that everything
-        succeeded when in fact all agents failed to deploy.
+        The new implementation shows errors via print() only when sys.stdout.isatty()
+        returns True. Errors are stored in agent_result.errors (DeploymentResult).
         """
         from claude_mpm.cli.startup import sync_remote_agents_on_startup
+        from claude_mpm.services.agents.deployment.deployment_reconciler import (
+            DeploymentResult,
+        )
 
         with ExitStack() as stack:
             mock_sync_agents = stack.enter_context(
                 patch("claude_mpm.services.agents.startup_sync.sync_agents_on_startup")
             )
-            mock_deployment_service_class = stack.enter_context(
+            # Mock reconciliation to return errors
+            mock_reconcile = stack.enter_context(
                 patch(
-                    "claude_mpm.services.agents.deployment.agent_deployment.AgentDeploymentService"
+                    "claude_mpm.services.agents.deployment.startup_reconciliation.perform_startup_reconciliation",
+                    return_value=(
+                        DeploymentResult(
+                            deployed=[],
+                            removed=[],
+                            unchanged=[],
+                            errors=[
+                                "agent1.md: Failed to parse template: JSONDecodeError",
+                                "agent2.md: Failed to parse template: Invalid frontmatter",
+                            ],
+                        ),
+                        DeploymentResult(
+                            deployed=[], removed=[], unchanged=[], errors=[]
+                        ),
+                    ),
                 )
             )
-            mock_progress_bar = stack.enter_context(
-                patch("claude_mpm.utils.progress.ProgressBar")
+            # Mock ConfigLoader to return config with no active_profile
+            mock_config_loader = stack.enter_context(
+                patch("claude_mpm.core.shared.config_loader.ConfigLoader")
             )
+            mock_main_config = MagicMock()
+            mock_main_config.get.return_value = None
+            mock_config_loader.return_value.load_main_config.return_value = (
+                mock_main_config
+            )
+            # Mock isatty to return True so errors are printed
+            stack.enter_context(patch("sys.stdout.isatty", return_value=True))
             mock_print = stack.enter_context(patch("builtins.print"))
             tmp_dir = stack.enter_context(tempfile.TemporaryDirectory())
             # Setup mocks
             tmp_path = Path(tmp_dir)
-            cache_dir = tmp_path / ".claude-mpm" / "cache" / "remote-agents"
+            cache_dir = tmp_path / ".claude-mpm" / "cache" / "agents"
             cache_dir.mkdir(parents=True)
 
             # Create agent files in cache
@@ -283,39 +325,20 @@ class TestAgentStartupDeployment:
                 "duration_ms": 500,
             }
 
-            # Mock deployment service to return errors
-            mock_deployment_service = MagicMock()
-            mock_deployment_service_class.return_value = mock_deployment_service
-
-            # Simulate deployment with errors
-            mock_deployment_service.deploy_agents.return_value = {
-                "deployed": [],
-                "updated": [],
-                "skipped": [],
-                "errors": [
-                    "agent1.md: Failed to parse template: JSONDecodeError",
-                    "agent2.md: Failed to parse template: Invalid frontmatter",
-                ],
-                "total": 2,
-            }
-
-            # Mock progress bar
-            mock_progress_instance = MagicMock()
-            mock_progress_bar.return_value = mock_progress_instance
-
             # Mock Path.home()
             with patch("pathlib.Path.home", return_value=tmp_path):
                 # Run the function
                 sync_remote_agents_on_startup()
 
                 # CRITICAL VERIFICATION: Errors should be displayed to user via print()
-                # Check that print was called with error messages
                 print_calls = [str(call) for call in mock_print.call_args_list]
-                print_output = "\n".join(print_calls)
 
-                # Verify error header is displayed
+                # Verify reconciliation was called (errors come from reconciler)
+                mock_reconcile.assert_called_once()
+
+                # Verify error header is displayed (only when isatty=True)
                 assert any("Agent Deployment Errors" in call for call in print_calls), (
-                    "Error header not displayed to user"
+                    f"Error header not displayed to user. Print calls: {print_calls}"
                 )
 
                 # Verify specific errors are shown

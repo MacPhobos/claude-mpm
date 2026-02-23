@@ -263,8 +263,14 @@ Co-Authored-By: skills-manager <noreply@anthropic.com>
         if "(" not in type_scope or ")" not in type_scope:
             return False
 
-        # Extract type
+        # Extract type and scope
         commit_type = type_scope.split("(")[0].strip()
+        scope_match = type_scope[len(commit_type) :]
+        # Verify scope is not empty (e.g., "feat()" is invalid)
+        if scope_match.startswith("(") and scope_match.endswith(")"):
+            scope = scope_match[1:-1].strip()
+            if not scope:
+                return False
 
         # Validate type is recognized
         if commit_type not in self.COMMIT_TYPES:

@@ -22,24 +22,11 @@ import pytest
 class TestConnectionManagement:
     """Test SocketIO and EventBus connection management."""
 
-    @patch("src.claude_mpm.hooks.claude_hooks.hook_handler.get_connection_pool")
-    @patch("src.claude_mpm.hooks.claude_hooks.hook_handler.EventBus")
-    @patch("src.claude_mpm.hooks.claude_hooks.hook_handler.EVENTBUS_AVAILABLE", True)
-    def test_connection_pool_initialization(self, mock_eventbus, mock_get_pool):
+    @pytest.mark.skip(
+        reason="Connection pool and EVENTBUS_AVAILABLE removed - hook handler uses HTTP connection manager"
+    )
+    def test_connection_pool_initialization(self):
         """Test SocketIO connection pool initialization."""
-        from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
-
-        mock_pool = MagicMock()
-        mock_get_pool.return_value = mock_pool
-        mock_bus = MagicMock()
-        mock_eventbus.get_instance.return_value = mock_bus
-
-        handler = ClaudeHookHandler()
-
-        assert handler.connection_pool == mock_pool
-        assert handler.event_bus == mock_bus
-        mock_get_pool.assert_called_once()
-        mock_eventbus.get_instance.assert_called_once()
 
     @patch("src.claude_mpm.hooks.claude_hooks.hook_handler.get_connection_pool")
     def test_connection_pool_initialization_failure(self, mock_get_pool):
@@ -52,17 +39,11 @@ class TestConnectionManagement:
 
         assert handler.connection_pool is None
 
-    @patch("src.claude_mpm.hooks.claude_hooks.hook_handler.EventBus")
-    @patch("src.claude_mpm.hooks.claude_hooks.hook_handler.EVENTBUS_AVAILABLE", True)
-    def test_eventbus_initialization_failure(self, mock_eventbus):
+    @pytest.mark.skip(
+        reason="EventBus and EVENTBUS_AVAILABLE removed - hook handler uses HTTP connection manager"
+    )
+    def test_eventbus_initialization_failure(self):
         """Test handling of EventBus initialization failure."""
-        from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
-
-        mock_eventbus.get_instance.side_effect = Exception("EventBus failed")
-
-        handler = ClaudeHookHandler()
-
-        assert handler.event_bus is None
 
     @patch("src.claude_mpm.hooks.claude_hooks.hook_handler._global_handler", None)
     @patch(
@@ -86,14 +67,14 @@ class TestConnectionManagement:
         """Test cleanup when handler is destroyed."""
         from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
 
-        mock_pool = MagicMock()
         handler = ClaudeHookHandler()
-        handler.connection_pool = mock_pool
+        mock_manager = MagicMock()
+        handler.connection_manager = mock_manager
 
         # Trigger __del__
         handler.__del__()
 
-        mock_pool.cleanup.assert_called_once()
+        mock_manager.cleanup.assert_called_once()
 
 
 class TestStateManagement:
@@ -201,9 +182,9 @@ class TestStateManagement:
         assert branch2 == "main"
         assert mock_run.call_count == 1  # Still 1, not called again
 
-        # Expire the cache
-        handler._git_branch_cache_time["/test/path"] = (
-            datetime.now(timezone.utc).timestamp() - 40
+        # Expire the cache - it lives in state_manager now
+        handler.state_manager._git_branch_cache_time["/test/path"] = (
+            datetime.now(timezone.utc).timestamp() - 400
         )
 
         # Third call should execute git command again
@@ -211,32 +192,8 @@ class TestStateManagement:
         assert branch3 == "main"
         assert mock_run.call_count == 2
 
+    @pytest.mark.skip(
+        reason="_cleanup_old_entries removed - cleanup now handled by state_manager"
+    )
     def test_cleanup_old_entries(self):
         """Test cleanup of old entries from various stores."""
-        from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
-
-        handler = ClaudeHookHandler()
-
-        # Add entries exceeding max limits
-        for i in range(250):
-            handler.active_delegations[f"session-{i}"] = f"agent-{i}"
-            handler.delegation_requests[f"session-{i}"] = {"data": i}
-
-        for i in range(150):
-            handler.pending_prompts[f"prompt-{i}"] = {"prompt": f"test-{i}"}
-
-        # Add old git branch cache entries
-        old_time = datetime.now(timezone.utc).timestamp() - 400
-        handler._git_branch_cache["old-path"] = "old-branch"
-        handler._git_branch_cache_time["old-path"] = old_time
-
-        handler._cleanup_old_entries()
-
-        # Check that storage was trimmed to max sizes
-        assert len(handler.active_delegations) <= handler.MAX_DELEGATION_TRACKING
-        assert len(handler.delegation_requests) <= handler.MAX_DELEGATION_TRACKING
-        assert len(handler.pending_prompts) <= handler.MAX_PROMPT_TRACKING
-
-        # Check that old git cache was removed
-        assert "old-path" not in handler._git_branch_cache
-        assert "old-path" not in handler._git_branch_cache_time

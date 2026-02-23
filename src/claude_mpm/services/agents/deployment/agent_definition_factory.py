@@ -4,12 +4,13 @@ This module provides factory functionality for creating AgentDefinition objects
 from lifecycle manager parameters. Extracted to reduce complexity.
 """
 
-from claude_mpm.core.enums import AgentType, ModificationTier
 from claude_mpm.models.agent_definition import (
     AgentDefinition,
     AgentMetadata,
     AgentPermissions,
+    AgentType,
 )
+from claude_mpm.services.agents.registry.modification_tracker import ModificationTier
 
 
 class AgentDefinitionFactory:

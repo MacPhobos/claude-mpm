@@ -198,7 +198,7 @@ class AgentLifecycleManager(BaseService):
             self.shared_cache = SharedPromptCache.get_instance()
 
             # Initialize AgentRegistry
-            self.agent_registry = AgentRegistry(cache_service=self.shared_cache)
+            self.agent_registry = AgentRegistry()
 
             # Initialize AgentModificationTracker
             self.modification_tracker = AgentModificationTracker()
@@ -250,7 +250,9 @@ class AgentLifecycleManager(BaseService):
         """Save agent lifecycle records to disk."""
         try:
             records_file = (
-                get_path_manager().get_tracking_dir() / "lifecycle_records.json"
+                get_path_manager().get_cache_dir()
+                / "tracking"
+                / "lifecycle_records.json"
             )
             path_ops.ensure_dir(records_file.parent)
 
@@ -753,7 +755,7 @@ class AgentLifecycleManager(BaseService):
             if not path_ops.validate_exists(source_path):
                 return None
 
-            backup_dir = get_path_manager().get_tracking_dir() / "backups"
+            backup_dir = get_path_manager().get_cache_dir() / "tracking" / "backups"
             path_ops.ensure_dir(backup_dir)
 
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")

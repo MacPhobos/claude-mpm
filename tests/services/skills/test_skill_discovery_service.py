@@ -479,7 +479,7 @@ Content
 
     def test_discover_skills_ignores_non_markdown_files(self, service, temp_skills_dir):
         """Test that discovery ignores non-.md files."""
-        # Create valid skill
+        # Create valid skill (use non-excluded name)
         skill_content = """---
 name: Test
 description: Test
@@ -487,7 +487,9 @@ description: Test
 
 Content
 """
-        (temp_skills_dir / "skill.md").write_text(skill_content, encoding="utf-8")
+        (temp_skills_dir / "my-test-skill.md").write_text(
+            skill_content, encoding="utf-8"
+        )
 
         # Create non-markdown files
         (temp_skills_dir / "README.txt").write_text("readme", encoding="utf-8")

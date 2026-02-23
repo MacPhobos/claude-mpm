@@ -26,10 +26,12 @@ class TestDuplicateDetection:
         """Test detection of duplicate events."""
         from src.claude_mpm.hooks.claude_hooks import hook_handler
 
-        # Reset recent events
-        hook_handler._recent_events = deque(maxlen=10)
-
         handler = hook_handler.ClaudeHookHandler()
+
+        # Reset recent events in duplicate_detector (where they now live)
+        detector = handler.duplicate_detector
+        with detector._events_lock:
+            detector._recent_events.clear()
 
         event = {
             "hook_event_name": "PreToolUse",
@@ -40,14 +42,14 @@ class TestDuplicateDetection:
         event_key = handler._get_event_key(event)
         current_time = time.time()
 
-        # Add to recent events
-        with hook_handler._events_lock:
-            hook_handler._recent_events.append((event_key, current_time))
+        # Add to recent events (in duplicate_detector)
+        with detector._events_lock:
+            detector._recent_events.append((event_key, current_time))
 
         # Check duplicate within 100ms window
-        with hook_handler._events_lock:
+        with detector._events_lock:
             is_dup = False
-            for recent_key, recent_time in hook_handler._recent_events:
+            for recent_key, recent_time in detector._recent_events:
                 if recent_key == event_key and (current_time - recent_time) < 0.1:
                     is_dup = True
                     break
@@ -57,9 +59,9 @@ class TestDuplicateDetection:
         # Check non-duplicate after 100ms
         time.sleep(0.11)
         current_time = time.time()
-        with hook_handler._events_lock:
+        with detector._events_lock:
             is_dup = False
-            for recent_key, recent_time in hook_handler._recent_events:
+            for recent_key, recent_time in detector._recent_events:
                 if recent_key == event_key and (current_time - recent_time) < 0.1:
                     is_dup = True
                     break

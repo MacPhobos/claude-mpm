@@ -90,6 +90,10 @@ class TestCommandSeparation(unittest.TestCase):
         for term in forbidden_terms:
             self.assertNotIn(term, source, f"run.py should not reference '{term}'")
 
+    @unittest.skip(
+        "run_guarded.py has been removed from the codebase - "
+        "memory guardian feature was discontinued"
+    )
     def test_run_guarded_extends_claude_runner(self):
         """Test that run-guarded properly extends ClaudeRunner.
 
@@ -119,6 +123,10 @@ class TestCommandSeparation(unittest.TestCase):
             "run_guarded.py should not directly import ClaudeRunner (uses MemoryAwareClaudeRunner instead)",
         )
 
+    @unittest.skip(
+        "run_guarded.py has been removed from the codebase - "
+        "memory guardian feature was discontinued"
+    )
     def test_experimental_warning_shown(self):
         """Test that experimental warning is shown for run-guarded.
 
@@ -141,6 +149,10 @@ class TestCommandSeparation(unittest.TestCase):
             "run_guarded.py should use experimental features configuration",
         )
 
+    @unittest.skip(
+        "run-guarded command and EXPERIMENTAL marking in parser.py have been removed - "
+        "memory guardian feature was discontinued and parser.py was refactored"
+    )
     def test_parser_marks_run_guarded_as_experimental(self):
         """Test that the parser marks run-guarded as experimental.
 
@@ -228,28 +240,30 @@ class TestCommandSeparation(unittest.TestCase):
         exp_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(exp_module)
 
-        # Create config with memory guardian disabled
+        # Create config with mcp_gateway disabled (uses enable_mcp_gateway key)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"experimental_features": {"enable_memory_guardian": False}}, f)
+            json.dump({"experimental_features": {"enable_mcp_gateway": False}}, f)
             config_file = Path(f.name)
 
         try:
             # Test with feature disabled
             features = exp_module.ExperimentalFeatures(config_file)
             self.assertFalse(
-                features.is_enabled("memory_guardian"),
-                "Memory Guardian should be disabled by default",
+                features.is_enabled("mcp_gateway"),
+                "MCP Gateway should be disabled when set to False",
             )
 
-            # Test warning should be shown
+            # Test warning should be shown (warnings enabled by default)
             self.assertTrue(
-                features.should_show_warning("memory_guardian"),
+                features.should_show_warning("mcp_gateway"),
                 "Warning should be shown for experimental features",
             )
 
-            # Test warning message exists
-            warning = features.get_warning("memory_guardian")
-            self.assertIsNotNone(warning, "Warning message should exist")
+            # Test warning message exists for mcp_gateway (defined in WARNINGS dict)
+            warning = features.get_warning("mcp_gateway")
+            self.assertIsNotNone(
+                warning, "Warning message should exist for mcp_gateway"
+            )
             self.assertIn(
                 "EXPERIMENTAL", warning, "Warning should mention experimental status"
             )

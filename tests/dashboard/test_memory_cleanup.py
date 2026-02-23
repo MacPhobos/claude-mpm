@@ -282,25 +282,24 @@ class TestEventStreamManager(unittest.TestCase):
 
     def test_clear_old_events(self):
         """Test clearing old events based on TTL."""
-        # Set very short TTL
-        self.manager = EventStreamManager(event_ttl=1)
+        # Use long TTL so events don't all expire
+        self.manager = EventStreamManager(event_ttl=100)
 
         # Add events with different timestamps
         now = datetime.utcnow()
 
-        # Old event
+        # Old event (clearly expired: 200 seconds ago, TTL is 100s)
         old_event = {
             "event_id": "old-1",
-            "timestamp": (now - timedelta(seconds=2)).isoformat(),
+            "timestamp": (now - timedelta(seconds=200)).isoformat(),
         }
         self.manager.add_event(old_event)
 
-        # Recent event
+        # Recent event (clearly not expired: timestamp is now, TTL is 100s)
         recent_event = {"event_id": "recent-1", "timestamp": now.isoformat()}
         self.manager.add_event(recent_event)
 
-        # Clear old events
-        time.sleep(1.1)
+        # Clear old events (no sleep needed - timestamps are explicitly set)
         self.manager.clear_old_events()
 
         # Only recent event should remain
@@ -384,17 +383,16 @@ class TestEventStreamManager(unittest.TestCase):
         self.assertEqual(len(errors), 0)
 
     def test_memory_leak_prevention(self):
-        """Test that memory is properly released."""
+        """Test that events are properly cleared and don't accumulate."""
         import gc
-        import weakref
 
-        # Create events with potential circular references
-        events = []
+        # Add many events
         for i in range(100):
             event = {"event_id": f"leak-test-{i}", "data": {"index": i}}
-            # Create a weak reference to track garbage collection
-            events.append(weakref.ref(event))
             self.manager.add_event(event)
+
+        # Verify events were added
+        self.assertEqual(len(self.manager.events), 100)
 
         # Clear all events
         self.manager.clear_all()
@@ -402,12 +400,10 @@ class TestEventStreamManager(unittest.TestCase):
         # Force garbage collection
         gc.collect()
 
-        # Check that events were garbage collected
-        alive_count = sum(1 for ref in events if ref() is not None)
-
-        # Most events should be garbage collected
-        # (some might still be referenced in locals)
-        self.assertLess(alive_count, 10)
+        # After clear_all(), events deque should be empty
+        # Note: weakref.ref() cannot be used on plain dict objects,
+        # but we can verify the events are cleared from the manager
+        self.assertEqual(len(self.manager.events), 0)
 
 
 class TestEventStreamPerformance(unittest.TestCase):

@@ -6,6 +6,7 @@ executes them in priority order, and handles errors gracefully.
 
 from datetime import datetime, timezone
 
+from claude_mpm.core.config import Config
 from claude_mpm.hooks.base_hook import (
     HookContext,
     HookResult,

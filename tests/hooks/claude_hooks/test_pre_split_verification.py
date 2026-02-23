@@ -20,6 +20,9 @@ from pathlib import Path
 import pytest
 
 
+@pytest.mark.skip(
+    reason="test_hook_handler_comprehensive.py was already split - these pre-split verification tests are obsolete"
+)
 class TestPreSplitVerification:
     """Verification tests to run before splitting test_hook_handler_comprehensive.py."""
 
