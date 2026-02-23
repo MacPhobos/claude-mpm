@@ -12,6 +12,8 @@ This test suite verifies that the memory system correctly:
 
 from pathlib import Path
 
+import pytest
+
 from claude_mpm.services.agents.memory.agent_memory_manager import AgentMemoryManager
 from claude_mpm.services.agents.memory.content_manager import MemoryContentManager
 
@@ -21,19 +23,17 @@ def test_exact_duplicate_prevention(tmp_path):
     tmpdir = tmp_path
     manager = AgentMemoryManager(working_directory=Path(tmpdir))
 
-    # Add initial item
+    # Add initial item (new API: takes list of items, no section param)
     success = manager.update_agent_memory(
         "test_agent",
-        "Recent Learnings",
-        "Always validate user input before processing",
+        ["Always validate user input before processing"],
     )
     assert success, "Failed to add initial memory"
 
     # Try to add exact duplicate
     success = manager.update_agent_memory(
         "test_agent",
-        "Recent Learnings",
-        "Always validate user input before processing",
+        ["Always validate user input before processing"],
     )
     assert success, "Failed to process duplicate"
 
@@ -45,6 +45,9 @@ def test_exact_duplicate_prevention(tmp_path):
     print("✓ Exact duplicate prevention works")
 
 
+@pytest.mark.skip(
+    reason="NLP similarity-based deduplication removed from new API; update_agent_memory now uses exact (case-insensitive) matching only - two distinct strings are both kept"
+)
 def test_similar_item_replacement(tmp_path):
     """Test that similar items (>80% similarity) replace old ones."""
     tmpdir = tmp_path
@@ -61,19 +64,17 @@ def test_similar_item_replacement(tmp_path):
     memory_file = manager.memories_dir / "test_agent_memories.md"
     memory_file.write_text(simple_memory, encoding="utf-8")
 
-    # Add initial item
+    # Add initial item (new API: takes list of items, no section param)
     success = manager.update_agent_memory(
         "test_agent",
-        "Implementation Guidelines",
-        "Use async/await for all database operations",
+        ["Use async/await for all database operations"],
     )
     assert success, "Failed to add initial memory"
 
     # Add similar item with slight variation
     success = manager.update_agent_memory(
         "test_agent",
-        "Implementation Guidelines",
-        "Use async/await for all database operations and queries",
+        ["Use async/await for all database operations and queries"],
     )
     assert success, "Failed to add similar item"
 
@@ -111,19 +112,17 @@ def test_different_items_preserved(tmp_path):
     tmpdir = tmp_path
     manager = AgentMemoryManager(working_directory=Path(tmpdir))
 
-    # Add first item
+    # Add first item (new API: takes list of items, no section param)
     success = manager.update_agent_memory(
         "test_agent",
-        "Common Mistakes to Avoid",
-        "Never use mutable default arguments in Python functions",
+        ["Never use mutable default arguments in Python functions"],
     )
     assert success, "Failed to add first item"
 
     # Add different item (low similarity)
     success = manager.update_agent_memory(
         "test_agent",
-        "Common Mistakes to Avoid",
-        "Always close database connections properly to avoid leaks",
+        ["Always close database connections properly to avoid leaks"],
     )
     assert success, "Failed to add second item"
 
@@ -135,24 +134,27 @@ def test_different_items_preserved(tmp_path):
     print("✓ Different items are preserved")
 
 
+@pytest.mark.skip(
+    reason="NLP substring-based similarity detection removed from new API; update_agent_memory now uses exact (case-insensitive) matching only - substring variants are both kept"
+)
 def test_substring_similarity_detection(tmp_path):
     """Test that substring matches are detected as similar."""
     tmpdir = tmp_path
     manager = AgentMemoryManager(working_directory=Path(tmpdir))
 
-    # Add longer item first
+    # Add longer item first (new API: takes list of items, no section param)
     success = manager.update_agent_memory(
         "test_agent",
-        "Project Architecture",
-        "The authentication system uses JWT tokens with refresh token rotation for enhanced security",
+        [
+            "The authentication system uses JWT tokens with refresh token rotation for enhanced security"
+        ],
     )
     assert success, "Failed to add initial item"
 
     # Add shorter version that's a substring
     success = manager.update_agent_memory(
         "test_agent",
-        "Project Architecture",
-        "The authentication system uses JWT tokens with refresh token rotation",
+        ["The authentication system uses JWT tokens with refresh token rotation"],
     )
     assert success, "Failed to add substring item"
 
@@ -178,19 +180,17 @@ def test_case_insensitive_matching(tmp_path):
     tmpdir = tmp_path
     manager = AgentMemoryManager(working_directory=Path(tmpdir))
 
-    # Add item with mixed case
+    # Add item with mixed case (new API: takes list of items, no section param)
     success = manager.update_agent_memory(
         "test_agent",
-        "Performance Considerations",
-        "Use Redis for caching frequently accessed data",
+        ["Use Redis for caching frequently accessed data"],
     )
     assert success, "Failed to add initial item"
 
     # Add same item with different case
     success = manager.update_agent_memory(
         "test_agent",
-        "Performance Considerations",
-        "USE REDIS FOR CACHING FREQUENTLY ACCESSED DATA",
+        ["USE REDIS FOR CACHING FREQUENTLY ACCESSED DATA"],
     )
     assert success, "Failed to add uppercase item"
 

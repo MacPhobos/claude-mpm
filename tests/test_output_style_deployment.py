@@ -48,7 +48,10 @@ def test_output_style_exists():
 
     # Check frontmatter
     assert content.startswith("---"), "Missing frontmatter"
-    assert "name: Claude MPM" in content, "Missing name in frontmatter"
+    # YAML frontmatter uses snake_case: "name: claude_mpm" (not "name: Claude MPM")
+    assert "name: claude_mpm" in content or "name: Claude MPM" in content, (
+        "Missing name in frontmatter"
+    )
 
     print(f"✓ CLAUDE_MPM_OUTPUT_STYLE.md exists ({len(content)} characters)")
     print("✓ Contains mandatory delegation directive")

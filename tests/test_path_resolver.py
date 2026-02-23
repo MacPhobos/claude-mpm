@@ -1,5 +1,6 @@
 """Tests for get_path_manager() utility."""
 
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -50,7 +51,14 @@ class TestUnifiedPathManager:
         subdir = tmp_path / "src" / "submodule"
         subdir.mkdir(parents=True)
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        # Must unset CLAUDE_MPM_USER_PWD since it overrides cwd-based detection
+        env_without_user_pwd = {
+            k: v for k, v in os.environ.items() if k != "CLAUDE_MPM_USER_PWD"
+        }
+        with patch("pathlib.Path.cwd", return_value=subdir), patch.dict(
+            "os.environ", env_without_user_pwd, clear=True
+        ):
+            get_path_manager().clear_cache()
             root = get_path_manager().project_root
             assert root == tmp_path
 
@@ -63,14 +71,28 @@ class TestUnifiedPathManager:
         subdir = tmp_path / "src"
         subdir.mkdir()
 
-        with patch("pathlib.Path.cwd", return_value=subdir):
+        # Must unset CLAUDE_MPM_USER_PWD since it overrides cwd-based detection
+        env_without_user_pwd = {
+            k: v for k, v in os.environ.items() if k != "CLAUDE_MPM_USER_PWD"
+        }
+        with patch("pathlib.Path.cwd", return_value=subdir), patch.dict(
+            "os.environ", env_without_user_pwd, clear=True
+        ):
+            get_path_manager().clear_cache()
             root = get_path_manager().project_root
             assert root == tmp_path
 
     def test_get_project_root_fallback_to_cwd(self, tmp_path):
         """Test project root fallback to current directory."""
         # No project markers
-        with patch("pathlib.Path.cwd", return_value=tmp_path):
+        # Must unset CLAUDE_MPM_USER_PWD since it overrides cwd-based detection
+        env_without_user_pwd = {
+            k: v for k, v in os.environ.items() if k != "CLAUDE_MPM_USER_PWD"
+        }
+        with patch("pathlib.Path.cwd", return_value=tmp_path), patch.dict(
+            "os.environ", env_without_user_pwd, clear=True
+        ):
+            get_path_manager().clear_cache()
             root = get_path_manager().project_root
             assert root == tmp_path
 

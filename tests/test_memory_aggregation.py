@@ -6,6 +6,10 @@ import pytest
 
 from claude_mpm.core.framework_loader import FrameworkLoader
 
+pytestmark = pytest.mark.skip(
+    reason="_aggregate_memories method removed from FrameworkLoader; memory aggregation has been refactored into the simplified memory list system"
+)
+
 
 class TestMemoryAggregation:
     """Test the _aggregate_memories method."""

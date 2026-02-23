@@ -6,6 +6,7 @@ and that the service maintains compatibility with existing functionality.
 
 import json
 import shutil
+import tempfile
 from pathlib import Path
 
 from claude_mpm.core.interfaces import AgentDeploymentInterface
@@ -25,7 +26,7 @@ class TestRefactoredServiceIntegration:
 
     def setup_method(self):
         """Set up test environment for each test."""
-        self.temp_dir = tmp_path
+        self.temp_dir = Path(tempfile.mkdtemp())
         self.working_dir = Path(self.temp_dir)
         self.templates_dir = self.working_dir / "agents"
         self.templates_dir.mkdir()

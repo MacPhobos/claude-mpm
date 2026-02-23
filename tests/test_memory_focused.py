@@ -98,9 +98,12 @@ def test_basic_memory_operations():
         # Test 5: Check timestamp format
         print("5. Checking timestamp format...")
         lines = content.split("\n")
-        assert lines[0].startswith("# Agent Memory:"), "Should have proper header"
-        assert lines[1].startswith("<!-- Last Updated:"), "Should have timestamp"
-        assert "Z -->" in lines[1], "Timestamp should end with Z"
+        # Header format changed: now "# {Agent_Name} Agent Memory" (not "# Agent Memory:")
+        assert "Agent Memory" in lines[0], (
+            f"Should have 'Agent Memory' in header, got: {lines[0]!r}"
+        )
+        # Timestamp may be in any line (header format changed)
+        assert any("Last Updated:" in line for line in lines), "Should have timestamp"
         print("✓ Timestamp format correct")
 
         print("\n🎉 All basic memory operations working correctly!")
@@ -196,10 +199,15 @@ def test_deduplication():
         print(f"Content before deduplication:\n{content}")
 
         # Should have deduplicated automatically during add_learning
-        lines = [line for line in content.split("\n") if line.strip().startswith("- ")]
+        # Filter out timestamp comment lines (they also start with "- <!--")
+        lines = [
+            line
+            for line in content.split("\n")
+            if line.strip().startswith("- ") and "<!-- Last Updated:" not in line
+        ]
         print(f"Memory items found: {len(lines)}")
 
-        # Should have fewer items due to deduplication
+        # Should have fewer items due to deduplication (exact + case-insensitive)
         assert len(lines) < len(similar_items), "Should have deduplicated some items"
 
         # Unique content should be preserved

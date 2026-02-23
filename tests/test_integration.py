@@ -12,8 +12,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 
-def test_hook_with_stdin(description, event_data):
-    """Test hook by simulating Claude Code calling it."""
+def _test_hook_with_stdin(description, event_data):
+    """Helper function (not a pytest test) to test hook by simulating Claude Code calling it."""
     print(f"\n{'=' * 60}")
     print(f"Testing: {description}")
     print(f"{'=' * 60}")
@@ -66,7 +66,7 @@ def main():
     print("Running integration tests simulating Claude Code...")
 
     # Test 1: Legitimate write in project
-    test_hook_with_stdin(
+    _test_hook_with_stdin(
         "Legitimate project file write",
         {
             "hook_event_name": "PreToolUse",
@@ -81,7 +81,7 @@ def main():
     )
 
     # Test 2: Malicious write attempt
-    test_hook_with_stdin(
+    _test_hook_with_stdin(
         "Malicious write to system file",
         {
             "hook_event_name": "PreToolUse",
@@ -96,7 +96,7 @@ def main():
     )
 
     # Test 3: Agent trying to escape sandbox
-    test_hook_with_stdin(
+    _test_hook_with_stdin(
         "Agent attempting sandbox escape",
         {
             "hook_event_name": "PreToolUse",
@@ -116,7 +116,7 @@ def main():
     )
 
     # Test 4: PM reading system info (allowed)
-    test_hook_with_stdin(
+    _test_hook_with_stdin(
         "PM reading system information",
         {
             "hook_event_name": "PreToolUse",
@@ -128,7 +128,7 @@ def main():
     )
 
     # Test 5: NotebookEdit in project (allowed)
-    test_hook_with_stdin(
+    _test_hook_with_stdin(
         "Editing notebook in project",
         {
             "hook_event_name": "PreToolUse",
@@ -143,7 +143,7 @@ def main():
     )
 
     # Test 6: Grep searching outside (allowed)
-    test_hook_with_stdin(
+    _test_hook_with_stdin(
         "Grep searching system files",
         {
             "hook_event_name": "PreToolUse",

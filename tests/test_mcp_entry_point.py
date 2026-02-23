@@ -15,9 +15,9 @@ import sys
 import time
 
 
-def test_entry_point(command_name):
+def _test_entry_point(command_name):
     """
-    Test a specific entry point command.
+    Helper function (not a pytest test) to test a specific entry point command.
 
     Args:
         command_name: Name of the command to test
@@ -114,7 +114,7 @@ def main():
 
     results = []
     for cmd in commands_to_test:
-        results.append(test_entry_point(cmd))
+        results.append(_test_entry_point(cmd))
 
     # Summary
     print("\n" + "=" * 60)

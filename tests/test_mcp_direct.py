@@ -9,6 +9,8 @@ import sys
 import threading
 import time
 
+import pytest
+
 
 def read_stderr(proc):
     """Read and print stderr in a separate thread."""
@@ -16,6 +18,9 @@ def read_stderr(proc):
         print(f"[STDERR] {line.strip()}", file=sys.stderr)
 
 
+@pytest.mark.skip(
+    reason="Requires claude-mpm-mcp binary at hardcoded path /Users/masa/Library/Python/3.11/bin/claude-mpm-mcp which does not exist; manual test only"
+)
 def test_mcp_direct():
     """Test MCP server directly."""
     cmd = ["/Users/masa/Library/Python/3.11/bin/claude-mpm-mcp"]

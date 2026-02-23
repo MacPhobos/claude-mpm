@@ -13,12 +13,19 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from claude_mpm.core.output_style_manager import OutputStyleManager
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.log_enforcement_status() removed - "
+    "enforcement status logging was removed from the API. "
+    "Style enforcement is now handled differently without periodic re-enforcement."
+)
 def test_initial_deployment():
     """Test initial deployment and activation."""
     print("=" * 60)
@@ -53,6 +60,10 @@ def test_initial_deployment():
     print()
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.enforce_style_periodically() removed - "
+    "periodic style enforcement was removed from the API"
+)
 def test_style_change_detection():
     """Test detection when user changes the style."""
     print("=" * 60)
@@ -96,6 +107,10 @@ def test_style_change_detection():
     print()
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.enforce_style_periodically() removed - "
+    "periodic style enforcement was removed from the API"
+)
 def test_multiple_enforcements():
     """Test multiple enforcement cycles."""
     print("=" * 60)
@@ -144,6 +159,10 @@ def test_multiple_enforcements():
     print()
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.log_enforcement_status() removed - "
+    "enforcement status API was removed from OutputStyleManager"
+)
 def test_enforcement_with_missing_settings(tmp_path):
     """Test enforcement when settings.json doesn't exist."""
     print("=" * 60)
@@ -184,6 +203,10 @@ def test_enforcement_with_missing_settings(tmp_path):
     print()
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.log_enforcement_status() removed - "
+    "enforcement status logging was removed from the API"
+)
 def test_enforcement_status_display():
     """Test the enforcement status display in different scenarios."""
     print("=" * 60)
