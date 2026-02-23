@@ -263,7 +263,8 @@ class TestClaudeHookHandler(unittest.TestCase):
         self.assertTrue(self.handler.duplicate_detector.is_duplicate(event1))
 
         # After waiting more than threshold, should not be duplicate
-        time.sleep(0.06)  # Wait 60ms (> 50ms threshold)
+        # DuplicateEventDetector default window is 100ms (not 50ms)
+        time.sleep(0.15)  # Wait 150ms (> 100ms default threshold)
         self.assertFalse(self.handler.duplicate_detector.is_duplicate(event1))
 
     @patch("signal.alarm")

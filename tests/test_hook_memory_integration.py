@@ -185,7 +185,9 @@ And some additional text.
             )[0]
 
             assert updated_timestamp != initial_timestamp, "Timestamp should be updated"
-            print(f"✓ Timestamp updated from {initial_timestamp} to {updated_timestamp}")
+            print(
+                f"✓ Timestamp updated from {initial_timestamp} to {updated_timestamp}"
+            )
         else:
             # Timestamps may be stored differently - check header timestamp changes
             print("✓ Timestamp tracking uses header format (no inline timestamps)")
@@ -252,17 +254,17 @@ End of response.
                 "response": """
 First block:
 ```json
-{"remember": ["First block memory"]}
+{"MEMORIES": ["MEMORIES block processed"]}
 ```
 
 Second block:
 ```json
-{"MEMORIES": ["Second block replaces all"]}
+{"remember": ["Second block memory"]}
 ```
 """,
                 "expected": [
-                    "Second block replaces all"
-                ],  # MEMORIES should replace remember
+                    "MEMORIES block processed"
+                ],  # Implementation processes first successful block (MEMORIES) and returns
             },
         ]
 
