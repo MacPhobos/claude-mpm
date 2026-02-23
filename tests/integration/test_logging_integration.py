@@ -5,9 +5,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 
 def test_manager_with_logging():
     """Test manager mode with logging enabled."""
