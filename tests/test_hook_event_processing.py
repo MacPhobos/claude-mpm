@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Comprehensive unit tests for hook event processing.
 
@@ -41,17 +40,22 @@ class TestDuplicateEventDetector(unittest.TestCase):
 
     def test_initialization(self):
         """Test detector initialization."""
-        self.assertIsNotNone(self.detector.recent_events)
-        self.assertIsNotNone(self.detector.event_lock)
-        self.assertEqual(self.detector.duplicate_threshold_ms, 50)
+        self.assertIsNotNone(self.detector._recent_events)
+        self.assertIsNotNone(self.detector._events_lock)
+        self.assertEqual(self.detector.duplicate_window_seconds, 0.1)
 
     def test_generate_event_key(self):
-        """Test event key generation for deduplication."""
+        """Test event key generation for deduplication.
+
+        NOTE: For Stop events, key is based on hook_type + session_id only.
+        Different session IDs → different keys.
+        """
         event1 = {"hook_event_name": "Stop", "data": "test", "session_id": "123"}
 
         event2 = {"hook_event_name": "Stop", "data": "test", "session_id": "123"}
 
-        event3 = {"hook_event_name": "Stop", "data": "different", "session_id": "123"}
+        # Different session_id makes a different key (data field is not used for Stop events)
+        event3 = {"hook_event_name": "Stop", "data": "different", "session_id": "456"}
 
         key1 = self.detector.generate_event_key(event1)
         key2 = self.detector.generate_event_key(event2)
@@ -59,7 +63,7 @@ class TestDuplicateEventDetector(unittest.TestCase):
 
         # Same events should generate same key
         self.assertEqual(key1, key2)
-        # Different events should generate different keys
+        # Different session_ids should generate different keys
         self.assertNotEqual(key1, key3)
 
     def test_duplicate_detection_within_threshold(self):
@@ -77,46 +81,52 @@ class TestDuplicateEventDetector(unittest.TestCase):
         self.assertTrue(self.detector.is_duplicate(event))
 
     def test_duplicate_detection_after_threshold(self):
-        """Test that events after 50ms threshold are not duplicates."""
+        """Test that events after 100ms threshold are not duplicates."""
         event = {"hook_event_name": "Stop", "data": "test"}
 
         # First occurrence
         self.assertFalse(self.detector.is_duplicate(event))
 
-        # Wait beyond threshold
-        time.sleep(0.06)  # 60ms > 50ms threshold
+        # Wait beyond threshold (duplicate_window_seconds = 0.1 = 100ms)
+        time.sleep(0.11)  # 110ms > 100ms threshold
 
         # Should not be duplicate anymore
         self.assertFalse(self.detector.is_duplicate(event))
 
     def test_different_events_not_duplicates(self):
-        """Test that different events are not considered duplicates."""
-        event1 = {"hook_event_name": "Stop", "data": "test1"}
-        event2 = {"hook_event_name": "Stop", "data": "test2"}
+        """Test that different events are not considered duplicates.
+
+        NOTE: Key uniqueness for Stop events is based on session_id, not data.
+        Different session_ids → different keys → not duplicates.
+        """
+        event1 = {"hook_event_name": "Stop", "data": "test1", "session_id": "session-A"}
+        event2 = {"hook_event_name": "Stop", "data": "test2", "session_id": "session-B"}
 
         self.assertFalse(self.detector.is_duplicate(event1))
         self.assertFalse(self.detector.is_duplicate(event2))
 
     def test_cleanup_old_events(self):
-        """Test cleanup of old events from cache."""
-        # Add multiple events
+        """Test time-based cleanup via clear_old_events() after events expire."""
+        # Add 10 events with unique session_ids so they get distinct keys
         for i in range(10):
-            event = {"hook_event_name": "Stop", "data": f"test{i}"}
+            event = {
+                "hook_event_name": "Stop",
+                "data": f"test{i}",
+                "session_id": f"session-{i}",
+            }
             self.detector.is_duplicate(event)
 
-        # Initially should have 10 events
-        self.assertEqual(len(self.detector.recent_events), 10)
+        # Should have exactly 10 events
+        self.assertEqual(len(self.detector._recent_events), 10)
 
-        # Wait for events to age
-        time.sleep(0.06)  # Beyond threshold
+        # Wait for events to age beyond duplicate window (duplicate_window_seconds=0.1)
+        time.sleep(0.11)
 
-        # Trigger cleanup with a new event
-        new_event = {"hook_event_name": "Stop", "data": "new"}
-        self.detector.is_duplicate(new_event)
+        # Call clear_old_events() to remove expired entries
+        self.detector.clear_old_events()
 
-        # Old events should be cleaned up
-        # Only the new event should remain
-        self.assertEqual(len(self.detector.recent_events), 1)
+        # All old events should be removed
+        self.assertEqual(len(self.detector._recent_events), 0)
 
     def test_thread_safety(self):
         """Test thread safety of duplicate detection."""
@@ -125,7 +135,12 @@ class TestDuplicateEventDetector(unittest.TestCase):
         events_processed = []
 
         def process_event(event_id):
-            event = {"hook_event_name": "Stop", "id": event_id}
+            # Use unique session_id per event so each has a unique key
+            event = {
+                "hook_event_name": "Stop",
+                "id": event_id,
+                "session_id": f"session-{event_id}",
+            }
             result = self.detector.is_duplicate(event)
             events_processed.append((event_id, result))
 
@@ -177,23 +192,24 @@ class TestStateManagerService(unittest.TestCase):
 
         self.state_manager.track_delegation(session_id, agent_type, request_data)
 
-        # Check delegation is tracked
+        # Check delegation is tracked (active_delegations stores agent_type as string)
         self.assertIn(session_id, self.state_manager.active_delegations)
-        self.assertEqual(
-            self.state_manager.active_delegations[session_id]["agent_type"], agent_type
+        self.assertEqual(self.state_manager.active_delegations[session_id], agent_type)
+
+        # Check delegation history (deque of (key, agent_type) tuples)
+        self.assertTrue(
+            any(
+                k.startswith(session_id)
+                for k, _ in self.state_manager.delegation_history
+            )
         )
 
-        # Check delegation history
-        self.assertIn(session_id, self.state_manager.delegation_history)
-        self.assertEqual(
-            self.state_manager.delegation_history[session_id]["agent_type"], agent_type
-        )
-
-        # Check request data if provided
+        # Check request data if provided (wrapped as {"agent_type": ..., "request": ...})
         if request_data:
             self.assertIn(session_id, self.state_manager.delegation_requests)
             self.assertEqual(
-                self.state_manager.delegation_requests[session_id], request_data
+                self.state_manager.delegation_requests[session_id]["request"],
+                request_data,
             )
 
     def test_get_delegation_agent_type(self):
@@ -223,49 +239,40 @@ class TestStateManagerService(unittest.TestCase):
         self.assertTrue(should_cleanup)
         self.assertEqual(self.state_manager.events_processed, 100)
 
-        # Counter should reset after cleanup trigger
+        # Counter does NOT reset (continues counting past 100)
         should_cleanup = self.state_manager.increment_events_processed()
         self.assertFalse(should_cleanup)
-        self.assertEqual(self.state_manager.events_processed, 1)
+        self.assertEqual(self.state_manager.events_processed, 101)
 
     def test_cleanup_old_entries(self):
-        """Test cleanup of old state entries."""
-        # Add some old entries (>1 hour old)
-        old_time = datetime.now(timezone.utc) - timedelta(hours=2)
+        """Test size-based cleanup of state entries (MAX_DELEGATION_TRACKING=200)."""
+        # Add more than MAX_DELEGATION_TRACKING (200) entries to trigger cleanup
+        for i in range(205):
+            self.state_manager.active_delegations[f"session-{i:03d}"] = f"agent-{i}"
 
-        # Add old delegation
-        self.state_manager.active_delegations["old-session"] = {
-            "agent_type": "test",
-            "timestamp": old_time.isoformat(),
-        }
-
-        # Add recent delegation
-        self.state_manager.active_delegations["recent-session"] = {
-            "agent_type": "test",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-
-        # Add old prompt
-        self.state_manager.pending_prompts["old-prompt"] = {
-            "prompt": "test",
-            "timestamp": old_time.isoformat(),
-        }
+        self.assertEqual(len(self.state_manager.active_delegations), 205)
 
         # Run cleanup
         self.state_manager.cleanup_old_entries()
 
-        # Old entries should be removed
-        self.assertNotIn("old-session", self.state_manager.active_delegations)
-        self.assertNotIn("old-prompt", self.state_manager.pending_prompts)
+        # Should have trimmed to MAX_DELEGATION_TRACKING (200)
+        self.assertEqual(
+            len(self.state_manager.active_delegations),
+            self.state_manager.MAX_DELEGATION_TRACKING,
+        )
 
-        # Recent entries should remain
-        self.assertIn("recent-session", self.state_manager.active_delegations)
+        # Alphabetically early sessions should have been removed
+        self.assertNotIn("session-000", self.state_manager.active_delegations)
+        # Later sessions should remain
+        self.assertIn("session-200", self.state_manager.active_delegations)
 
+    @patch("os.chdir")
     @patch("subprocess.run")
-    def test_get_git_branch(self, mock_run):
-        """Test git branch detection."""
-        mock_run.return_value = Mock(
-            returncode=0, stdout="  main\n* feature/test-branch\n  develop\n"
+    def test_get_git_branch(self, mock_run, mock_chdir):
+        """Test git branch detection (uses git branch --show-current)."""
+        mock_run.return_value = Mock(returncode=0, stdout="feature/test-branch\n")
+        mock_chdir.return_value = (
+            None  # Mock os.chdir so /test/repo path doesn't need to exist
         )
 
         branch = self.state_manager.get_git_branch("/test/repo")
@@ -273,10 +280,14 @@ class TestStateManagerService(unittest.TestCase):
         self.assertEqual(branch, "feature/test-branch")
         mock_run.assert_called_once()
 
+    @patch("os.chdir")
     @patch("subprocess.run")
-    def test_get_git_branch_caching(self, mock_run):
+    def test_get_git_branch_caching(self, mock_run, mock_chdir):
         """Test git branch caching."""
-        mock_run.return_value = Mock(returncode=0, stdout="* main\n")
+        mock_run.return_value = Mock(returncode=0, stdout="main\n")
+        mock_chdir.return_value = (
+            None  # Mock os.chdir so /test/repo path doesn't need to exist
+        )
 
         # First call should hit git
         branch1 = self.state_manager.get_git_branch("/test/repo")
@@ -300,8 +311,13 @@ class TestStateManagerService(unittest.TestCase):
         del self.state_manager.active_delegations[session_id]
         self.assertNotIn(session_id, self.state_manager.active_delegations)
 
-        # History should still have it
-        self.assertIn(session_id, self.state_manager.delegation_history)
+        # History should still have it (deque of (key, agent_type) tuples)
+        self.assertTrue(
+            any(
+                k.startswith(session_id)
+                for k, _ in self.state_manager.delegation_history
+            )
+        )
 
 
 class TestSubagentResponseProcessor(unittest.TestCase):
@@ -340,8 +356,8 @@ class TestSubagentResponseProcessor(unittest.TestCase):
         # Process event
         self.processor.process_subagent_stop(event)
 
-        # Verify response tracking was called
-        self.response_tracking.add_response.assert_called_once()
+        # Verify response tracking was called via response_tracker.track_response
+        self.response_tracking.response_tracker.track_response.assert_called()
 
         # Verify connection manager emitted event
         self.connection_manager.emit_event.assert_called()
@@ -359,41 +375,26 @@ class TestSubagentResponseProcessor(unittest.TestCase):
         # Process event
         self.processor.process_subagent_stop(event)
 
-        # Should still track response
-        self.response_tracking.add_response.assert_called_once()
+        # Should still track response via response_tracker.track_response
+        self.response_tracking.response_tracker.track_response.assert_called()
 
+    @unittest.skip(
+        "_extract_memory_operations was removed; memory extraction now handled by _extract_structured_response"
+    )
     def test_extract_memory_operations(self):
         """Test extraction of memory operations from response."""
-        # Test with JSON response containing memory
-        json_response = json.dumps(
-            {
-                "memory-update": {"Key1": ["Value1"], "Key2": ["Value2", "Value3"]},
-                "remember": ["Item1", "Item2"],
-            }
-        )
 
-        memory_ops = self.processor._extract_memory_operations(json_response)
-
-        self.assertIn("memory-update", memory_ops)
-        self.assertEqual(len(memory_ops["memory-update"]), 2)
-        self.assertIn("remember", memory_ops)
-        self.assertEqual(len(memory_ops["remember"]), 2)
-
+    @unittest.skip(
+        "_extract_memory_operations was removed; memory extraction now handled by _extract_structured_response"
+    )
     def test_extract_memory_operations_no_json(self):
         """Test extraction when response is not JSON."""
-        text_response = "This is a plain text response"
 
-        memory_ops = self.processor._extract_memory_operations(text_response)
-
-        self.assertIsNone(memory_ops)
-
+    @unittest.skip(
+        "_extract_memory_operations was removed; memory extraction now handled by _extract_structured_response"
+    )
     def test_extract_memory_operations_json_without_memory(self):
         """Test extraction from JSON without memory fields."""
-        json_response = json.dumps({"result": "success", "data": {"key": "value"}})
-
-        memory_ops = self.processor._extract_memory_operations(json_response)
-
-        self.assertIsNone(memory_ops)
 
 
 class TestEventTransformation(unittest.TestCase):

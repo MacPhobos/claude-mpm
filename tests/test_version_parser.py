@@ -10,6 +10,7 @@ Tests cover:
 """
 
 import json
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -30,15 +31,16 @@ class TestEnhancedVersionParser(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        self.temp_dir = tmp_path
-        self.project_root = Path(self.temp_dir)
+        import shutil
+
+        self._tmpdir_obj = tempfile.TemporaryDirectory()
+        self.temp_dir = Path(self._tmpdir_obj.name)
+        self.project_root = self.temp_dir
         self.parser = EnhancedVersionParser(self.project_root, cache_ttl=1)
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
-
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        self._tmpdir_obj.cleanup()
 
     def test_version_from_git_tags(self):
         """Test retrieving version from git tags."""
