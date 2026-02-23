@@ -237,11 +237,11 @@ class TestHookInstaller(unittest.TestCase):
         self.assertFalse(self.installer.settings_file.exists())
 
     @patch.object(HookInstaller, "is_version_compatible")
-    @patch.object(HookInstaller, "get_hook_script_path")
-    def test_install_hooks_script_not_found(self, mock_get_script, mock_version_check):
-        """Test hook installation when script cannot be found."""
+    @patch.object(HookInstaller, "get_hook_command")
+    def test_install_hooks_script_not_found(self, mock_get_command, mock_version_check):
+        """Test hook installation when hook command cannot be found."""
         mock_version_check.return_value = (True, "Compatible")
-        mock_get_script.side_effect = FileNotFoundError("Script not found")
+        mock_get_command.side_effect = FileNotFoundError("Hook command not found")
 
         result = self.installer.install_hooks()
 
@@ -478,12 +478,32 @@ class TestHookInstaller(unittest.TestCase):
 
     @patch.object(HookInstaller, "get_claude_version")
     @patch.object(HookInstaller, "verify_hooks")
-    @patch.object(HookInstaller, "get_hook_script_path")
-    def test_get_status(self, mock_get_script, mock_verify, mock_get_version):
+    @patch.object(HookInstaller, "_get_hook_script_path")
+    @patch.object(HookInstaller, "_get_fast_hook_script_path")
+    @patch.object(HookInstaller, "get_hook_command")
+    @patch.object(HookInstaller, "supports_pretool_modify")
+    def test_get_status(
+        self,
+        mock_supports_pretool,
+        mock_get_cmd,
+        mock_get_fast,
+        mock_get_script,
+        mock_verify,
+        mock_get_version,
+    ):
         """Test getting hook installation status."""
         # Setup mocks
         mock_get_version.return_value = "1.0.95"
         mock_verify.return_value = (True, [])
+        mock_supports_pretool.return_value = False
+
+        # get_hook_command returns deployment-root style (no fast-hook, no entry-point)
+        mock_get_cmd.return_value = "/path/to/hook.sh"
+
+        # No fast hook available
+        mock_fast_path = Mock()
+        mock_fast_path.exists.return_value = False
+        mock_get_fast.return_value = mock_fast_path
 
         # Create a mock script path that returns True for exists()
         mock_script_path = Mock()
