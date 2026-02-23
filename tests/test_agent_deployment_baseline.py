@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Baseline Test Coverage for AgentDeploymentService
 ================================================
@@ -178,8 +177,8 @@ Follow these guidelines for all tasks.
 
         assert isinstance(metrics, dict)
         assert "total_deployments" in metrics
-        assert "average_deployment_time_ms" in metrics  # Actual field name
-        assert "successful_deployments" in metrics  # Actual field name
+        assert "successful_deployments" in metrics
+        assert "failed_deployments" in metrics
 
     def test_reset_metrics(self, deployment_service):
         """Test resetting deployment metrics."""

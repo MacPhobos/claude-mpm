@@ -87,19 +87,24 @@ class TestDeploymentStrategies:
 
     def test_strategy_selector_selects_correct_strategy(self):
         """Test that strategy selector chooses the right strategy."""
+        import os
+
         selector = DeploymentStrategySelector()
 
-        # Test system strategy selection
-        context = DeploymentContext()
-        strategy = selector.select_strategy(context)
-        assert isinstance(strategy, SystemAgentDeploymentStrategy)
+        # Test system strategy selection (clear CLAUDE_MPM_USER_PWD to avoid user strategy winning)
+        # The env var CLAUDE_MPM_USER_PWD is set in some dev environments, so we clear it
+        clean_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_MPM_USER_PWD"}
+        with patch.dict("os.environ", clean_env, clear=True):
+            context = DeploymentContext()
+            strategy = selector.select_strategy(context)
+            assert isinstance(strategy, SystemAgentDeploymentStrategy)
 
-        # Test project strategy selection
-        context = DeploymentContext(
-            deployment_mode="project", working_directory=Path("/test/project")
-        )
-        strategy = selector.select_strategy(context)
-        assert isinstance(strategy, ProjectAgentDeploymentStrategy)
+            # Test project strategy selection
+            context = DeploymentContext(
+                deployment_mode="project", working_directory=Path("/test/project")
+            )
+            strategy = selector.select_strategy(context)
+            assert isinstance(strategy, ProjectAgentDeploymentStrategy)
 
 
 class TestDeploymentPipeline:
@@ -477,10 +482,12 @@ class TestDeploymentValidation:
                 "category": "testing",
                 "tags": ["test", "validation"],
             },
-            "capabilities": {"model": "sonnet", "tools": ["Read", "Write"]},
-            "instructions": {
-                "system_prompt": "You are a test agent for validation purposes."
+            "capabilities": {
+                "model": "sonnet",
+                "tools": ["Read", "Write"],
+                "resource_tier": "standard",
             },
+            "instructions": "You are a test agent for validation purposes.",
         }
         template_file.write_text(json.dumps(template_data, indent=2))
 
@@ -550,8 +557,12 @@ This is a test agent for validation purposes.
                 "category": "testing",
                 "tags": ["test"],
             },
-            "capabilities": {"model": "sonnet", "tools": ["Read"]},
-            "instructions": {"system_prompt": "Test prompt"},
+            "capabilities": {
+                "model": "sonnet",
+                "tools": ["Read"],
+                "resource_tier": "standard",
+            },
+            "instructions": "Test prompt for the agent.",
         }
         template_file.write_text(json.dumps(template_data, indent=2))
 
