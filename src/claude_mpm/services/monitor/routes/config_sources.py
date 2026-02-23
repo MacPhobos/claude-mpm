@@ -43,6 +43,24 @@ PROTECTED_SKILL_SOURCES = {"system", "anthropic-official"}
 active_sync_tasks: Dict[str, asyncio.Task] = {}
 sync_status: Dict[str, Dict[str, Any]] = {}
 
+# Maximum number of job entries retained in sync_status (prevents unbounded growth).
+# The special "last_results" key is excluded from this cap.
+_SYNC_STATUS_MAX_JOBS = 100
+
+
+def _prune_sync_status() -> None:
+    """Remove oldest job entries from sync_status when the cap is exceeded.
+
+    The ``last_results`` key stores per-source outcome data and is not a job
+    entry, so it is excluded from the count and never pruned here.
+    """
+    job_keys = [k for k in sync_status if k != "last_results"]
+    overflow = len(job_keys) - _SYNC_STATUS_MAX_JOBS
+    if overflow > 0:
+        # dict preserves insertion order (Python 3.7+); drop oldest first.
+        for old_key in job_keys[:overflow]:
+            sync_status.pop(old_key, None)
+
 
 def register_source_routes(app, config_event_handler, config_file_watcher):
     """Register all source management routes on the aiohttp app.
@@ -713,6 +731,7 @@ async def _run_sync(
 ) -> None:
     """Background sync task. Runs blocking Git ops in thread pool."""
     try:
+        _prune_sync_status()
         sync_status[job_id] = {
             "started_at": datetime.now(timezone.utc).isoformat(),
             "sources_total": 1,
@@ -801,6 +820,7 @@ async def _run_sync_all(
         sources_to_sync = await asyncio.to_thread(_gather_sources)
         total = len(sources_to_sync)
 
+        _prune_sync_status()
         sync_status[job_id] = {
             "started_at": datetime.now(timezone.utc).isoformat(),
             "sources_total": total,
