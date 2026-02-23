@@ -53,7 +53,7 @@ class TestHealthMetric:
         metric = HealthMetric(
             name="test_metric",
             value=42,
-            status=HealthStatus.WARNING,
+            status=HealthStatus.DEGRADED,
             message="Test message",
         )
 
@@ -61,7 +61,7 @@ class TestHealthMetric:
 
         assert result["name"] == "test_metric"
         assert result["value"] == 42
-        assert result["status"] == "warning"
+        assert result["status"] == "degraded"
         assert result["message"] == "Test message"
         assert "timestamp_iso" in result
 
@@ -73,18 +73,18 @@ class TestHealthCheckResult:
         """Test creating a health check result."""
         metrics = [
             HealthMetric("metric1", 10, HealthStatus.HEALTHY),
-            HealthMetric("metric2", 20, HealthStatus.WARNING),
+            HealthMetric("metric2", 20, HealthStatus.DEGRADED),
         ]
 
         result = HealthCheckResult(
-            overall_status=HealthStatus.WARNING,
+            overall_status=HealthStatus.DEGRADED,
             metrics=metrics,
             timestamp=time.time(),
             duration_ms=5.5,
             errors=["error1"],
         )
 
-        assert result.overall_status == HealthStatus.WARNING
+        assert result.overall_status == HealthStatus.DEGRADED
         assert len(result.metrics) == 2
         assert result.duration_ms == 5.5
         assert result.errors == ["error1"]
@@ -93,12 +93,12 @@ class TestHealthCheckResult:
         """Test converting result to dictionary."""
         metrics = [
             HealthMetric("metric1", 10, HealthStatus.HEALTHY),
-            HealthMetric("metric2", 20, HealthStatus.WARNING),
-            HealthMetric("metric3", 30, HealthStatus.CRITICAL),
+            HealthMetric("metric2", 20, HealthStatus.DEGRADED),
+            HealthMetric("metric3", 30, HealthStatus.UNHEALTHY),
         ]
 
         result = HealthCheckResult(
-            overall_status=HealthStatus.CRITICAL,
+            overall_status=HealthStatus.UNHEALTHY,
             metrics=metrics,
             timestamp=time.time(),
             duration_ms=10.0,
@@ -107,11 +107,11 @@ class TestHealthCheckResult:
 
         data = result.to_dict()
 
-        assert data["overall_status"] == "critical"
+        assert data["overall_status"] == "unhealthy"
         assert data["metric_count"] == 3
         assert data["healthy_metrics"] == 1
-        assert data["warning_metrics"] == 1
-        assert data["critical_metrics"] == 1
+        assert data["degraded_metrics"] == 1
+        assert data["unhealthy_metrics"] == 1
         assert data["duration_ms"] == 10.0
 
 
@@ -129,7 +129,7 @@ class TestProcessResourceChecker:
         assert len(metrics) == 1
         assert metrics[0].name == "psutil_availability"
         assert metrics[0].value is False
-        assert metrics[0].status == HealthStatus.WARNING
+        assert metrics[0].status == HealthStatus.DEGRADED
 
     @patch(
         "claude_mpm.services.infrastructure.monitoring.process.PSUTIL_AVAILABLE", True
@@ -146,10 +146,12 @@ class TestProcessResourceChecker:
         assert len(metrics) == 1
         assert metrics[0].name == "process_exists"
         assert metrics[0].value is False
-        assert metrics[0].status == HealthStatus.CRITICAL
+        assert metrics[0].status == HealthStatus.UNHEALTHY
 
-    @patch("claude_mpm.services.infrastructure.monitoring.PSUTIL_AVAILABLE", True)
-    @patch("claude_mpm.services.infrastructure.monitoring.psutil")
+    @patch(
+        "claude_mpm.services.infrastructure.monitoring.process.PSUTIL_AVAILABLE", True
+    )
+    @patch("claude_mpm.services.infrastructure.monitoring.process.psutil")
     async def test_healthy_process_metrics(self, mock_psutil):
         """Test healthy process resource metrics."""
         # Setup mock process
@@ -194,8 +196,10 @@ class TestProcessResourceChecker:
         assert metric_dict["file_descriptors"].value == 50
         assert metric_dict["file_descriptors"].status == HealthStatus.HEALTHY
 
-    @patch("claude_mpm.services.infrastructure.monitoring.PSUTIL_AVAILABLE", True)
-    @patch("claude_mpm.services.infrastructure.monitoring.psutil")
+    @patch(
+        "claude_mpm.services.infrastructure.monitoring.process.PSUTIL_AVAILABLE", True
+    )
+    @patch("claude_mpm.services.infrastructure.monitoring.process.psutil")
     async def test_warning_thresholds(self, mock_psutil):
         """Test warning status when thresholds exceeded."""
         mock_process = MagicMock()
@@ -221,11 +225,13 @@ class TestProcessResourceChecker:
         metrics = await checker.check_health()
         metric_dict = {m.name: m for m in metrics}
 
-        assert metric_dict["cpu_usage_percent"].status == HealthStatus.WARNING
-        assert metric_dict["memory_usage_mb"].status == HealthStatus.WARNING
+        assert metric_dict["cpu_usage_percent"].status == HealthStatus.DEGRADED
+        assert metric_dict["memory_usage_mb"].status == HealthStatus.DEGRADED
 
-    @patch("claude_mpm.services.infrastructure.monitoring.PSUTIL_AVAILABLE", True)
-    @patch("claude_mpm.services.infrastructure.monitoring.psutil")
+    @patch(
+        "claude_mpm.services.infrastructure.monitoring.process.PSUTIL_AVAILABLE", True
+    )
+    @patch("claude_mpm.services.infrastructure.monitoring.process.psutil")
     async def test_critical_thresholds(self, mock_psutil):
         """Test critical status when thresholds greatly exceeded."""
         mock_process = MagicMock()
@@ -251,8 +257,8 @@ class TestProcessResourceChecker:
         metrics = await checker.check_health()
         metric_dict = {m.name: m for m in metrics}
 
-        assert metric_dict["cpu_usage_percent"].status == HealthStatus.CRITICAL
-        assert metric_dict["memory_usage_mb"].status == HealthStatus.CRITICAL
+        assert metric_dict["cpu_usage_percent"].status == HealthStatus.UNHEALTHY
+        assert metric_dict["memory_usage_mb"].status == HealthStatus.UNHEALTHY
 
 
 class TestNetworkConnectivityChecker:
@@ -288,19 +294,20 @@ class TestNetworkConnectivityChecker:
             metric_dict = {m.name: m for m in metrics}
 
             assert metric_dict["port_accessible"].value is False
-            assert metric_dict["port_accessible"].status == HealthStatus.CRITICAL
+            assert metric_dict["port_accessible"].status == HealthStatus.UNHEALTHY
 
     async def test_socket_creation_failure(self):
         """Test when socket creation fails."""
         with patch("socket.socket") as mock_socket_class:
-            # First call succeeds for port check
+            # Implementation calls _check_socket_creation() FIRST, then _check_endpoint()
+            # First call fails for socket creation test
             mock_socket1 = MagicMock()
             mock_socket1.connect_ex.return_value = 0
 
-            # Second call fails for socket creation test
+            # Second call succeeds for port check
             mock_socket_class.side_effect = [
-                mock_socket1,
                 OSError("No file descriptors"),
+                mock_socket1,
             ]
 
             checker = NetworkConnectivityChecker("localhost", 8080)
@@ -309,7 +316,7 @@ class TestNetworkConnectivityChecker:
             metric_dict = {m.name: m for m in metrics}
 
             assert metric_dict["socket_creation"].value is False
-            assert metric_dict["socket_creation"].status == HealthStatus.CRITICAL
+            assert metric_dict["socket_creation"].status == HealthStatus.UNHEALTHY
 
 
 class TestServiceHealthChecker:
@@ -365,7 +372,7 @@ class TestServiceHealthChecker:
         metrics = await checker.check_health()
         metric_dict = {m.name: m for m in metrics}
 
-        assert metric_dict["connected_clients"].status == HealthStatus.WARNING
+        assert metric_dict["connected_clients"].status == HealthStatus.DEGRADED
 
     async def test_critical_client_count(self):
         """Test critical status for exceeded client count."""
@@ -383,7 +390,7 @@ class TestServiceHealthChecker:
         metrics = await checker.check_health()
         metric_dict = {m.name: m for m in metrics}
 
-        assert metric_dict["connected_clients"].status == HealthStatus.CRITICAL
+        assert metric_dict["connected_clients"].status == HealthStatus.UNHEALTHY
 
     async def test_error_rate_thresholds(self):
         """Test error rate threshold detection."""
@@ -403,7 +410,7 @@ class TestServiceHealthChecker:
         metric_dict = {m.name: m for m in metrics}
 
         assert metric_dict["error_rate"].value == 0.15
-        assert metric_dict["error_rate"].status == HealthStatus.CRITICAL
+        assert metric_dict["error_rate"].status == HealthStatus.UNHEALTHY
 
     async def test_activity_staleness(self):
         """Test detection of stale activity."""
@@ -418,7 +425,7 @@ class TestServiceHealthChecker:
         metrics = await checker.check_health()
         metric_dict = {m.name: m for m in metrics}
 
-        assert metric_dict["time_since_last_activity"].status == HealthStatus.WARNING
+        assert metric_dict["time_since_last_activity"].status == HealthStatus.DEGRADED
 
 
 class TestAdvancedHealthMonitor:
@@ -466,13 +473,13 @@ class TestAdvancedHealthMonitor:
         checker1.get_name.return_value = "checker1"
         checker1.check_health.return_value = [
             HealthMetric("metric1", 10, HealthStatus.HEALTHY),
-            HealthMetric("metric2", 20, HealthStatus.WARNING),
+            HealthMetric("metric2", 20, HealthStatus.DEGRADED),
         ]
 
         checker2 = AsyncMock(spec=HealthChecker)
         checker2.get_name.return_value = "checker2"
         checker2.check_health.return_value = [
-            HealthMetric("metric3", 30, HealthStatus.CRITICAL),
+            HealthMetric("metric3", 30, HealthStatus.UNHEALTHY),
         ]
 
         monitor.add_checker(checker1)
@@ -480,7 +487,7 @@ class TestAdvancedHealthMonitor:
 
         result = await monitor.perform_health_check()
 
-        assert result.overall_status == HealthStatus.CRITICAL  # Due to critical metric
+        assert result.overall_status == HealthStatus.UNHEALTHY  # Due to critical metric
         assert len(result.metrics) == 3
         assert len(result.errors) == 0
         assert monitor.monitoring_stats["checks_performed"] == 1
@@ -514,13 +521,13 @@ class TestAdvancedHealthMonitor:
         assert monitor._determine_overall_status(metrics) == HealthStatus.HEALTHY
 
         # One critical -> overall critical
-        metrics.append(HealthMetric("m3", 3, HealthStatus.CRITICAL))
-        assert monitor._determine_overall_status(metrics) == HealthStatus.CRITICAL
+        metrics.append(HealthMetric("m3", 3, HealthStatus.UNHEALTHY))
+        assert monitor._determine_overall_status(metrics) == HealthStatus.UNHEALTHY
 
         # Many warnings -> overall warning
-        metrics = [HealthMetric(f"m{i}", i, HealthStatus.WARNING) for i in range(4)]
+        metrics = [HealthMetric(f"m{i}", i, HealthStatus.DEGRADED) for i in range(4)]
         metrics.append(HealthMetric("m5", 5, HealthStatus.HEALTHY))
-        assert monitor._determine_overall_status(metrics) == HealthStatus.WARNING
+        assert monitor._determine_overall_status(metrics) == HealthStatus.DEGRADED
 
     async def test_monitoring_loop(self):
         """Test continuous monitoring loop."""
@@ -587,7 +594,7 @@ class TestAdvancedHealthMonitor:
         # Add warning result
         monitor.health_history.append(
             HealthCheckResult(
-                overall_status=HealthStatus.WARNING,
+                overall_status=HealthStatus.DEGRADED,
                 metrics=[],
                 timestamp=current_time - 50,
                 duration_ms=15,
@@ -598,7 +605,7 @@ class TestAdvancedHealthMonitor:
         aggregated = monitor.get_aggregated_status()
 
         assert aggregated["checks_count"] == 2
-        assert aggregated["overall_status"] == "healthy"
+        assert aggregated["overall_status"] == "degraded"
         assert aggregated["total_errors"] == 1
         assert aggregated["average_duration_ms"] == 12.5
 
@@ -682,7 +689,11 @@ class TestIntegration:
         result = await monitor.perform_health_check()
 
         # Verify results
-        assert result.overall_status in [HealthStatus.HEALTHY, HealthStatus.WARNING]
+        assert result.overall_status in [
+            HealthStatus.HEALTHY,
+            HealthStatus.DEGRADED,
+            HealthStatus.UNHEALTHY,
+        ]
         assert len(result.metrics) > 5  # Multiple metrics from all checkers
         assert result.duration_ms > 0
 
