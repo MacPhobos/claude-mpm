@@ -7,6 +7,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from claude_mpm.core.config import Config
+
 # Set up logging
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

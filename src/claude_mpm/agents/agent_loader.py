@@ -180,12 +180,12 @@ class AgentLoader:
         # Initialize the agent registry
         self.registry = get_agent_registry()
 
-        # Load agents through registry
-        self.registry.load_agents()
+        # Load agents through registry (list_agents triggers lazy loading)
+        self.registry.list_agents()
 
         init_time = (time.time() - start_time) * 1000
         logger.debug(
-            f"AgentLoader initialized in {init_time:.2f}ms with {len(self.registry._agent_registry)} agents"
+            f"AgentLoader initialized in {init_time:.2f}ms with {len(self.registry.registry)} agents"
         )
 
     def get_agent(self, agent_id: str) -> Optional[Dict[str, Any]]:
@@ -298,9 +298,7 @@ class AgentLoader:
         # Reload registry
         self.registry.reload()
 
-        logger.debug(
-            f"Agent system reloaded with {len(self.registry._agent_registry)} agents"
-        )
+        logger.debug(f"Agent system reloaded with {len(self.registry.registry)} agents")
 
 
 # Global loader instance (singleton pattern)
@@ -880,7 +878,7 @@ def clear_agent_cache(agent_name: Optional[str] = None) -> None:
         else:
             # Clear all agent caches by iterating through registry
             loader = _get_loader()
-            for agent_id in loader._agent_registry:
+            for agent_id in loader.registry.registry:
                 cache_key = f"{AGENT_CACHE_PREFIX}{agent_id}"
                 cache.invalidate(cache_key)
             logger.debug("All agent caches cleared")

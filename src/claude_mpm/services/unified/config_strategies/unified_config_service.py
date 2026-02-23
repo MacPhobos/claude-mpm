@@ -271,17 +271,34 @@ class UnifiedConfigService:
     def get(
         self, key: str, context: Optional[ConfigContext] = None, default: Any = None
     ) -> Any:
-        """Get configuration value by key with context awareness"""
+        """Get configuration value by key with context awareness.
+
+        Supports dot notation for nested access (e.g., 'api.timeout' retrieves
+        config['api']['timeout']).
+        """
+
+        def _nested_get(config: Dict[str, Any], dotted_key: str) -> Any:
+            """Traverse a dict using dot-notation key."""
+            parts = dotted_key.split(".")
+            current = config
+            for part in parts:
+                if not isinstance(current, dict) or part not in current:
+                    return None
+                current = current[part]
+            return current
+
         # Check specific context first
         if context:
             for _cache_key, config in self._contexts[context].items():
-                if key in config:
-                    return config[key]
+                result = _nested_get(config, key)
+                if result is not None:
+                    return result
 
         # Check all cached configs
         for config in self._cache.values():
-            if key in config:
-                return config[key]
+            result = _nested_get(config, key)
+            if result is not None:
+                return result
 
         return default
 
@@ -326,34 +343,35 @@ class UnifiedConfigService:
     def reload(
         self, cache_key: Optional[str] = None, context: Optional[ConfigContext] = None
     ):
-        """Reload configuration(s)"""
+        """Reload configuration(s), invalidating cache to force fresh load."""
         with self._lock:
             if cache_key:
                 # Reload specific configuration
                 if cache_key in self._metadata:
                     metadata = self._metadata[cache_key]
-                    self.load(
-                        metadata.source,
-                        metadata.context,
-                        metadata.format,
-                        hot_reload=metadata.hot_reload,
-                        ttl=metadata.ttl,
-                    )
+                    # Invalidate cache first to force fresh load
+                    self._cache.pop(cache_key, None)
+                    self._metadata.pop(cache_key, None)
+                    for ctx_dict in self._contexts.values():
+                        ctx_dict.pop(cache_key, None)
             elif context:
                 # Reload all configurations in context
                 for key in list(self._contexts[context].keys()):
                     if key in self._metadata:
-                        metadata = self._metadata[key]
-                        self.load(
-                            metadata.source,
-                            metadata.context,
-                            metadata.format,
-                            hot_reload=metadata.hot_reload,
-                            ttl=metadata.ttl,
-                        )
+                        # Invalidate cache first
+                        self._cache.pop(key, None)
+                        self._metadata.pop(key, None)
+                        for ctx_dict in self._contexts.values():
+                            ctx_dict.pop(key, None)
             else:
-                # Reload all configurations
-                for key, metadata in list(self._metadata.items()):
+                # Reload all configurations - save metadata to re-load after clearing
+                saved_metadata = dict(self._metadata)
+                self._cache.clear()
+                self._metadata.clear()
+                for ctx_dict in self._contexts.values():
+                    ctx_dict.clear()
+                # Re-load each config from source
+                for key, metadata in saved_metadata.items():
                     self.load(
                         metadata.source,
                         metadata.context,
@@ -706,7 +724,7 @@ class UnifiedConfigService:
     def _generate_cache_key(self, source: Any, context: ConfigContext) -> str:
         """Generate unique cache key"""
         source_str = str(source)
-        return f"{context.value}:{hashlib.md5(source_str.encode()).hexdigest()}"
+        return f"{context.value}:{hashlib.md5(source_str.encode(), usedforsecurity=False).hexdigest()}"  # nosec B324
 
     def _calculate_checksum(self, config: Dict[str, Any]) -> str:
         """Calculate configuration checksum"""

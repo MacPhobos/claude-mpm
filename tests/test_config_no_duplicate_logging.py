@@ -25,7 +25,7 @@ class TestConfigNoDuplicateLogging(TestCase):
 
     def test_single_success_message(self):
         """Test that 'Successfully loaded configuration' appears only once."""
-        with self.assertLogs("claude_mpm.core.config", level=logging.INFO) as cm:
+        with self.assertLogs("claude_mpm.core.config", level=logging.DEBUG) as cm:
             # Create multiple Config instances
             Config(config_file=Path.cwd() / ".claude-mpm" / "configuration.yaml")
             Config(config_file=Path.cwd() / ".claude-mpm" / "configuration.yaml")
@@ -75,7 +75,7 @@ class TestConfigNoDuplicateLogging(TestCase):
             SystemInstructionsService,
         )
 
-        with self.assertLogs("claude_mpm.core.config", level=logging.INFO) as cm:
+        with self.assertLogs("claude_mpm.core.config", level=logging.DEBUG) as cm:
             service1 = AgentCapabilitiesService()
             service2 = SystemInstructionsService()
 

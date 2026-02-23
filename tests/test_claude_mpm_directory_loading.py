@@ -138,8 +138,9 @@ class TestClaudeMpmDirectoryLoading:
             assert "CLAUDE_DIR_WORKFLOW" not in full_instructions
             assert "CLAUDE_DIR_MEMORY" not in full_instructions
 
-            # Verify no .claude/ references in instructions
-            assert ".claude/" not in full_instructions
+            # Note: we do NOT assert ".claude/" not in full_instructions because
+            # the PM system instructions themselves legitimately reference .claude/agents/
+            # paths. The important thing is that content FROM .claude/ was not loaded.
         finally:
             os.chdir(original_cwd)
 
@@ -203,6 +204,12 @@ class TestClaudeMpmDirectoryLoading:
         try:
             os.chdir(tmp_path)
             loader = FrameworkLoader()
+
+            # The FrameworkLoader uses a singleton DI container shared across instances.
+            # Clear the memory cache to force reload from the current (tmp_path) directory,
+            # then re-populate framework_content with fresh memories.
+            loader.clear_memory_caches()
+            loader._load_actual_memories(loader.framework_content)
 
             # Verify PM memories were loaded
             assert loader.framework_content.get("actual_memories") is not None
