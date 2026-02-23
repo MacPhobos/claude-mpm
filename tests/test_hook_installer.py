@@ -442,18 +442,14 @@ class TestHookInstaller(unittest.TestCase):
             # Should skip other checks
             self.assertEqual(len(issues), 1)
 
-    @patch.object(HookInstaller, "get_hook_script_path")
-    def test_verify_hooks_missing_events(self, mock_get_script):
+    def test_verify_hooks_missing_events(self):
         """Test verification when required events are missing."""
-        mock_script = Mock()
-        mock_script.exists.return_value = True
-        mock_get_script.return_value = mock_script
-
         # Create settings missing some events
         settings = {
             "hooks": {
                 "Stop": [],
-                # Missing SubagentStop, SubagentStart, PreToolUse, PostToolUse
+                # Missing SubagentStop, PreToolUse, PostToolUse
+                # Note: SubagentStart no longer required
             }
         }
 
@@ -462,19 +458,19 @@ class TestHookInstaller(unittest.TestCase):
 
         with patch.object(
             self.installer, "is_version_compatible", return_value=(True, "Compatible")
+        ), patch.object(
+            self.installer, "get_hook_command", return_value="/path/to/hook.sh"
         ), patch("os.access", return_value=True):
             is_valid, issues = self.installer.verify_hooks()
 
             self.assertFalse(is_valid)
-            # Check for missing events
-            missing_events = [
-                "SubagentStop",
-                "SubagentStart",
-                "PreToolUse",
-                "PostToolUse",
-            ]
+            # Check for missing events that are still required
+            missing_events = ["SubagentStop", "PreToolUse", "PostToolUse"]
             for event in missing_events:
-                self.assertTrue(any(event in issue for issue in issues))
+                self.assertTrue(
+                    any(event in issue for issue in issues),
+                    f"Expected '{event}' in issues: {issues}",
+                )
 
     @patch.object(HookInstaller, "get_claude_version")
     @patch.object(HookInstaller, "verify_hooks")
