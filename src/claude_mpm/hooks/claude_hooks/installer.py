@@ -15,6 +15,15 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
+class _PathEncoder(json.JSONEncoder):
+    """JSON encoder that converts Path objects to strings."""
+
+    def default(self, obj):
+        if isinstance(obj, Path):
+            return str(obj)
+        return super().default(obj)
+
+
 class HookInstaller:
     """Manages installation and configuration of Claude MPM hooks."""
 
@@ -644,7 +653,7 @@ main "$@"
 
                 # Write back the cleaned settings
                 with self.old_settings_file.open("w") as f:
-                    json.dump(old_settings, f, indent=2)
+                    json.dump(old_settings, f, indent=2, cls=_PathEncoder)
 
                 self.logger.info(f"Cleaned up hooks from {self.old_settings_file}")
         except Exception as e:
@@ -821,7 +830,7 @@ main "$@"
 
         # Write settings to settings.json
         with self.settings_file.open("w") as f:
-            json.dump(settings, f, indent=2)
+            json.dump(settings, f, indent=2, cls=_PathEncoder)
 
         self.logger.info(f"Updated Claude settings at {self.settings_file}")
 
@@ -1006,7 +1015,7 @@ main "$@"
 
                         # Write back settings
                         with settings_path.open("w") as f:
-                            json.dump(settings, f, indent=2)
+                            json.dump(settings, f, indent=2, cls=_PathEncoder)
 
                         self.logger.info(f"Removed hooks from {settings_path}")
 
