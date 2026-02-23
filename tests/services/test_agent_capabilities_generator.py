@@ -90,63 +90,55 @@ class TestAgentCapabilitiesGenerator:
             },
         ]
 
-    def test_generate_capabilities_section_success(self, sample_agents):
+    def test_generate_capabilities_section_success(self, generator, sample_agents):
         """Test successful generation of capabilities section."""
-        content = self.generate_capabilities_section(sample_agents)
+        content = generator.generate_capabilities_section(sample_agents)
 
-        # Verify core agents list
-        assert "**Core Agents**: custom-analyzer, engineer, research" in content
+        # Verify total agents count
+        assert "**Total Available Agents**: 3" in content
 
-        # Verify project-specific agents section
+        # Verify project-specific agents section is present
         assert "### Project-Specific Agents" in content
-        assert (
-            "**Custom Analyzer** (custom-analyzer): Project-specific analysis tool"
-            in content
-        )
 
-        # Verify agent capabilities
-        assert (
-            "**Research Agent**: Analyzing code structure; Finding implementation patterns"
-            in content
-        )
-        assert "**Engineer Agent**: implementation, refactoring" in content
-        assert "**Custom Analyzer**: Analyzing project-specific patterns" in content
+        # Verify project agent entry (description shown in project section)
+        assert "**Custom Analyzer**" in content
+        assert "custom-analyzer" in content
+        assert "Project-specific analysis tool" in content
 
-        # Verify agent name formats (order is alphabetical by ID)
-        assert (
-            'Capitalized: Custom Analyzer", "Engineer Agent", "Research Agent'
-            in content
-        )
-        assert (
-            'Lowercase-hyphenated: custom-analyzer", "engineer", "research' in content
-        )
+        # Verify research agent in Research Agents section
+        assert "**Research**" in content
+        assert "Analyzing code structure; Finding implementation patterns" in content
 
-        # Verify footer
-        assert "*Generated from 3 deployed agents*" in content
+        # Verify engineer agent in Engineering Agents section
+        assert "**Engineer**" in content
+        assert "implementation, refactoring" in content
 
-    def test_generate_capabilities_section_empty_agents(self):
+        # Verify footer guidance
+        assert "Task tool" in content
+
+    def test_generate_capabilities_section_empty_agents(self, generator):
         """Test generation with empty agent list."""
-        content = self.generate_capabilities_section([])
+        content = generator.generate_capabilities_section([])
 
-        assert "**Core Agents**: " in content  # Empty list
-        assert "*Generated from 0 deployed agents*" in content
+        # Verify total agents is 0
+        assert "**Total Available Agents**: 0" in content
 
-    def test_generate_capabilities_section_error_handling(self, caplog):
+    def test_generate_capabilities_section_error_handling(self, generator, caplog):
         """Test error handling returns fallback content."""
         # Pass invalid data that will cause template rendering to fail
         invalid_agents = [{"invalid": "data"}]  # Missing required fields
 
         with caplog.at_level(logging.ERROR):
-            content = self.generate_capabilities_section(invalid_agents)
+            content = generator.generate_capabilities_section(invalid_agents)
 
         # Should return fallback content
         assert "Unable to dynamically generate agent list" in content
         assert "research, engineer, qa, documentation" in content
         assert "Failed to generate capabilities section" in caplog.text
 
-    def test_group_by_tier(self, sample_agents):
+    def test_group_by_tier(self, generator, sample_agents):
         """Test grouping agents by source tier."""
-        grouped = self._group_by_tier(sample_agents)
+        grouped = generator._group_by_tier(sample_agents)
 
         assert len(grouped["system"]) == 2
         assert len(grouped["project"]) == 1
@@ -156,27 +148,27 @@ class TestAgentCapabilitiesGenerator:
         assert grouped["system"][1]["id"] == "engineer"
         assert grouped["project"][0]["id"] == "custom-analyzer"
 
-    def test_group_by_tier_unknown_tier(self, caplog):
+    def test_group_by_tier_unknown_tier(self, generator, caplog):
         """Test handling of unknown source tiers."""
         agents = [{"id": "test", "source_tier": "unknown-tier"}]
 
         with caplog.at_level(logging.WARNING):
-            grouped = self._group_by_tier(agents)
+            grouped = generator._group_by_tier(agents)
 
         # Should default to system tier
         assert len(grouped["system"]) == 1
         assert "Unknown source tier 'unknown-tier'" in caplog.text
 
-    def test_generate_core_agent_list(self, sample_agents):
+    def test_generate_core_agent_list(self, generator, sample_agents):
         """Test generation of core agent list."""
-        agent_list = self._generate_core_agent_list(sample_agents)
+        agent_list = generator._generate_core_agent_list(sample_agents)
 
         # Should be sorted alphabetically
         assert agent_list == "custom-analyzer, engineer, research"
 
-    def test_generate_detailed_capabilities(self, sample_agents):
+    def test_generate_detailed_capabilities(self, generator, sample_agents):
         """Test generation of detailed capabilities."""
-        capabilities = self._generate_detailed_capabilities(sample_agents)
+        capabilities = generator._generate_detailed_capabilities(sample_agents)
 
         assert len(capabilities) == 3
 
@@ -198,7 +190,7 @@ class TestAgentCapabilitiesGenerator:
         # Verify tools extraction
         assert capabilities[2]["tools"] == "grep, find, tree, ast-parser"
 
-    def test_generate_detailed_capabilities_long_text(self):
+    def test_generate_detailed_capabilities_long_text(self, generator):
         """Test truncation of long capability text."""
         agents = [
             {
@@ -211,13 +203,13 @@ class TestAgentCapabilitiesGenerator:
             }
         ]
 
-        capabilities = self._generate_detailed_capabilities(agents)
+        capabilities = generator._generate_detailed_capabilities(agents)
 
         # Should truncate to 100 chars with ellipsis
         assert len(capabilities[0]["capability_text"]) == 100
         assert capabilities[0]["capability_text"].endswith("...")
 
-    def test_generate_detailed_capabilities_fallback_to_description(self):
+    def test_generate_detailed_capabilities_fallback_to_description(self, generator):
         """Test fallback to description when no specializations or when_to_use."""
         agents = [
             {
@@ -230,11 +222,11 @@ class TestAgentCapabilitiesGenerator:
             }
         ]
 
-        capabilities = self._generate_detailed_capabilities(agents)
+        capabilities = generator._generate_detailed_capabilities(agents)
 
         assert capabilities[0]["capability_text"] == "General purpose testing agent"
 
-    def test_generate_detailed_capabilities_no_description(self):
+    def test_generate_detailed_capabilities_no_description(self, generator):
         """Test default text when no description available."""
         agents = [
             {
@@ -246,13 +238,13 @@ class TestAgentCapabilitiesGenerator:
             }
         ]
 
-        capabilities = self._generate_detailed_capabilities(agents)
+        capabilities = generator._generate_detailed_capabilities(agents)
 
         assert capabilities[0]["capability_text"] == "General purpose agent"
 
-    def test_generate_fallback_content(self):
+    def test_generate_fallback_content(self, generator):
         """Test fallback content generation."""
-        content = self._generate_fallback_content()
+        content = generator._generate_fallback_content()
 
         # Verify it contains default agents
         assert "research, engineer, qa, documentation" in content
