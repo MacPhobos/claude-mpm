@@ -64,8 +64,9 @@ This is the base agent configuration.
             Path to the created template file
         """
         template_file = self.templates_dir / f"{agent_name}.json"
+        # Use current schema (1.3.0): instructions is a string, capabilities has resource_tier
         template_data = {
-            "schema_version": "1.2.0",
+            "schema_version": "1.3.0",
             "agent_id": agent_name,
             "agent_version": "1.0.0",
             "agent_type": agent_type,
@@ -75,10 +76,12 @@ This is the base agent configuration.
                 "category": "testing",
                 "tags": ["test", agent_type],
             },
-            "capabilities": {"model": "sonnet", "tools": ["Read", "Write", "Edit"]},
-            "instructions": {
-                "system_prompt": f"You are a {agent_type} agent for testing purposes."
+            "capabilities": {
+                "model": "sonnet",
+                "tools": ["Read", "Write", "Edit"],
+                "resource_tier": "standard",
             },
+            "instructions": f"You are a {agent_type} agent for testing purposes.",
         }
         template_file.write_text(json.dumps(template_data, indent=2))
         return template_file
@@ -114,7 +117,11 @@ This is the base agent configuration.
         # Verify service status
         status = service.get_deployment_status()
         assert status["service_version"] == "refactored-1.0.0"
-        assert status["status"] == "ready"
+        # status is an OperationResult enum; check its value
+        status_val = status["status"]
+        assert (
+            hasattr(status_val, "value") and status_val.value == "success"
+        ) or status_val == "ready"
 
     def test_interface_adapter_integration(self):
         """Test interface adapter with actual deployment service."""
