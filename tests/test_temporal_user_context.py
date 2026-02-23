@@ -12,6 +12,12 @@ from claude_mpm.core.framework_loader import FrameworkLoader
 
 def test_temporal_user_context():
     """Test that the temporal and user context is properly generated."""
+    import pytest
+
+    pytest.skip(
+        "FrameworkLoader._generate_temporal_user_context() was removed; "
+        "temporal context is now injected differently"
+    )
     print("Testing Enhanced Temporal & User Context\n" + "=" * 50)
 
     # Initialize framework loader

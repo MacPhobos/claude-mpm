@@ -5,10 +5,19 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from claude_mpm.core.framework_loader import FrameworkLoader
 from claude_mpm.services.agents.memory.agent_memory_manager import AgentMemoryManager
 
 
+@pytest.mark.skip(
+    reason=(
+        "User-level memory directory support removed from AgentMemoryManager. "
+        "Only project-level memories are supported. setUp uses undefined 'tmp_path' "
+        "(pytest fixture not available in unittest.TestCase)."
+    )
+)
 class TestUserMemoryAggregation(unittest.TestCase):
     """Test user-level memory support and aggregation functionality."""
 
