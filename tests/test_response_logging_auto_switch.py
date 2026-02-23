@@ -191,7 +191,7 @@ response_logging:
         env = call_args[0][1]
         self.assertIsInstance(env, dict)
 
-    def test_response_logger_initialization():
+    def test_response_logger_initialization(self):
         """Test that response logger is properly initialized when enabled."""
         # Create config with response logging enabled
         config = self.create_config(response_logging_enabled=True)
@@ -213,7 +213,7 @@ response_logging:
                 self.assertEqual(runner.response_logger, mock_logger)
                 mock_get_logger.assert_called_once_with(config)
 
-    def test_logging_messages_for_auto_switch():
+    def test_logging_messages_for_auto_switch(self):
         """Test that appropriate log messages are generated during auto-switch."""
         # Create config with response logging enabled
         config = self.create_config(response_logging_enabled=True)

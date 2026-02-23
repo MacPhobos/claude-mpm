@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from unittest import TestCase
 
+from claude_mpm.core.config import Config
+
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -21,7 +23,7 @@ class TestConfigNoDuplicateLogging(TestCase):
         """Reset singleton after each test."""
         Config.reset_singleton()
 
-    def test_single_success_message():
+    def test_single_success_message(self):
         """Test that 'Successfully loaded configuration' appears only once."""
         with self.assertLogs("claude_mpm.core.config", level=logging.INFO) as cm:
             # Create multiple Config instances
@@ -41,7 +43,7 @@ class TestConfigNoDuplicateLogging(TestCase):
                 f"Expected 1 success message, got {len(success_messages)}",
             )
 
-    def test_reload_prevention():
+    def test_reload_prevention(self):
         """Test that calling load_file on same file doesn't reload."""
         config_file = Path.cwd() / ".claude-mpm" / "configuration.yaml"
 
@@ -64,7 +66,7 @@ class TestConfigNoDuplicateLogging(TestCase):
                 "Expected skip messages for duplicate load attempts",
             )
 
-    def test_singleton_with_services():
+    def test_singleton_with_services(self):
         """Test that services share the same Config singleton."""
         from claude_mpm.services.agent_capabilities_service import (
             AgentCapabilitiesService,

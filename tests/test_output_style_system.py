@@ -18,7 +18,7 @@ from claude_mpm.core.output_style_manager import OutputStyleManager
 class TestOutputStyleManager:
     """Test suite for OutputStyleManager."""
 
-    def test_version_detection_success():
+    def test_version_detection_success(self):
         """Test successful Claude version detection."""
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
@@ -29,13 +29,13 @@ class TestOutputStyleManager:
             manager = OutputStyleManager()
             assert manager.claude_version == "1.0.83"
 
-    def test_version_detection_not_found():
+    def test_version_detection_not_found(self):
         """Test when Claude is not found."""
         with patch("subprocess.run", side_effect=FileNotFoundError):
             manager = OutputStyleManager()
             assert manager.claude_version is None
 
-    def test_version_comparison():
+    def test_version_comparison(self):
         """Test version comparison logic."""
         manager = OutputStyleManager()
 
@@ -52,7 +52,7 @@ class TestOutputStyleManager:
         assert manager._compare_versions("1.1.0", "1.0.83") == 1
         assert manager._compare_versions("2.0.0", "1.0.83") == 1
 
-    def test_supports_output_styles():
+    def test_supports_output_styles(self):
         """Test output style support detection."""
         with patch("subprocess.run") as mock_run:
             # Test version >= 1.0.83
@@ -76,7 +76,7 @@ class TestOutputStyleManager:
             assert manager.supports_output_styles() is False
             assert manager.should_inject_content() is True
 
-    def test_extract_output_style_content():
+    def test_extract_output_style_content(self):
         """Test extraction of output style content."""
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
@@ -96,7 +96,7 @@ class TestOutputStyleManager:
             assert "Communication Standards" in content
             assert "TodoWrite Requirements" in content
 
-    def test_get_injectable_content():
+    def test_get_injectable_content(self):
         """Test getting injectable content without YAML frontmatter."""
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
@@ -115,9 +115,10 @@ class TestOutputStyleManager:
             assert "PRIMARY DIRECTIVE" in injectable
             assert "MANDATORY DELEGATION" in injectable
 
-    def test_save_output_style():
+    def test_save_output_style(self, tmp_path):
         """Test saving output style to file."""
-        with tmp_path as tmpdir, patch("subprocess.run") as mock_run:
+        tmpdir = tmp_path
+        with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_result.stdout = "Claude 1.0.83"
@@ -133,9 +134,10 @@ class TestOutputStyleManager:
             assert saved_path.exists()
             assert saved_path.read_text() == content
 
-    def test_deploy_output_style_success():
+    def test_deploy_output_style_success(self, tmp_path):
         """Test successful deployment to Claude Code."""
-        with tmp_path as tmpdir, patch("subprocess.run") as mock_run:
+        tmpdir = tmp_path
+        with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_result.stdout = "Claude 1.0.83"
@@ -159,7 +161,7 @@ class TestOutputStyleManager:
             settings = json.loads(manager.settings_file.read_text())
             assert settings["activeOutputStyle"] == "claude-mpm"
 
-    def test_deploy_output_style_unsupported_version():
+    def test_deploy_output_style_unsupported_version(self):
         """Test deployment fails for older Claude versions."""
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
@@ -177,7 +179,7 @@ class TestOutputStyleManager:
 class TestFrameworkLoaderIntegration:
     """Test integration with FrameworkLoader."""
 
-    def test_output_style_initialization_new_version():
+    def test_output_style_initialization_new_version(self):
         """Test output style initialization for Claude >= 1.0.83."""
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
@@ -196,7 +198,7 @@ class TestFrameworkLoaderIntegration:
                 assert loader.output_style_manager is not None
                 assert loader.output_style_manager.supports_output_styles() is True
 
-    def test_output_style_injection_old_version():
+    def test_output_style_injection_old_version(self):
         """Test output style injection for Claude < 1.0.83."""
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
@@ -232,7 +234,7 @@ class TestFrameworkLoaderIntegration:
                 ):
                     assert "Output Style Configuration" in full_instructions
 
-    def test_output_style_not_injected_new_version():
+    def test_output_style_not_injected_new_version(self):
         """Test output style NOT injected for Claude >= 1.0.83."""
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()

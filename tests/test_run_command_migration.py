@@ -21,12 +21,12 @@ class TestRunCommandMigration:
         """Setup test fixtures."""
         self.command = RunCommand()
 
-    def test_command_initialization():
+    def test_command_initialization(self):
         """Test that RunCommand initializes correctly."""
         assert self.command.command_name == "run"
         assert self.command.logger is not None
 
-    def test_validate_args_minimal():
+    def test_validate_args_minimal(self):
         """Test argument validation with minimal args."""
         args = Namespace()
         result = self.command.validate_args(args)
@@ -92,7 +92,7 @@ class TestRunCommandMigration:
 
         assert result is False
 
-    def test_backward_compatibility_function():
+    def test_backward_compatibility_function(self):
         """Test that the run_session function maintains backward compatibility."""
         from claude_mpm.cli.commands.run import run_session
 
@@ -151,7 +151,7 @@ class TestRunCommandHelperMethods:
         assert resume_session_id is None
         assert resume_context is None
 
-    def test_setup_monitoring_disabled():
+    def test_setup_monitoring_disabled(self):
         """Test monitoring setup when disabled."""
         args = Namespace()
 
@@ -172,7 +172,7 @@ class TestRunCommandHelperMethods:
         assert result == mock_runner
         self.assert_called_once()
 
-    def test_is_socketio_server_running_false():
+    def test_is_socketio_server_running_false(self):
         """Test Socket.IO server running check when not running."""
         result = self.command._is_socketio_server_running(9999)  # Unlikely to be used
         assert result is False

@@ -65,7 +65,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_simple_remember_field_extraction():
+    def test_simple_remember_field_extraction(self):
         """Test extraction from simple remember field in JSON response."""
         response = """
         Task completed successfully.
@@ -91,7 +91,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertIn("Python 3.11", content)
         self.assertIn("PostgreSQL", content)
 
-    def test_capital_remember_field_extraction():
+    def test_capital_remember_field_extraction(self):
         """Test extraction from Remember field (capital R) in JSON response."""
         response = """
         Analysis complete.
@@ -117,7 +117,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertIn("JWT authentication", content)
         self.assertIn("Rate limit", content)
 
-    def test_null_remember_field_handling():
+    def test_null_remember_field_handling(self):
         """Test handling of null remember field."""
         response = """
         Task completed.
@@ -140,7 +140,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
             memory_file.exists(), "Memory file should not be created for null remember"
         )
 
-    def test_empty_list_remember_field_handling():
+    def test_empty_list_remember_field_handling(self):
         """Test handling of empty list remember field."""
         response = """
         Task completed.
@@ -157,7 +157,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         # Should return False for empty list
         self.assertFalse(result, "Empty remember list should return False")
 
-    def test_memory_update_structured_format_NOT_IMPLEMENTED():
+    def test_memory_update_structured_format_NOT_IMPLEMENTED(self):
         """Test extraction from memory-update structured format - EXPECTED TO FAIL."""
         response = """
         Task completed.
@@ -184,7 +184,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
             "Memory file should not be created for unimplemented format",
         )
 
-    def test_no_json_response_handling():
+    def test_no_json_response_handling(self):
         """Test handling of response with no JSON."""
         response = """
         Task completed successfully.
@@ -197,7 +197,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         # Should return False for no JSON
         self.assertFalse(result, "Response with no JSON should return False")
 
-    def test_invalid_json_handling():
+    def test_invalid_json_handling(self):
         """Test handling of invalid JSON in response."""
         response = """
         Task completed.
@@ -214,7 +214,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         # Should return False for invalid JSON
         self.assertFalse(result, "Response with invalid JSON should return False")
 
-    def test_multiple_json_blocks_processing():
+    def test_multiple_json_blocks_processing(self):
         """Test processing multiple JSON blocks in one response."""
         response = """
         First task completed.
@@ -247,7 +247,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertIn("First learning", content)
         self.assertIn("Second learning", content)
 
-    def test_memory_file_format_consistency():
+    def test_memory_file_format_consistency(self):
         """Test that memory files are created with consistent format."""
         response = """
         ```json

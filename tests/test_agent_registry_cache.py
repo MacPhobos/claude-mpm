@@ -17,6 +17,7 @@ from pathlib import Path
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from claude_mpm.core.unified_agent_registry import get_agent_registry
 from claude_mpm.services.agents.registry import AgentRegistry
 from claude_mpm.services.memory.cache.simple_cache import SimpleCacheService
 
@@ -76,55 +77,55 @@ def test_force_refresh():
     print("✓ Force refresh bypasses cache correctly")
 
 
-def test_file_modification_detection():
+def test_file_modification_detection(tmp_path):
     """Test that cache invalidates when files are modified."""
     print("\n=== Testing File Modification Detection ===")
 
     # Create a temporary directory with an agent file
-    with tmp_path as tmpdir:
-        tmppath = Path(tmpdir)
-        agent_file = tmppath / "test_agent.md"
+    tmpdir = tmp_path
+    tmppath = Path(tmpdir)
+    agent_file = tmppath / "test_agent.md"
 
-        # Write initial agent file
-        agent_file.write_text(
-            """# Test Agent
+    # Write initial agent file
+    agent_file.write_text(
+        """# Test Agent
 Description: Initial version
 Version: 1.0.0
 """
-        )
+    )
 
-        # Create registry and add the temp path
-        registry = get_agent_registry()
-        registry.add_discovery_path(tmppath)
+    # Create registry and add the temp path
+    registry = get_agent_registry()
+    registry.add_discovery_path(tmppath)
 
-        # First discovery
-        print("First discovery...")
-        registry.discover_agents()
-        test_agent1 = registry.get_agent("test")
-        print(f"  Found agent: {test_agent1.name if test_agent1 else 'None'}")
+    # First discovery
+    print("First discovery...")
+    registry.discover_agents()
+    test_agent1 = registry.get_agent("test")
+    print(f"  Found agent: {test_agent1.name if test_agent1 else 'None'}")
 
-        # Wait a bit to ensure file modification time changes
-        time.sleep(0.1)
+    # Wait a bit to ensure file modification time changes
+    time.sleep(0.1)
 
-        # Modify the agent file
-        print("Modifying agent file...")
-        agent_file.write_text(
-            """# Test Agent
+    # Modify the agent file
+    print("Modifying agent file...")
+    agent_file.write_text(
+        """# Test Agent
 Description: Modified version
 Version: 2.0.0
 """
-        )
+    )
 
-        # Second discovery (should detect modification)
-        print("Second discovery (should detect file change)...")
-        registry.discover_agents()
-        test_agent2 = registry.get_agent("test")
+    # Second discovery (should detect modification)
+    print("Second discovery (should detect file change)...")
+    registry.discover_agents()
+    test_agent2 = registry.get_agent("test")
 
-        # Cache should have detected the change
-        if test_agent1 and test_agent2:
-            print(f"  Version changed: {test_agent1.version} -> {test_agent2.version}")
+    # Cache should have detected the change
+    if test_agent1 and test_agent2:
+        print(f"  Version changed: {test_agent1.version} -> {test_agent2.version}")
 
-        print("✓ File modification detection works (cache invalidated on file change)")
+    print("✓ File modification detection works (cache invalidated on file change)")
 
 
 def test_cache_invalidation():

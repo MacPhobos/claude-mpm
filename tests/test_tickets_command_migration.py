@@ -22,24 +22,24 @@ class TestTicketsCommandMigration:
         """Setup test fixtures."""
         self.command = TicketsCommand()
 
-    def test_command_initialization():
+    def test_command_initialization(self):
         """Test that TicketsCommand initializes correctly."""
         assert self.command.command_name == "tickets"
         assert self.command.logger is not None
 
-    def test_validate_args_no_subcommand():
+    def test_validate_args_no_subcommand(self):
         """Test argument validation with no subcommand."""
         args = Namespace()
         result = self.command.validate_args(args)
         assert result == "No tickets subcommand specified"
 
-    def test_validate_args_invalid_subcommand():
+    def test_validate_args_invalid_subcommand(self):
         """Test argument validation with invalid subcommand."""
         args = Namespace(tickets_command="invalid")
         result = self.command.validate_args(args)
         assert "Unknown tickets command" in result
 
-    def test_validate_args_valid_subcommand():
+    def test_validate_args_valid_subcommand(self):
         """Test argument validation with valid subcommand."""
         args = Namespace(tickets_command=TicketCommands.LIST.value)
         result = self.command.validate_args(args)
@@ -120,7 +120,7 @@ class TestTicketsCommandMigration:
         assert result.success is True
         assert "closed successfully" in result.message
 
-    def test_unknown_command():
+    def test_unknown_command(self):
         """Test handling of unknown command."""
         args = Namespace(tickets_command="unknown")
 
@@ -130,7 +130,7 @@ class TestTicketsCommandMigration:
         assert result.success is False
         assert "Unknown tickets command" in result.message
 
-    def test_backward_compatibility_function():
+    def test_backward_compatibility_function(self):
         """Test that the manage_tickets function maintains backward compatibility."""
         from claude_mpm.cli.commands.tickets import manage_tickets
 
@@ -144,7 +144,7 @@ class TestTicketsCommandMigration:
             assert exit_code == 0
             mock_execute.assert_called_once_with(args)
 
-    def test_list_tickets_compatibility_function():
+    def test_list_tickets_compatibility_function(self):
         """Test that the list_tickets compatibility function works."""
         from claude_mpm.cli.commands.tickets import list_tickets
 

@@ -155,7 +155,7 @@ class TestAgentDiscoveryService:
 
         assert agents == []
 
-    def test_list_available_agents_nonexistent_directory():
+    def test_list_available_agents_nonexistent_directory(self):
         """Test listing agents from nonexistent directory."""
         nonexistent_dir = Path("/nonexistent/directory")
         service = AgentDiscoveryService(nonexistent_dir)

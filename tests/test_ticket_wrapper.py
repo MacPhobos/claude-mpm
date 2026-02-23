@@ -11,7 +11,7 @@ import pytest
 class TestTicketCLI:
     """Placeholder for ticket CLI tests."""
 
-    def test_placeholder():
+    def test_placeholder(self):
         """Placeholder test."""
 
 
@@ -19,5 +19,5 @@ class TestTicketCLI:
 class TestMain:
     """Placeholder for main tests."""
 
-    def test_placeholder():
+    def test_placeholder(self):
         """Placeholder test."""

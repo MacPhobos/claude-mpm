@@ -889,8 +889,7 @@ class TestAgentMemoryManager:
         logger2 = manager.logger
         assert logger1 is logger2
 
-    @staticmethod
-    def test_singleton_get_memory_manager():
+    def test_singleton_get_memory_manager(self):
         """Test that get_memory_manager returns singleton."""
         from claude_mpm.services.agents.memory.agent_memory_manager import (
             get_memory_manager,

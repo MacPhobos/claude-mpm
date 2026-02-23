@@ -19,6 +19,7 @@ from unittest.mock import patch
 
 import pytest
 
+from claude_mpm.core.config import Config
 from claude_mpm.hooks.base_hook import HookContext, HookType
 from claude_mpm.hooks.memory_integration_hook import (
     MemoryPostDelegationHook,
@@ -60,7 +61,7 @@ class TestMemoryFixesVerification:
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
-    def test_pm_memory_persistence_to_user_directory():
+    def test_pm_memory_persistence_to_user_directory(self):
         """Test 1: Verify PM memories are saved to ~/.claude/memories/"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             memory_manager = AgentMemoryManager(
@@ -95,7 +96,7 @@ class TestMemoryFixesVerification:
 
             print("✅ PM memory persistence to user directory verified")
 
-    def test_directory_handling_pm_vs_others():
+    def test_directory_handling_pm_vs_others(self):
         """Test 2: Verify PM uses user directory, other agents use project directory"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             memory_manager = AgentMemoryManager(
@@ -127,7 +128,7 @@ class TestMemoryFixesVerification:
 
             print("✅ Directory handling verification passed")
 
-    def test_memory_hook_service_functionality():
+    def test_memory_hook_service_functionality(self):
         """Test 3: Test memory hook service functionality"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             # Test memory extraction hook
@@ -175,7 +176,7 @@ The implementation follows best practices.
 
             print("✅ Memory hook service functionality verified")
 
-    def test_migration_with_pm_backup_creation():
+    def test_migration_with_pm_backup_creation(self):
         """Test 4: Test migration from old formats with PM backup creation"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             # Create old format PM file in user directory
@@ -239,7 +240,7 @@ The implementation follows best practices.
 
             print("✅ Migration with PM backup creation verified")
 
-    def test_cross_project_pm_memory_accessibility():
+    def test_cross_project_pm_memory_accessibility(self):
         """Test 5: Test cross-project PM memory accessibility"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             # Create PM memory in first project
@@ -281,7 +282,7 @@ The implementation follows best practices.
 
             print("✅ Cross-project PM memory accessibility verified")
 
-    def test_other_agents_use_project_directory_correctly():
+    def test_other_agents_use_project_directory_correctly(self):
         """Test 6: Verify non-PM agents use project directory correctly"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             # Test multiple agents in project 1
@@ -343,7 +344,7 @@ The implementation follows best practices.
 
             print("✅ Other agents using project directory correctly verified")
 
-    def test_memory_hook_extraction_from_json_responses():
+    def test_memory_hook_extraction_from_json_responses(self):
         """Test memory extraction from JSON responses (new requirement)"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             memory_manager = AgentMemoryManager(
@@ -378,7 +379,7 @@ The implementation follows security best practices.
 
             print("✅ Memory extraction from JSON responses verified")
 
-    def test_pm_memory_extraction_to_user_directory():
+    def test_pm_memory_extraction_to_user_directory(self):
         """Test that PM memory extraction saves to user directory"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             memory_manager = AgentMemoryManager(
@@ -420,7 +421,7 @@ Delegation was successful.
 
             print("✅ PM memory extraction to user directory verified")
 
-    def test_memory_directory_creation():
+    def test_memory_directory_creation(self):
         """Test that directories are created correctly"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             # Remove existing directories to test creation
@@ -460,7 +461,7 @@ Delegation was successful.
 
             print("✅ Memory directory creation verified")
 
-    def test_pre_delegation_hook_memory_injection():
+    def test_pre_delegation_hook_memory_injection(self):
         """Test pre-delegation hook injects memory correctly"""
         with patch("pathlib.Path.home", return_value=self.test_user_home):
             # Create memory for engineer

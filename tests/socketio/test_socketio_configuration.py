@@ -30,6 +30,7 @@ from claude_mpm.config.socketio_config import (
     get_discovery_hosts,
     get_server_ports,
 )
+from claude_mpm.core.config import Config
 
 
 class TestSocketIOConfiguration:

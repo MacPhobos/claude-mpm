@@ -144,42 +144,42 @@ def test_multiple_enforcements():
     print()
 
 
-def test_enforcement_with_missing_settings():
+def test_enforcement_with_missing_settings(tmp_path):
     """Test enforcement when settings.json doesn't exist."""
     print("=" * 60)
     print("TEST 4: Enforcement with Missing Settings")
     print("=" * 60)
 
     # Create a temporary directory for testing
-    with tmp_path as tmpdir:
-        test_dir = Path(tmpdir) / ".claude"
-        test_dir.mkdir(parents=True)
+    tmpdir = tmp_path
+    test_dir = Path(tmpdir) / ".claude"
+    test_dir.mkdir(parents=True)
 
-        # Create manager with mocked paths
-        manager = OutputStyleManager()
-        manager.settings_file = test_dir / "settings.json"
-        manager.output_style_dir = test_dir / "output-styles"
+    # Create manager with mocked paths
+    manager = OutputStyleManager()
+    manager.settings_file = test_dir / "settings.json"
+    manager.output_style_dir = test_dir / "output-styles"
 
-        if not manager.supports_output_styles():
-            print("Skipping - Claude version does not support output styles")
-            return
+    if not manager.supports_output_styles():
+        print("Skipping - Claude version does not support output styles")
+        return
 
-        print(f"Settings file exists: {manager.settings_file.exists()}")
+    print(f"Settings file exists: {manager.settings_file.exists()}")
 
-        # Deploy style (should create settings)
-        content = manager.extract_output_style_content()
-        deployed = manager.deploy_output_style(content)
-        print(f"Deployment successful: {deployed}")
+    # Deploy style (should create settings)
+    content = manager.extract_output_style_content()
+    deployed = manager.deploy_output_style(content)
+    print(f"Deployment successful: {deployed}")
 
-        # Check if settings was created
-        print(f"Settings file created: {manager.settings_file.exists()}")
+    # Check if settings was created
+    print(f"Settings file created: {manager.settings_file.exists()}")
 
-        if manager.settings_file.exists():
-            settings = json.loads(manager.settings_file.read_text())
-            print(f"Active style: {settings.get('activeOutputStyle')}")
+    if manager.settings_file.exists():
+        settings = json.loads(manager.settings_file.read_text())
+        print(f"Active style: {settings.get('activeOutputStyle')}")
 
-        # Log status
-        manager.log_enforcement_status()
+    # Log status
+    manager.log_enforcement_status()
 
     print()
 

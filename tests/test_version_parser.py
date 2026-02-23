@@ -40,7 +40,7 @@ class TestEnhancedVersionParser(unittest.TestCase):
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_version_from_git_tags():
+    def test_version_from_git_tags(self):
         """Test retrieving version from git tags."""
         with patch("subprocess.run") as mock_run:
             # Mock git describe output
@@ -52,7 +52,7 @@ class TestEnhancedVersionParser(unittest.TestCase):
             self.assertEqual(version.version, "3.8.1")
             self.assertEqual(version.source, VersionSource.GIT_TAGS)
 
-    def test_version_from_version_file():
+    def test_version_from_version_file(self):
         """Test retrieving version from VERSION file."""
         version_file = self.project_root / "VERSION"
         version_file.write_text("3.8.0\n")
@@ -63,7 +63,7 @@ class TestEnhancedVersionParser(unittest.TestCase):
         self.assertEqual(version.version, "3.8.0")
         self.assertEqual(version.source, VersionSource.VERSION_FILE)
 
-    def test_version_from_package_json():
+    def test_version_from_package_json(self):
         """Test retrieving version from package.json."""
         package_json = self.project_root / "package.json"
         package_json.write_text(
@@ -76,7 +76,7 @@ class TestEnhancedVersionParser(unittest.TestCase):
         self.assertEqual(version.version, "2.1.0")
         self.assertEqual(version.source, VersionSource.PACKAGE_JSON)
 
-    def test_version_from_pyproject_toml():
+    def test_version_from_pyproject_toml(self):
         """Test retrieving version from pyproject.toml."""
         pyproject = self.project_root / "pyproject.toml"
         pyproject.write_text(
@@ -93,7 +93,7 @@ version = "1.5.3"
         self.assertEqual(version.version, "1.5.3")
         self.assertEqual(version.source, VersionSource.PYPROJECT_TOML)
 
-    def test_version_from_changelog():
+    def test_version_from_changelog(self):
         """Test parsing versions from CHANGELOG.md."""
         changelog = self.project_root / "CHANGELOG.md"
         changelog.write_text(
@@ -127,7 +127,7 @@ version = "1.5.3"
         # Note: changes extraction might be empty depending on changelog format
         self.assertEqual(len(versions), 3)
 
-    def test_fallback_mechanism():
+    def test_fallback_mechanism(self):
         """Test fallback when primary sources are unavailable."""
         with patch("subprocess.run") as mock_run:
             # Simulate git not available
@@ -143,7 +143,7 @@ version = "1.5.3"
             self.assertEqual(version.version, "3.7.0")
             self.assertEqual(version.source, VersionSource.VERSION_FILE)
 
-    def test_version_history_aggregation():
+    def test_version_history_aggregation(self):
         """Test aggregating version history from multiple sources."""
         # Mock git tags
         with patch.object(self.parser, "_get_all_versions_from_git") as mock_git:
@@ -177,7 +177,7 @@ version = "1.5.3"
             v381 = next(v for v in history if v.version == "3.8.1")
             self.assertEqual(v381.source, VersionSource.GIT_TAGS)
 
-    def test_caching_behavior():
+    def test_caching_behavior(self):
         """Test that caching works correctly."""
         with patch.object(self.parser, "_get_version_from_git") as mock_git:
             mock_git.return_value = VersionMetadata("3.8.1", VersionSource.GIT_TAGS)
@@ -201,7 +201,7 @@ version = "1.5.3"
             self.parser.get_current_version()
             self.assertEqual(mock_git.call_count, 2)
 
-    def test_prerelease_filtering():
+    def test_prerelease_filtering(self):
         """Test filtering of pre-release versions."""
         with patch.object(self.parser, "_get_all_versions_from_git") as mock_git:
             mock_git.return_value = [
@@ -225,7 +225,7 @@ version = "1.5.3"
             self.assertIn("3.9.0-alpha.1", versions)
             self.assertIn("3.8.0-rc.1", versions)
 
-    def test_version_consistency_validation():
+    def test_version_consistency_validation(self):
         """Test version consistency validation across sources."""
         # Set up different versions in different sources
         version_file = self.project_root / "VERSION"
@@ -249,7 +249,7 @@ version = "1.5.3"
                 consistency[VersionSource.VERSION_FILE],
             )
 
-    def test_semantic_version_integration():
+    def test_semantic_version_integration(self):
         """Test integration with SemanticVersionManager."""
         # Create VERSION file
         version_file = self.project_root / "VERSION"
@@ -267,7 +267,7 @@ version = "1.5.3"
         self.assertEqual(current_version.minor, 8)
         self.assertEqual(current_version.patch, 1)
 
-    def test_error_handling():
+    def test_error_handling(self):
         """Test error handling for various failure scenarios."""
         # Test with no version sources available
         parser = EnhancedVersionParser(Path("/nonexistent/path"))
@@ -288,14 +288,14 @@ version = "1.5.3"
         version = self.parser._get_version_from_package_json()
         self.assertIsNone(version)
 
-    def test_singleton_behavior():
+    def test_singleton_behavior(self):
         """Test that get_version_parser returns singleton instance."""
         parser1 = get_version_parser(self.project_root)
         parser2 = get_version_parser(self.project_root)
 
         self.assertIs(parser1, parser2)
 
-    def test_git_tag_metadata_extraction():
+    def test_git_tag_metadata_extraction(self):
         """Test extraction of metadata from git tags."""
         with patch("subprocess.run") as mock_run:
             # Mock git for-each-ref output
@@ -311,7 +311,7 @@ version = "1.5.3"
             self.assertEqual(versions[0].message, "Release 3.8.1")
             self.assertIsNotNone(versions[0].release_date)
 
-    def test_version_sorting():
+    def test_version_sorting(self):
         """Test that versions are sorted correctly."""
         with patch.object(self.parser, "_get_all_versions_from_git") as mock_git:
             mock_git.return_value = [

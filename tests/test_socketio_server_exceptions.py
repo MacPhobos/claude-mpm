@@ -56,7 +56,7 @@ class TestSocketIOServerExceptions(unittest.TestCase):
         if self.temp_dir.exists():
             self.temp_dir.rmdir()
 
-    def test_daemon_conflict_error_creation():
+    def test_daemon_conflict_error_creation(self):
         """Test DaemonConflictError creation with full context."""
         process_info = {
             "pid": self.test_pid,
@@ -100,7 +100,7 @@ class TestSocketIOServerExceptions(unittest.TestCase):
         self.assertEqual(error_dict["context"]["port"], self.test_port)
         self.assertIn("timestamp", error_dict)
 
-    def test_port_conflict_error_creation():
+    def test_port_conflict_error_creation(self):
         """Test PortConflictError creation and messaging."""
         conflicting_process = {
             "pid": 9876,
@@ -132,7 +132,7 @@ class TestSocketIOServerExceptions(unittest.TestCase):
             any("lsof" in step or "netstat" in step for step in resolution_steps)
         )
 
-    def test_stale_process_error_creation():
+    def test_stale_process_error_creation(self):
         """Test StaleProcessError creation with different statuses."""
         validation_errors = ["Process no longer exists", "PID file is stale"]
 
@@ -164,7 +164,7 @@ class TestSocketIOServerExceptions(unittest.TestCase):
         resolution_steps = zombie_error.context["resolution_steps"]
         self.assertTrue(any("parent process" in step for step in resolution_steps))
 
-    def test_recovery_failed_error_creation():
+    def test_recovery_failed_error_creation(self):
         """Test RecoveryFailedError creation and messaging."""
         health_status = {
             "status": "degraded",
@@ -200,7 +200,7 @@ class TestSocketIOServerExceptions(unittest.TestCase):
         resolution_steps = error.context["resolution_steps"]
         self.assertTrue(any("Manually stop" in step for step in resolution_steps))
 
-    def test_health_check_error_creation():
+    def test_health_check_error_creation(self):
         """Test HealthCheckError creation with threshold information."""
         check_details = {"cpu_usage": 85.5, "memory_usage": 512, "check_duration": 2.3}
 
@@ -234,7 +234,7 @@ class TestSocketIOServerExceptions(unittest.TestCase):
         resolution_steps = error.context["resolution_steps"]
         self.assertTrue(any("CPU" in step for step in resolution_steps))
 
-    def test_format_troubleshooting_guide():
+    def test_format_troubleshooting_guide(self):
         """Test the comprehensive troubleshooting guide formatter."""
         error = PortConflictError(port=self.test_port, host=self.test_host)
 
@@ -292,7 +292,7 @@ class TestSocketIOServerErrorIntegration(unittest.TestCase):
         with self.server.pidfile_path.open("w") as f:
             json.dump(pidfile_content, f)
 
-    def test_daemon_conflict_detection_with_enhanced_errors():
+    def test_daemon_conflict_detection_with_enhanced_errors(self):
         """Test daemon conflict detection raises enhanced errors."""
         # Create a mock PID file
         self.create_mock_pidfile(pid=99999)  # Use unlikely PID
@@ -315,7 +315,7 @@ class TestSocketIOServerErrorIntegration(unittest.TestCase):
             self.assertEqual(error.existing_pid, 99999)
             self.assertIn("mock-server", error.existing_server_id)
 
-    def test_stale_process_detection_with_enhanced_errors():
+    def test_stale_process_detection_with_enhanced_errors(self):
         """Test stale process detection raises enhanced errors."""
         # Create a mock PID file
         self.create_mock_pidfile(pid=99998)
@@ -339,7 +339,7 @@ class TestSocketIOServerErrorIntegration(unittest.TestCase):
             self.assertEqual(error.process_status, "not_found")
             self.assertIn("Process 99998 does not exist", error.validation_errors)
 
-    def test_zombie_process_detection_with_enhanced_errors():
+    def test_zombie_process_detection_with_enhanced_errors(self):
         """Test zombie process detection raises enhanced errors."""
         # Create a mock PID file
         self.create_mock_pidfile(pid=99997)
@@ -378,7 +378,7 @@ class TestSocketIOServerErrorIntegration(unittest.TestCase):
         self.assertEqual(error.port, self.test_port)
         self.assertEqual(error.host, "localhost")
 
-    def test_server_start_with_enhanced_error_handling():
+    def test_server_start_with_enhanced_error_handling(self):
         """Test server start with enhanced error handling."""
         # Create a mock PID file to simulate conflict
         self.create_mock_pidfile()
@@ -401,7 +401,7 @@ class TestSocketIOServerErrorIntegration(unittest.TestCase):
                 error_call_args = mock_logger.error.call_args[0][0]
                 self.assertIn("TROUBLESHOOTING GUIDE", error_call_args)
 
-    def test_pidfile_lock_conflict_raises_daemon_error():
+    def test_pidfile_lock_conflict_raises_daemon_error(self):
         """Test PID file lock conflict raises DaemonConflictError."""
         # Mock file locking to fail
         with patch.object(self.server, "_acquire_pidfile_lock", return_value=False):
@@ -423,7 +423,7 @@ class TestErrorMessageContent(unittest.TestCase):
     """Test the content and usefulness of error messages."""
 
     @unittest.skipIf(not IMPORTS_AVAILABLE, "Required modules not available")
-    def test_daemon_conflict_error_actionable_content():
+    def test_daemon_conflict_error_actionable_content(self):
         """Test that DaemonConflictError provides actionable guidance."""
         error = DaemonConflictError(
             port=8080,
@@ -447,7 +447,7 @@ class TestErrorMessageContent(unittest.TestCase):
         self.assertIn("RESOLUTION STEPS", message)
 
     @unittest.skipIf(not IMPORTS_AVAILABLE, "Required modules not available")
-    def test_error_messages_are_not_too_verbose():
+    def test_error_messages_are_not_too_verbose(self):
         """Test that error messages are informative but not overwhelming."""
         error = PortConflictError(port=9090)
         message = str(error)
@@ -463,7 +463,7 @@ class TestErrorMessageContent(unittest.TestCase):
         )
 
     @unittest.skipIf(not IMPORTS_AVAILABLE, "Required modules not available")
-    def test_troubleshooting_guide_comprehensiveness():
+    def test_troubleshooting_guide_comprehensiveness(self):
         """Test that troubleshooting guide covers essential areas."""
         error = RecoveryFailedError(
             recovery_action="restart", failure_reason="Process hung"

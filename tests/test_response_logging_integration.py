@@ -50,7 +50,7 @@ response_logging:
         self.config_file.write_text(config_content)
         return Config(config_file=str(self.config_file))
 
-    def test_subprocess_mode_captures_output():
+    def test_subprocess_mode_captures_output(self):
         """Test that subprocess mode is selected when response logging is enabled."""
         # Create config with response logging enabled
         config = self.create_config_with_logging()
@@ -84,7 +84,7 @@ response_logging:
         # Verify response logger is available for the session
         self.assertIsNotNone(runner.response_logger)
 
-    def test_auto_switch_message_displayed():
+    def test_auto_switch_message_displayed(self):
         """Test that the auto-switch message is displayed to the user."""
         # Create config with response logging enabled
         config = self.create_config_with_logging()
@@ -122,7 +122,7 @@ response_logging:
             found_message, f"Auto-switch message not found. Print calls: {print_calls}"
         )
 
-    def test_response_logging_disabled_uses_exec():
+    def test_response_logging_disabled_uses_exec(self):
         """Test that exec mode is used when response logging is disabled."""
         # Create config with response logging disabled
         config_content = """

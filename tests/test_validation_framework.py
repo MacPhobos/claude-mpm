@@ -204,7 +204,7 @@ class TestValidationHooks:
         assert any("very long" in warning for warning in result.warnings)
 
     @pytest.mark.asyncio
-    async def test_security_validation():
+    async def test_security_validation(self):
         """Test security constraint validation."""
         # Safe task
         result = await validate_security_constraints("agent", "Analyze this file")
@@ -225,7 +225,7 @@ class TestValidationHooks:
         assert len(result.errors) >= 2  # Should detect both eval and __import__
 
     @pytest.mark.asyncio
-    async def test_dependency_validation():
+    async def test_dependency_validation(self):
         """Test agent dependency validation."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             profile_data = {
@@ -276,7 +276,7 @@ class TestValidationHooks:
 class TestValidationError:
     """Test ValidationError functionality."""
 
-    def test_validation_error_with_result():
+    def test_validation_error_with_result(self):
         """Test ValidationError with validation result."""
         result = ValidationResult(
             is_valid=False, errors=["Error 1", "Error 2"], warnings=["Warning 1"]
@@ -290,7 +290,7 @@ class TestValidationError:
         assert "Error 2" in detailed
         assert "Warning 1" in detailed
 
-    def test_validation_error_without_result():
+    def test_validation_error_without_result(self):
         """Test ValidationError without validation result."""
         error = ValidationError("Simple error")
         detailed = error.get_detailed_message()

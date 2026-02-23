@@ -37,7 +37,7 @@ class TestPipxPathDetectionFix(unittest.TestCase):
         # Clear environment variable
         os.environ.pop("CLAUDE_MPM_DEV_MODE", None)
 
-    def test_environment_variable_override():
+    def test_environment_variable_override(self):
         """Test that CLAUDE_MPM_DEV_MODE environment variable forces development mode."""
         # Set environment variable
         os.environ["CLAUDE_MPM_DEV_MODE"] = "1"
@@ -59,7 +59,7 @@ class TestPipxPathDetectionFix(unittest.TestCase):
                 f"Failed for CLAUDE_MPM_DEV_MODE={value}",
             )
 
-    def test_environment_variable_false_values():
+    def test_environment_variable_false_values(self):
         """Test that invalid CLAUDE_MPM_DEV_MODE values don't force development mode."""
         # Test various false values
         for value in ["0", "false", "False", "no", "No", ""]:
@@ -80,7 +80,7 @@ class TestPipxPathDetectionFix(unittest.TestCase):
                         f"Should not be development for CLAUDE_MPM_DEV_MODE={value}",
                     )
 
-    def test_editable_install_detection():
+    def test_editable_install_detection(self):
         """Test that editable installations are properly detected."""
         # Test the _is_editable_install method
 
@@ -109,7 +109,7 @@ class TestPipxPathDetectionFix(unittest.TestCase):
                     is_editable = PathContext._is_editable_install()
                     self.assertTrue(is_editable)
 
-    def test_development_detection_from_cwd():
+    def test_development_detection_from_cwd(self):
         """Test that running from development directory is detected."""
         # Clear cache
         PathContext.detect_deployment_context.cache_clear()
@@ -144,7 +144,7 @@ class TestPipxPathDetectionFix(unittest.TestCase):
                         context = PathContext.detect_deployment_context()
                         self.assertEqual(context, DeploymentContext.DEVELOPMENT)
 
-    def test_framework_root_in_development_mode():
+    def test_framework_root_in_development_mode(self):
         """Test that framework_root returns development path in development mode."""
         # Create a path manager
         pm = UnifiedPathManager()
@@ -178,7 +178,7 @@ class TestPipxPathDetectionFix(unittest.TestCase):
                     self.assertIn("Projects/claude-mpm", str(root))
                     self.assertNotIn("pipx", str(root))
 
-    def test_package_root_in_development_mode():
+    def test_package_root_in_development_mode(self):
         """Test that package_root returns src directory in development mode."""
         # Create a path manager
         pm = UnifiedPathManager()

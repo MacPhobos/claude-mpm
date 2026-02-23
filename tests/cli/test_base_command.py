@@ -22,7 +22,7 @@ from claude_mpm.cli.shared.base_command import (
 class TestCommandResult:
     """Test CommandResult data structure."""
 
-    def test_success_result_creation():
+    def test_success_result_creation(self):
         """Test creating success results."""
         result = CommandResult.success_result("Test success")
         assert result.success is True
@@ -30,7 +30,7 @@ class TestCommandResult:
         assert result.message == "Test success"
         assert result.data is None
 
-    def test_success_result_with_data():
+    def test_success_result_with_data(self):
         """Test creating success results with data."""
         data = {"key": "value"}
         result = CommandResult.success_result("Test success", data)
@@ -39,7 +39,7 @@ class TestCommandResult:
         assert result.message == "Test success"
         assert result.data == data
 
-    def test_error_result_creation():
+    def test_error_result_creation(self):
         """Test creating error results."""
         result = CommandResult.error_result("Test error")
         assert result.success is False
@@ -47,14 +47,14 @@ class TestCommandResult:
         assert result.message == "Test error"
         assert result.data is None
 
-    def test_error_result_with_custom_exit_code():
+    def test_error_result_with_custom_exit_code(self):
         """Test creating error results with custom exit code."""
         result = CommandResult.error_result("Test error", exit_code=2)
         assert result.success is False
         assert result.exit_code == 2
         assert result.message == "Test error"
 
-    def test_error_result_with_data():
+    def test_error_result_with_data(self):
         """Test creating error results with data."""
         data = {"error_type": "validation"}
         result = CommandResult.error_result("Test error", data=data)
@@ -92,7 +92,7 @@ class TestBaseCommand:
         """Set up test fixtures."""
         self.command = ConcreteCommand()
 
-    def test_config_lazy_loading():
+    def test_config_lazy_loading(self):
         """Test configuration lazy loading."""
         # Config should be None initially
         assert self.command._config is None
@@ -107,13 +107,13 @@ class TestBaseCommand:
         config2 = self.command.config
         assert config2 is config
 
-    def test_working_dir_default():
+    def test_working_dir_default(self):
         """Test working directory default behavior."""
         with patch("os.getcwd", return_value="/test/dir"):
             working_dir = self.command.working_dir
             assert working_dir == Path("/test/dir")
 
-    def test_working_dir_from_env():
+    def test_working_dir_from_env(self):
         """Test working directory from environment variable."""
         with patch.dict("os.environ", {"CLAUDE_MPM_USER_PWD": "/env/dir"}):
             # Reset cached working dir
@@ -121,7 +121,7 @@ class TestBaseCommand:
             working_dir = self.command.working_dir
             assert working_dir == Path("/env/dir")
 
-    def test_setup_logging_debug():
+    def test_setup_logging_debug(self):
         """Test logging setup with debug flag."""
         args = Namespace(debug=True)
 
@@ -132,7 +132,7 @@ class TestBaseCommand:
             self.command.setup_logging(args)
             mock_logger.setLevel.assert_called_once()
 
-    def test_setup_logging_verbose():
+    def test_setup_logging_verbose(self):
         """Test logging setup with verbose flag."""
         args = Namespace(verbose=True, debug=False)
 
@@ -143,7 +143,7 @@ class TestBaseCommand:
             self.command.setup_logging(args)
             mock_logger.setLevel.assert_called_once()
 
-    def test_setup_logging_quiet():
+    def test_setup_logging_quiet(self):
         """Test logging setup with quiet flag."""
         args = Namespace(quiet=True, debug=False, verbose=False)
 
@@ -154,7 +154,7 @@ class TestBaseCommand:
             self.command.setup_logging(args)
             mock_logger.setLevel.assert_called_once()
 
-    def test_load_config_default():
+    def test_load_config_default(self):
         """Test configuration loading with default behavior."""
         args = Namespace()
 
@@ -167,7 +167,7 @@ class TestBaseCommand:
             # Should create config instance
             assert self.command._config is mock_config
 
-    def test_load_config_with_file():
+    def test_load_config_with_file(self):
         """Test configuration loading with specific file."""
         with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as tmp:
             tmp.write(b"test_key: test_value\n")
@@ -186,7 +186,7 @@ class TestBaseCommand:
                 mock_config_class.assert_called_once_with(config_file=Path(tmp.name))
                 assert self.command._config is mock_config
 
-    def test_execute_success():
+    def test_execute_success(self):
         """Test successful command execution."""
         args = Namespace()
 
@@ -199,7 +199,7 @@ class TestBaseCommand:
         assert self.command.run_called is True
         assert self.command.run_args is args
 
-    def test_execute_validation_error():
+    def test_execute_validation_error(self):
         """Test command execution with validation error."""
         args = Namespace(invalid=True)
 
@@ -211,7 +211,7 @@ class TestBaseCommand:
         assert result.message == "Invalid argument provided"
         assert self.command.run_called is False
 
-    def test_execute_keyboard_interrupt():
+    def test_execute_keyboard_interrupt(self):
         """Test command execution with keyboard interrupt."""
         args = Namespace()
 
@@ -224,7 +224,7 @@ class TestBaseCommand:
             assert result.exit_code == 130
             assert "cancelled by user" in result.message
 
-    def test_execute_exception():
+    def test_execute_exception(self):
         """Test command execution with general exception."""
         args = Namespace()
 
@@ -237,7 +237,7 @@ class TestBaseCommand:
             assert result.exit_code == 1
             assert "Test error" in result.message
 
-    def test_print_result_text_format():
+    def test_print_result_text_format(self):
         """Test printing result in text format."""
         result = CommandResult.success_result("Test success")
         args = Namespace(format="text")
@@ -253,7 +253,7 @@ class TestBaseCommand:
                 mock_format.assert_called_once_with(result, "text")
                 mock_print.assert_called_once_with("Formatted output")
 
-    def test_print_result_to_file():
+    def test_print_result_to_file(self):
         """Test printing result to file."""
         result = CommandResult.success_result("Test success")
 
@@ -300,7 +300,7 @@ class ConcreteMemoryCommand(MemoryCommand):
 class TestServiceCommand:
     """Test ServiceCommand functionality."""
 
-    def test_service_lazy_loading():
+    def test_service_lazy_loading(self):
         """Test service lazy loading."""
         mock_service_class = Mock()
         mock_service_instance = Mock()
@@ -327,7 +327,7 @@ class TestServiceCommand:
 class TestAgentCommand:
     """Test AgentCommand functionality."""
 
-    def test_get_agent_dir_from_args():
+    def test_get_agent_dir_from_args(self):
         """Test getting agent directory from arguments."""
         command = ConcreteAgentCommand("test-agent")
         agent_dir = Path("/test/agents")
@@ -336,7 +336,7 @@ class TestAgentCommand:
         result = command.get_agent_dir(args)
         assert result == agent_dir
 
-    def test_get_agent_dir_default():
+    def test_get_agent_dir_default(self):
         """Test getting agent directory default."""
         command = ConcreteAgentCommand("test-agent")
         args = Namespace()
@@ -346,7 +346,7 @@ class TestAgentCommand:
         result = command.get_agent_dir(args)
         assert result == Path("/test/working")
 
-    def test_get_agent_pattern():
+    def test_get_agent_pattern(self):
         """Test getting agent pattern from arguments."""
         command = ConcreteAgentCommand("test-agent")
         args = Namespace(agent="test-pattern")
@@ -354,7 +354,7 @@ class TestAgentCommand:
         result = command.get_agent_pattern(args)
         assert result == "test-pattern"
 
-    def test_get_agent_pattern_none():
+    def test_get_agent_pattern_none(self):
         """Test getting agent pattern when not provided."""
         command = ConcreteAgentCommand("test-agent")
         args = Namespace()
@@ -366,7 +366,7 @@ class TestAgentCommand:
 class TestMemoryCommand:
     """Test MemoryCommand functionality."""
 
-    def test_get_memory_dir_from_args():
+    def test_get_memory_dir_from_args(self):
         """Test getting memory directory from arguments."""
         command = ConcreteMemoryCommand("test-memory")
         memory_dir = Path("/test/memories")
@@ -375,7 +375,7 @@ class TestMemoryCommand:
         result = command.get_memory_dir(args)
         assert result == memory_dir
 
-    def test_get_memory_dir_default():
+    def test_get_memory_dir_default(self):
         """Test getting memory directory default."""
         command = ConcreteMemoryCommand("test-memory")
         args = Namespace()

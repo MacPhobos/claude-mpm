@@ -79,70 +79,70 @@ def test_agent_deployment():
         return True
 
 
-def test_claude_runner():
+def test_claude_runner(tmp_path):
     """Test that ClaudeRunner respects user directory."""
     from claude_mpm.core.claude_runner import ClaudeRunner
 
     # Create a temporary user directory
-    with tmp_path as tmpdir:
-        user_dir = Path(tmpdir) / "user_project"
-        user_dir.mkdir(exist_ok=True)
+    tmpdir = tmp_path
+    user_dir = Path(tmpdir) / "user_project"
+    user_dir.mkdir(exist_ok=True)
 
-        # Set the environment variable
-        os.environ["CLAUDE_MPM_USER_PWD"] = str(user_dir)
+    # Set the environment variable
+    os.environ["CLAUDE_MPM_USER_PWD"] = str(user_dir)
 
-        print(f"\nTesting ClaudeRunner with user directory: {user_dir}")
+    print(f"\nTesting ClaudeRunner with user directory: {user_dir}")
 
-        # Create runner
-        runner = ClaudeRunner(enable_tickets=False, log_level="OFF")
+    # Create runner
+    runner = ClaudeRunner(enable_tickets=False, log_level="OFF")
 
-        # Verify deployment service has correct working directory
-        assert runner.deployment_service.working_directory == user_dir, (
-            f"Runner deployment service mismatch: {runner.deployment_service.working_directory} != {user_dir}"
-        )
-        print("✓ ClaudeRunner's deployment service uses correct directory")
+    # Verify deployment service has correct working directory
+    assert runner.deployment_service.working_directory == user_dir, (
+        f"Runner deployment service mismatch: {runner.deployment_service.working_directory} != {user_dir}"
+    )
+    print("✓ ClaudeRunner's deployment service uses correct directory")
 
-        # Test ensure_project_agents method
-        success = runner.ensure_project_agents()
-        print(f"✓ ensure_project_agents completed: {success}")
+    # Test ensure_project_agents method
+    success = runner.ensure_project_agents()
+    print(f"✓ ensure_project_agents completed: {success}")
 
-        # Create a test project agent directory
-        project_agents_dir = user_dir / ".claude-mpm" / "agents"
-        project_agents_dir.mkdir(parents=True, exist_ok=True)
+    # Create a test project agent directory
+    project_agents_dir = user_dir / ".claude-mpm" / "agents"
+    project_agents_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create a test agent JSON file
-        test_agent = {
-            "agent_id": "test_agent",
-            "version": "1.0.0",
-            "metadata": {
-                "name": "Test Agent",
-                "description": "Test agent for verification",
-            },
-            "instructions": "You are a test agent.",
-        }
+    # Create a test agent JSON file
+    test_agent = {
+        "agent_id": "test_agent",
+        "version": "1.0.0",
+        "metadata": {
+            "name": "Test Agent",
+            "description": "Test agent for verification",
+        },
+        "instructions": "You are a test agent.",
+    }
 
-        import json
+    import json
 
-        test_agent_file = project_agents_dir / "test_agent.json"
-        test_agent_file.write_text(json.dumps(test_agent, indent=2))
+    test_agent_file = project_agents_dir / "test_agent.json"
+    test_agent_file.write_text(json.dumps(test_agent, indent=2))
 
-        # Test deploy_project_agents_to_claude
-        success = runner.deploy_project_agents_to_claude()
-        assert success, "Failed to deploy project agents"
-        print("✓ deploy_project_agents_to_claude completed successfully")
+    # Test deploy_project_agents_to_claude
+    success = runner.deploy_project_agents_to_claude()
+    assert success, "Failed to deploy project agents"
+    print("✓ deploy_project_agents_to_claude completed successfully")
 
-        # Verify the agent was deployed to the correct location
-        deployed_agent = user_dir / ".claude" / "agents" / "test_agent.md"
-        if deployed_agent.exists():
-            print(f"✓ Project agent deployed to correct location: {deployed_agent}")
-        else:
-            print(f"⚠️  Agent not found at expected location: {deployed_agent}")
+    # Verify the agent was deployed to the correct location
+    deployed_agent = user_dir / ".claude" / "agents" / "test_agent.md"
+    if deployed_agent.exists():
+        print(f"✓ Project agent deployed to correct location: {deployed_agent}")
+    else:
+        print(f"⚠️  Agent not found at expected location: {deployed_agent}")
 
-        # Clean up environment
-        del os.environ["CLAUDE_MPM_USER_PWD"]
+    # Clean up environment
+    del os.environ["CLAUDE_MPM_USER_PWD"]
 
-        print("\n✅ ClaudeRunner tests passed!")
-        return True
+    print("\n✅ ClaudeRunner tests passed!")
+    return True
 
 
 if __name__ == "__main__":

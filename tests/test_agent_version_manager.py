@@ -30,10 +30,10 @@ class TestAgentVersionManager:
         return AgentVersionManager()
 
     @pytest.fixture
-    def temp_dir(self):
+    def temp_dir(self, tmp_path):
         """Create temporary directory for testing."""
-        with tmp_path as temp_dir:
-            yield Path(temp_dir)
+        temp_dir = tmp_path
+        yield Path(temp_dir)
 
     def test_initialization(self):
         """Test AgentVersionManager initialization."""

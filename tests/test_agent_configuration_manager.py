@@ -62,7 +62,7 @@ class TestAgentConfigurationManager:
         assert hasattr(manager, "logger")
         assert manager._base_agent_cache is None
 
-    def test_initialization_no_base_agent():
+    def test_initialization_no_base_agent(self):
         """Test initialization without base agent."""
         manager = AgentConfigurationManager()
         assert manager.base_agent_path is None
@@ -228,41 +228,41 @@ class TestAgentConfigurationManager:
         assert config["memory_limit"] == "1GB"
         assert config["parallel_execution"] is False
 
-    def test_determine_source_tier_project(self):
+    def test_determine_source_tier_project(self, tmp_path):
         """Test source tier determination for project context."""
-        with tmp_path as temp_dir:
-            temp_path = Path(temp_dir)
+        temp_dir = tmp_path
+        temp_path = Path(temp_dir)
 
-            # Create project indicator
-            (temp_path / ".git").mkdir()
+        # Create project indicator
+        (temp_path / ".git").mkdir()
 
-            with patch("pathlib.Path.cwd", return_value=temp_path):
-                tier = self.determine_source_tier()
-                assert tier == "project"
+        with patch("pathlib.Path.cwd", return_value=temp_path):
+            tier = self.determine_source_tier()
+            assert tier == "project"
 
-    def test_determine_source_tier_user(self):
+    def test_determine_source_tier_user(self, tmp_path):
         """Test source tier determination for user context."""
-        with tmp_path as temp_dir:
-            temp_path = Path(temp_dir)
-            user_config = temp_path / ".claude"
-            user_config.mkdir()
+        temp_dir = tmp_path
+        temp_path = Path(temp_dir)
+        user_config = temp_path / ".claude"
+        user_config.mkdir()
 
-            with patch("pathlib.Path.cwd", return_value=temp_path), patch(
-                "pathlib.Path.home", return_value=temp_path
-            ):
-                tier = self.determine_source_tier()
-                assert tier == "user"
+        with patch("pathlib.Path.cwd", return_value=temp_path), patch(
+            "pathlib.Path.home", return_value=temp_path
+        ):
+            tier = self.determine_source_tier()
+            assert tier == "user"
 
-    def test_determine_source_tier_system(self):
+    def test_determine_source_tier_system(self, tmp_path):
         """Test source tier determination for system context."""
-        with tmp_path as temp_dir:
-            temp_path = Path(temp_dir)
+        temp_dir = tmp_path
+        temp_path = Path(temp_dir)
 
-            with patch("pathlib.Path.cwd", return_value=temp_path), patch(
-                "pathlib.Path.home", return_value=temp_path
-            ):
-                tier = self.determine_source_tier()
-                assert tier == "system"
+        with patch("pathlib.Path.cwd", return_value=temp_path), patch(
+            "pathlib.Path.home", return_value=temp_path
+        ):
+            tier = self.determine_source_tier()
+            assert tier == "system"
 
     def test_parse_base_agent_content_json(self):
         """Test parsing JSON base agent content."""

@@ -31,7 +31,7 @@ from claude_mpm.services.version_control.semantic_versioning import (
 class TestSemanticVersion:
     """Test SemanticVersion class functionality."""
 
-    def test_semantic_version_creation():
+    def test_semantic_version_creation(self):
         """Test creating SemanticVersion instances."""
         # Basic version
         version = SemanticVersion(1, 2, 3)
@@ -54,7 +54,7 @@ class TestSemanticVersion:
         assert version_full.prerelease == "beta.2"
         assert version_full.build == "build.456"
 
-    def test_semantic_version_string_representation():
+    def test_semantic_version_string_representation(self):
         """Test string representation of SemanticVersion."""
         # Basic version
         version = SemanticVersion(1, 2, 3)
@@ -72,7 +72,7 @@ class TestSemanticVersion:
         version_full = SemanticVersion(1, 2, 3, prerelease="beta.2", build="build.456")
         assert str(version_full) == "1.2.3-beta.2+build.456"
 
-    def test_semantic_version_comparison():
+    def test_semantic_version_comparison(self):
         """Test version comparison logic."""
         v1_0_0 = SemanticVersion(1, 0, 0)
         v1_0_1 = SemanticVersion(1, 0, 1)
@@ -89,7 +89,7 @@ class TestSemanticVersion:
         assert not (v1_0_0 < v1_0_0_copy)
         assert not (v1_0_0_copy < v1_0_0)
 
-    def test_semantic_version_prerelease_comparison():
+    def test_semantic_version_prerelease_comparison(self):
         """Test prerelease version comparison."""
         v1_0_0 = SemanticVersion(1, 0, 0)
         v1_0_0_alpha = SemanticVersion(1, 0, 0, prerelease="alpha")
@@ -105,7 +105,7 @@ class TestSemanticVersion:
         assert v1_0_0_alpha < v1_0_0_beta
         assert v1_0_0_alpha1 < v1_0_0_alpha2
 
-    def test_semantic_version_build_metadata_ignored():
+    def test_semantic_version_build_metadata_ignored(self):
         """Test that build metadata is ignored in comparisons."""
         v1_build1 = SemanticVersion(1, 0, 0, build="build.1")
         v1_build2 = SemanticVersion(1, 0, 0, build="build.2")
@@ -117,7 +117,7 @@ class TestSemanticVersion:
         assert not (v1_build1 < v1_no_build)
         assert not (v1_no_build < v1_build1)
 
-    def test_version_bump_major():
+    def test_version_bump_major(self):
         """Test major version bumping."""
         version = SemanticVersion(1, 2, 3)
         bumped = version.bump(VersionBumpType.MAJOR)
@@ -128,7 +128,7 @@ class TestSemanticVersion:
         assert bumped.prerelease is None
         assert bumped.build is None
 
-    def test_version_bump_minor():
+    def test_version_bump_minor(self):
         """Test minor version bumping."""
         version = SemanticVersion(1, 2, 3)
         bumped = version.bump(VersionBumpType.MINOR)
@@ -139,7 +139,7 @@ class TestSemanticVersion:
         assert bumped.prerelease is None
         assert bumped.build is None
 
-    def test_version_bump_patch():
+    def test_version_bump_patch(self):
         """Test patch version bumping."""
         version = SemanticVersion(1, 2, 3)
         bumped = version.bump(VersionBumpType.PATCH)
@@ -150,7 +150,7 @@ class TestSemanticVersion:
         assert bumped.prerelease is None
         assert bumped.build is None
 
-    def test_version_bump_prerelease_new():
+    def test_version_bump_prerelease_new(self):
         """Test creating new prerelease version."""
         version = SemanticVersion(1, 2, 3)
         bumped = version.bump(VersionBumpType.PRERELEASE)
@@ -160,7 +160,7 @@ class TestSemanticVersion:
         assert bumped.patch == 3
         assert bumped.prerelease == "alpha.1"
 
-    def test_version_bump_prerelease_increment():
+    def test_version_bump_prerelease_increment(self):
         """Test incrementing existing prerelease version."""
         version = SemanticVersion(1, 2, 3, prerelease="alpha.1")
         bumped = version.bump(VersionBumpType.PRERELEASE)
@@ -173,7 +173,7 @@ class TestSemanticVersion:
 
         assert bumped_beta.prerelease == "beta.6"
 
-    def test_version_bump_prerelease_no_number():
+    def test_version_bump_prerelease_no_number(self):
         """Test incrementing prerelease without number."""
         version = SemanticVersion(1, 2, 3, prerelease="alpha")
         bumped = version.bump(VersionBumpType.PRERELEASE)
@@ -185,10 +185,10 @@ class TestSemanticVersionManager:
     """Test SemanticVersionManager functionality."""
 
     @pytest.fixture
-    def temp_project_dir(self):
+    def temp_project_dir(self, tmp_path):
         """Create a temporary project directory."""
-        with tmp_path as temp_dir:
-            yield Path(temp_dir)
+        temp_dir = tmp_path
+        yield Path(temp_dir)
 
     @pytest.fixture
     def version_manager(self, temp_project_dir):
@@ -446,10 +446,10 @@ class TestVersionFileUpdates:
     """Test updating version files."""
 
     @pytest.fixture
-    def temp_project_dir(self):
+    def temp_project_dir(self, tmp_path):
         """Create a temporary project directory."""
-        with tmp_path as temp_dir:
-            yield Path(temp_dir)
+        temp_dir = tmp_path
+        yield Path(temp_dir)
 
     @pytest.fixture
     def version_manager(self, temp_project_dir):
@@ -513,7 +513,7 @@ class TestVersionFileUpdates:
 class TestVersionMetadata:
     """Test VersionMetadata functionality."""
 
-    def test_version_metadata_creation():
+    def test_version_metadata_creation(self):
         """Test creating VersionMetadata instances."""
         version = SemanticVersion(1, 2, 3)
         release_date = datetime.now(timezone.utc)

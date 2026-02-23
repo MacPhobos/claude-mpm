@@ -63,7 +63,7 @@ class TestAgentLifecycleManagerCore:
             await manager._cleanup()
 
     @pytest.mark.asyncio
-    async def test_initialization():
+    async def test_initialization(self):
         """Test AgentLifecycleManager initialization."""
         config = {"enable_auto_backup": False, "enable_auto_validation": False}
 

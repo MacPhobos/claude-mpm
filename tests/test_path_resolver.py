@@ -19,20 +19,20 @@ class TestUnifiedPathManager:
         """Clear cache before each test."""
         get_path_manager().clear_cache()
 
-    def test_get_framework_root_from_module():
+    def test_get_framework_root_from_module(self):
         """Test framework root detection from module location."""
         root = get_path_manager().framework_root
         assert root.exists()
         # Should have src/claude_mpm structure or claude_mpm directly
         assert (root / "src" / "claude_mpm").exists() or (root / "claude_mpm").exists()
 
-    def test_get_framework_root_cached():
+    def test_get_framework_root_cached(self):
         """Test that framework root is cached."""
         root1 = get_path_manager().framework_root
         root2 = get_path_manager().framework_root
         assert root1 == root2
 
-    def test_get_agents_dir():
+    def test_get_agents_dir(self):
         """Test agents directory detection."""
         agents_dir = get_path_manager().get_agents_dir("framework")
         assert agents_dir.exists()
@@ -40,97 +40,97 @@ class TestUnifiedPathManager:
         # Should contain agent files
         assert list(agents_dir.glob("*.md")) or list(agents_dir.glob("*.py"))
 
-    def test_get_project_root_with_git(self):
+    def test_get_project_root_with_git(self, tmp_path):
         """Test project root detection with .git directory."""
         # Create a temporary project structure
-        git_dir = self / ".git"
+        git_dir = tmp_path / ".git"
         git_dir.mkdir()
 
         # Change to a subdirectory
-        subdir = self / "src" / "submodule"
+        subdir = tmp_path / "src" / "submodule"
         subdir.mkdir(parents=True)
 
         with patch("pathlib.Path.cwd", return_value=subdir):
             root = get_path_manager().project_root
-            assert root == self
+            assert root == tmp_path
 
-    def test_get_project_root_with_pyproject(self):
+    def test_get_project_root_with_pyproject(self, tmp_path):
         """Test project root detection with pyproject.toml."""
         # Create pyproject.toml
-        (self / "pyproject.toml").touch()
+        (tmp_path / "pyproject.toml").touch()
 
         # Change to subdirectory
-        subdir = self / "src"
+        subdir = tmp_path / "src"
         subdir.mkdir()
 
         with patch("pathlib.Path.cwd", return_value=subdir):
             root = get_path_manager().project_root
-            assert root == self
+            assert root == tmp_path
 
-    def test_get_project_root_fallback_to_cwd(self):
+    def test_get_project_root_fallback_to_cwd(self, tmp_path):
         """Test project root fallback to current directory."""
         # No project markers
-        with patch("pathlib.Path.cwd", return_value=self):
+        with patch("pathlib.Path.cwd", return_value=tmp_path):
             root = get_path_manager().project_root
-            assert root == self
+            assert root == tmp_path
 
-    def test_get_config_dir_project():
+    def test_get_config_dir_project(self):
         """Test project config directory."""
         config_dir = get_path_manager().get_config_dir("project")
         assert config_dir.name == ".claude-mpm"
         assert config_dir.parent == get_path_manager().project_root
 
-    def test_get_config_dir_user():
+    def test_get_config_dir_user(self):
         """Test user config directory."""
         config_dir = get_path_manager().get_config_dir("user")
         assert "claude-mpm" in str(config_dir)
         assert str(config_dir).startswith(str(Path.home()))
 
-    def test_get_config_dir_user_with_xdg():
+    def test_get_config_dir_user_with_xdg(self):
         """Test user config directory (unified implementation uses home directory)."""
         # The unified implementation uses home directory, not XDG
         config_dir = get_path_manager().get_config_dir("user")
         assert config_dir == Path.home() / ".claude-mpm"
 
-    def test_get_config_dir_invalid_scope():
+    def test_get_config_dir_invalid_scope(self):
         """Test invalid config scope."""
         with pytest.raises(ValueError, match="Invalid scope"):
             get_path_manager().get_config_dir("invalid")
 
-    def test_find_file_upwards(self):
+    def test_find_file_upwards(self, tmp_path):
         """Test upward file search."""
         # Create file in parent
-        target_file = self / "target.txt"
+        target_file = tmp_path / "target.txt"
         target_file.touch()
 
         # Search from subdirectory
-        subdir = self / "a" / "b" / "c"
+        subdir = tmp_path / "a" / "b" / "c"
         subdir.mkdir(parents=True)
 
         result = get_path_manager().find_file_upwards("target.txt", subdir)
         assert result == target_file
 
-    def test_find_file_upwards_not_found(self):
+    def test_find_file_upwards_not_found(self, tmp_path):
         """Test upward file search when file doesn't exist."""
-        result = get_path_manager().find_file_upwards("nonexistent.txt", self)
+        result = get_path_manager().find_file_upwards("nonexistent.txt", tmp_path)
         assert result is None
 
-    def test_get_project_config_dir():
+    def test_get_project_config_dir(self):
         """Test project config directory method."""
         config_dir = get_path_manager().get_project_config_dir()
         assert config_dir.name == ".claude-mpm"
         assert config_dir.parent == get_path_manager().project_root
 
-    def test_ensure_directory(self):
+    def test_ensure_directory(self, tmp_path):
         """Test directory creation."""
-        new_dir = self / "new" / "nested" / "dir"
+        new_dir = tmp_path / "new" / "nested" / "dir"
         result = get_path_manager().ensure_directory(new_dir)
 
         assert result == new_dir
         assert new_dir.exists()
         assert new_dir.is_dir()
 
-    def test_get_relative_to_root():
+    def test_get_relative_to_root(self):
         """Test getting paths relative to roots."""
         # Test with actual project root
         path = get_path_manager().get_relative_to_root("src/module.py", "project")
@@ -142,7 +142,7 @@ class TestUnifiedPathManager:
         expected = get_path_manager().framework_root / "agents/test.md"
         assert path == expected
 
-    def test_convenience_functions():
+    def test_convenience_functions(self):
         """Test backward compatibility convenience functions."""
         # These should work the same as the class methods
         root1 = get_framework_root()
@@ -153,7 +153,7 @@ class TestUnifiedPathManager:
         proj2 = get_path_manager().project_root
         assert proj1 == proj2
 
-    def test_cache_clearing():
+    def test_cache_clearing(self):
         """Test cache clearing functionality."""
         # Get some cached values
         get_path_manager().framework_root

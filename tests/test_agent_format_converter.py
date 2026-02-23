@@ -31,13 +31,13 @@ class TestAgentFormatConverter:
         return AgentFormatConverter()
 
     @pytest.fixture
-    def temp_dir_with_yaml(self):
+    def temp_dir_with_yaml(self, tmp_path):
         """Create temporary directory with YAML files."""
-        with tmp_path as temp_dir:
-            temp_path = Path(temp_dir)
+        temp_dir = tmp_path
+        temp_path = Path(temp_dir)
 
-            # Create test YAML files
-            yaml_content = """name: test-agent
+        # Create test YAML files
+        yaml_content = """name: test-agent
 description: "Test agent for testing"
 version: "1.0.0"
 tools: "Read,Write,Edit"
@@ -46,21 +46,21 @@ instructions: |
   This is a test agent.
   It performs testing tasks."""
 
-            yaml_file = temp_path / "test-agent.yaml"
-            yaml_file.write_text(yaml_content)
+        yaml_file = temp_path / "test-agent.yaml"
+        yaml_file.write_text(yaml_content)
 
-            # Create another YAML file
-            yaml_content2 = """name: qa-agent
+        # Create another YAML file
+        yaml_content2 = """name: qa-agent
 description: "QA agent for quality assurance"
 version: "2.0.0"
 tools: ["Read", "Write", "Test"]
 model: "haiku"
 """
 
-            yaml_file2 = temp_path / "qa-agent.yaml"
-            yaml_file2.write_text(yaml_content2)
+        yaml_file2 = temp_path / "qa-agent.yaml"
+        yaml_file2.write_text(yaml_content2)
 
-            yield temp_path
+        yield temp_path
 
     def test_initialization(self):
         """Test AgentFormatConverter initialization."""
