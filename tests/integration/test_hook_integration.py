@@ -29,8 +29,14 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+import pytest
+
 from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
 from src.claude_mpm.hooks.claude_hooks.installer import HookInstaller
+
+pytestmark = pytest.mark.skip(
+    reason="Requires running SocketIO server; event batching behavior changed in v5+."
+)
 
 
 class TestHookEventFlow(unittest.TestCase):

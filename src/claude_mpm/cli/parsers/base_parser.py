@@ -543,6 +543,13 @@ def create_parser(
         pass
 
     try:
+        from .auth_parser import add_auth_subparser
+
+        add_auth_subparser(subparsers)
+    except ImportError:
+        pass
+
+    try:
         from .setup_parser import add_setup_subparser
 
         add_setup_subparser(subparsers)

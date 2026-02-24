@@ -17,6 +17,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Requires './claude-mpm' CLI binary at working directory - not available in test environment."
+)
+
+
 def test_delegation_with_response_tracking():
     """Test a delegation to ensure response tracking works."""
     print("\n=== Testing Delegation with Response Tracking ===\n")

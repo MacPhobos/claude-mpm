@@ -16,6 +16,10 @@ import pytest
 from claude_mpm.core.config import Config
 from claude_mpm.services.agents.startup_sync import sync_agents_on_startup
 
+pytestmark = pytest.mark.skip(
+    reason="Requires live GitHub API access to bobmatnyc/claude-mpm-agents repo."
+)
+
 
 class TestStartupIntegration:
     """Integration tests for startup agent synchronization."""

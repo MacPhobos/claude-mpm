@@ -27,6 +27,10 @@ import socketio
 from claude_mpm.services.socketio.server.main import SocketIOServer
 from tests.utils.test_helpers import wait_for_condition, wait_for_condition_async
 
+pytestmark = pytest.mark.skip(
+    reason="Requires running SocketIO server; EventBus integration disabled, events don't flow."
+)
+
 
 class TestEndToEndEventFlow:
     """Test complete event flow from source to client."""

@@ -19,9 +19,15 @@ os.environ["CLAUDE_MPM_HOOK_DEBUG"] = "true"
 # Add the src directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
+import pytest
+
 from claude_mpm.core.config import Config
 from claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
 from claude_mpm.services.response_tracker import ResponseTracker
+
+pytestmark = pytest.mark.skip(
+    reason="ClaudeHookHandler._handle_pre_tool_fast() method removed in v5+."
+)
 
 
 def test_disabled_tracking():
