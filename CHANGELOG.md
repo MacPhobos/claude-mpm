@@ -1,3 +1,9 @@
+## v5.9.31 (2026-02-24)
+
+### Fix
+
+- **messaging**: resolve macOS path case mismatch causing messages not received
+
 ## v5.9.30 (2026-02-24)
 
 ### Feat
