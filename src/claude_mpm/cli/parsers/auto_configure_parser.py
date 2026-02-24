@@ -117,4 +117,16 @@ Examples:
         help="Project path to analyze (default: current directory)",
     )
 
+    auto_configure_parser.add_argument(
+        "--role",
+        choices=["developer", "product-manager", "executive"],
+        metavar="ROLE",
+        help=(
+            "Configure for a specific user role, bypassing toolchain detection. "
+            "developer: engineer, qa, ops, research, documentation. "
+            "product-manager: product-owner, research, documentation, ticketing, qa. "
+            "executive: research, documentation, product-owner."
+        ),
+    )
+
     return auto_configure_parser

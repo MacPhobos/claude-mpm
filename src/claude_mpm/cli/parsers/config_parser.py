@@ -119,6 +119,18 @@ The command provides safety features including:
     )
 
     auto_parser.add_argument(
+        "--role",
+        choices=["developer", "product-manager", "executive"],
+        metavar="ROLE",
+        help=(
+            "Configure for a specific user role, bypassing toolchain detection. "
+            "developer: engineer, qa, ops, research, documentation. "
+            "product-manager: product-owner, research, documentation, ticketing, qa. "
+            "executive: research, documentation, product-owner."
+        ),
+    )
+
+    auto_parser.add_argument(
         "--json",
         action="store_true",
         help="Output results in JSON format",
