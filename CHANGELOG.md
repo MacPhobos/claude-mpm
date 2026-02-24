@@ -1,3 +1,53 @@
+## v5.9.28 (2026-02-24)
+
+### Feat
+
+- **auth**: add claude-mpm auth refresh command for OAuth token refresh
+- add --body-file flag to message send/reply for shell quoting safety
+
+### Fix
+
+- **tests**: skip interactive test_logging_integration.py
+- **tests**: skip 18 stale integration tests with v5+ API contract changes
+- AgentDeploymentService working_directory override removed
+- AgentMetadata is no longer subscriptable (was dict, now dataclass)
+- HookService import path changed; AgentLoader constructor changed
+- Markdown template YAML frontmatter now required (v4.26.0+)
+- Various other v5+ API changes in schema, socketio, startup tests
+- **tests**: fix flaky test_mcp_stdio.py ProcessLookupError in teardown
+- **tests**: Phase 3 batch 10 - socketio handler registry and configuration fixes
+- **tests**: Phase 3 batch 10 - ZeroDivisionError and timeout fixes
+- **tests**: Phase 3 batch 9 - gitignore entry count and dashboard timeout fixes
+- **tests**: Phase 3 batch 8 - health monitoring, heartbeat, local templates, and isolation fixes
+- **agent_loader**: Fix AgentMetadata dict compat and agent_loader.py API alignment
+- **tests**: Phase 3 batch 7 - skills, socketio, telemetry, and remaining fixes
+- **tests**: Phase 3 batch 6 - socketio, startup, tickets, validation, stream tests
+- **tests**: Phase 3 batch 6 - response tracker, logging, resume, refactored deployment
+- **tests**: Phase 3 batch 5 - path, output style, pack, pid, pm memory tests
+- **tests**: Phase 3 batch 4 - memory system integration and QA tests
+- **tests**: Phase 3 batch 3 - hook, http integration, and response logging tests
+- **tests**: Phase 3 batch 2 continued - git sync, git source sync, event flow, example tests
+- **tests**: Phase 3 batch 2 - env manager, deployment hooks, e2e, pid validation, hook service, memory integration
+- **tests**: Fix environment manager, deployment hooks, e2e, pid validation tests
+- **tests**: Fix state detection and skip deprecated unified interface tests
+- **tests**: Fix deployment tests - metrics fields, strategy selection, template validation
+- **tests**: Fix test_agent_configuration_manager and skip pending_autotodos test
+- **tests**: Phase 3 test fixes - config, cache, schema, and directory loading
+- **tests**: Fix root-level test failures - hook event processing and version parser
+- **tests**: Phase 3 final fixes - security, version control, and logging tests
+- **tests**: align test_git_source_sync_service.py with Tree API implementation
+- **tests**: fix agent capabilities and system instructions tests (38 tests)
+- **tests**: fix test_runner_configuration_service.py (25 tests passing)
+- **tests**: align memory manager tests with refactored service architecture
+- **tests**: align monitoring and CLI utility tests with refactored API
+- **tests**: fix all 54 failures in test_socketio_handlers.py
+- **tests**: resolve KeyboardInterrupt propagation and mcp module shadowing
+- **tests**: Phase 2 file and module infrastructure remediation
+- add PathEncoder to prevent PosixPath JSON serialization errors
+- **tests**: Phase 1 test infrastructure remediation (~650 fixes)
+- add CONFIG_DIR property and fix __getattr__ submodule resolution
+- remove raw SQLite guidance from bundled messaging skill
+
 ## v5.9.27 (2026-02-22)
 
 ### Feat
