@@ -564,7 +564,9 @@ def deploy_output_style_on_startup():
                 except json.JSONDecodeError:
                     pass
 
-            current_style = settings.get("activeOutputStyle")
+            current_style = settings.get("outputStyle") or settings.get(
+                "activeOutputStyle"
+            )
             if current_style is None or current_style == "default":
                 manager._activate_output_style("Claude MPM", is_fresh_install=False)
 

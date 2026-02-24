@@ -323,11 +323,23 @@ class OutputStyleManager:
             self.logger.error(f"Failed to deploy {style} style: {e}")
             return False
 
+    # Mapping from display names to Claude Code's outputStyle IDs (frontmatter `name:` field)
+    _STYLE_ID_MAP: dict = {
+        "Claude MPM": "claude_mpm",
+        "Claude MPM Teacher": "claude_mpm_teacher",
+        "Claude MPM Research": "claude_mpm_research",
+    }
+
     def _activate_output_style(
         self, style_name: str = "Claude MPM", is_fresh_install: bool = False
     ) -> bool:
         """
         Update Claude Code settings to activate a specific output style.
+
+        Writes the native Claude Code ``outputStyle`` key (matching the frontmatter
+        ``name:`` field in the style file) so that Claude Code actually applies the
+        style.  Also writes the legacy ``activeOutputStyle`` key for backward
+        compatibility with older diagnostics/startup checks.
 
         Only activates the style if:
         1. No active style is currently set (first deployment), OR
@@ -336,13 +348,18 @@ class OutputStyleManager:
         This preserves user preferences if they've manually changed their active style.
 
         Args:
-            style_name: Name of the style to activate (e.g., "Claude MPM", "Claude MPM Teacher")
+            style_name: Display name of the style (e.g., "Claude MPM", "Claude MPM Teacher")
             is_fresh_install: Whether this is a fresh install (style file didn't exist before)
 
         Returns:
             True if activated successfully, False otherwise
         """
         try:
+            # Resolve the frontmatter `name:` value that Claude Code uses as the style ID
+            style_id = self._STYLE_ID_MAP.get(
+                style_name, style_name.lower().replace(" ", "_")
+            )
+
             # Load existing settings or create new
             settings = {}
             if self.settings_file.exists():
@@ -353,10 +370,12 @@ class OutputStyleManager:
                         "Could not parse existing settings.json, using defaults"
                     )
 
-            # Check current active style
-            current_style = settings.get("activeOutputStyle")
+            # Check current active style — prefer the native Claude Code key
+            current_style = settings.get("outputStyle") or settings.get(
+                "activeOutputStyle"
+            )
 
-            # Only set activeOutputStyle if:
+            # Only set outputStyle if:
             # 1. No active style is set (first deployment), OR
             # 2. Current style is "default" (not a real user preference), OR
             # 3. This is a fresh install (file didn't exist before deployment)
@@ -364,7 +383,12 @@ class OutputStyleManager:
                 current_style is None or current_style == "default" or is_fresh_install
             )
 
-            if should_activate and current_style != style_name:
+            # On fresh install always force-write both keys (file was absent, so reset).
+            # Otherwise only write when style isn't already set to the desired value.
+            if is_fresh_install or (should_activate and current_style != style_id):
+                # Write the native Claude Code key (used by /output-style command)
+                settings["outputStyle"] = style_id
+                # Keep legacy key in sync for backward compat
                 settings["activeOutputStyle"] = style_name
 
                 # Ensure settings directory exists
@@ -376,7 +400,7 @@ class OutputStyleManager:
                 )
 
                 self.logger.info(
-                    f"✅ Activated {style_name} output style (was: {current_style or 'none'})"
+                    f"✅ Activated {style_name} output style (id={style_id}, was: {current_style or 'none'})"
                 )
             else:
                 self.logger.debug(
@@ -418,7 +442,9 @@ class OutputStyleManager:
             if self.settings_file.exists():
                 try:
                     settings = json.loads(self.settings_file.read_text())
-                    status["active_style"] = settings.get("activeOutputStyle", "none")
+                    status["active_style"] = settings.get(
+                        "outputStyle"
+                    ) or settings.get("activeOutputStyle", "none")
                 except Exception:
                     status["active_style"] = "Error reading settings"
         else:
