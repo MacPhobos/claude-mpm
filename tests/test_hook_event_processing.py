@@ -19,7 +19,7 @@ import sys
 import time
 import unittest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -325,9 +325,12 @@ class TestSubagentResponseProcessor(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.state_manager = Mock()
-        self.response_tracking = Mock()
-        self.connection_manager = Mock()
+        # Use MagicMock so len() works on delegation_requests when DEBUG=True
+        # (test_agent_event_tracking.py sets CLAUDE_MPM_HOOK_DEBUG=true at module level
+        # which can pollute the env for this test when run in the full suite)
+        self.state_manager = MagicMock()
+        self.response_tracking = MagicMock()
+        self.connection_manager = MagicMock()
 
         self.processor = SubagentResponseProcessor(
             self.state_manager, self.response_tracking, self.connection_manager

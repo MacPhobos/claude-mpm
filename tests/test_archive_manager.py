@@ -3,6 +3,12 @@
 Test the Enhanced Archive Manager Documentation Review Features
 ===============================================================
 
+NOTE: This file is a demonstration script, not a pytest test suite.
+The functions prefixed with 'test_' take a 'project_path: Path' parameter
+which pytest tries to resolve as a fixture (not found → ERROR).
+Added module-level skip below.
+
+
 This script demonstrates the enhanced ArchiveManager capabilities including:
 - Documentation review with Git history analysis
 - Outdated content detection
@@ -24,6 +30,13 @@ Commands:
 import json
 import sys
 from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Standalone script with test_*() functions taking project_path: Path parameter "
+    "(not a pytest fixture). Run directly: python tests/test_archive_manager.py [command]"
+)
 
 # Add project root to path
 project_root = Path(__file__).parent.parent

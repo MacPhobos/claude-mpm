@@ -35,6 +35,9 @@ class TestInteractiveResponseLogging(unittest.TestCase):
         """Set up test fixtures."""
         import tempfile
 
+        # Reset Config singleton so fresh config_file is read (not a pre-warmed singleton)
+        Config.reset_singleton()
+
         self.temp_dir = tempfile.mkdtemp()
         self.config_path = Path(self.temp_dir) / "config.json"
 
@@ -56,6 +59,8 @@ class TestInteractiveResponseLogging(unittest.TestCase):
 
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
+        # Reset Config singleton to prevent state pollution for subsequent tests
+        Config.reset_singleton()
 
     def test_response_tracker_initialized_when_enabled(self):
         """Test that response tracker is initialized when response logging is enabled."""
