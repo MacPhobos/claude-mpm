@@ -1,3 +1,10 @@
+## v5.9.29 (2026-02-24)
+
+### Fix
+
+- **output-style**: use native Claude Code outputStyle key instead of activeOutputStyle
+- **release**: add pyproject.toml to commitizen version_files and sync to 5.9.28
+
 ## v5.9.28 (2026-02-24)
 
 ### Feat
