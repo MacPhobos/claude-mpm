@@ -145,8 +145,8 @@ class MessageService:
             project_root: Root directory of the current project
             registry_path: Override for global session registry path (for testing)
         """
-        # Normalize project root to absolute, resolved path for consistent comparisons
-        self.project_root = Path(project_root).resolve()
+        # Normalize project root with FS-canonical case (see _canonical_path docstring)
+        self.project_root = Path(self._canonical_path(str(project_root)))
 
         # Use SHARED database for all projects (not per-project)
         # This is the key change for the Huey migration
@@ -169,6 +169,43 @@ class MessageService:
         from .message_bus import MessageBus
 
         self.message_bus = MessageBus()
+
+    @staticmethod
+    def _canonical_path(path: str) -> str:
+        """Return the filesystem-canonical absolute path, including correct case.
+
+        WHY: On macOS (case-insensitive, case-preserving HFS+/APFS), Path.resolve()
+        preserves the caller's casing (e.g. '/apex') rather than the real directory
+        name (e.g. '/APEX'), while os.getcwd() from inside that directory returns
+        the real name.  This causes exact-match SQL queries to miss messages because
+        the stored path and the queried path differ only in case.
+
+        FIX: Walk each component through os.scandir() so we always get the name the
+        filesystem actually uses, regardless of what the caller typed.
+
+        Falls back gracefully to Path.resolve() if any component can't be read
+        (e.g. symlink target doesn't exist, permission error).
+        """
+        resolved = Path(path).expanduser().resolve()
+        parts = resolved.parts  # e.g. ('/', 'Users', 'masa', 'Duetto', 'repos', 'apex')
+        if not parts:
+            return str(resolved)
+
+        canonical = Path(parts[0])  # start at root '/'
+        for part in parts[1:]:
+            try:
+                # Find the real-cased entry in the parent directory
+                for entry in os.scandir(canonical):
+                    if entry.name.lower() == part.lower():
+                        canonical = canonical / entry.name
+                        break
+                else:
+                    # Component not found on disk — append as-is
+                    canonical = canonical / part
+            except OSError:
+                # Can't read directory — fall back to user-supplied component
+                canonical = canonical / part
+        return str(canonical)
 
     def send_message(
         self,
@@ -199,8 +236,10 @@ class MessageService:
         Returns:
             Created message object
         """
-        # Normalize to_project path for consistent database queries
-        to_project_normalized = str(Path(to_project).resolve())
+        # Normalize to_project path using FS-canonical case resolution.
+        # Path.resolve() preserves the caller's casing on macOS (case-insensitive FS),
+        # but os.getcwd() returns the real FS name.  _canonical_path() reconciles both.
+        to_project_normalized = self._canonical_path(to_project)
 
         # Generate message ID
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
