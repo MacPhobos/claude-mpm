@@ -16,7 +16,7 @@ CRITICAL: Ping/pong settings MUST match between client and server to prevent dis
 
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 # Import constants for default values
 from claude_mpm.core.constants import NetworkConfig, RetryConfig, SystemLimits
@@ -121,7 +121,7 @@ class SocketIOConfig:
     def for_production(cls) -> "SocketIOConfig":
         """Configuration optimized for production."""
         return cls(
-            host="0.0.0.0",  # Bind to all interfaces in production
+            host="0.0.0.0",  # Bind to all interfaces in production  # nosec B104
             port=8765,
             cors_allowed_origins="https://your-domain.com",  # Restrict CORS
             deployment_mode="standalone",
@@ -138,7 +138,7 @@ class SocketIOConfig:
     def for_docker(cls) -> "SocketIOConfig":
         """Configuration optimized for Docker deployment."""
         return cls(
-            host="0.0.0.0",
+            host="0.0.0.0",  # nosec B104
             port=8765,
             deployment_mode="standalone",
             persistent=True,
@@ -256,7 +256,9 @@ class ConfigManager:
 
         return None
 
-    def save_config(self, config: SocketIOConfig, path: Optional[str] = None) -> bool:
+    def save_config(
+        self, config: SocketIOConfig, path: Optional[Union[str, Path]] = None
+    ) -> bool:
         """Save configuration to file."""
         import json
 
@@ -265,6 +267,9 @@ class ConfigManager:
             config_dir = Path.home() / ".claude-mpm"
             config_dir.mkdir(exist_ok=True)
             path = config_dir / self.config_file_name
+        else:
+            # Accept both str and Path inputs
+            path = Path(path)
 
         try:
             with path.open("w") as f:
@@ -292,7 +297,7 @@ def get_server_ports(config: SocketIOConfig) -> List[int]:
 
 def get_discovery_hosts(config: SocketIOConfig) -> List[str]:
     """Get list of hosts to try for server discovery."""
-    if config.host == "0.0.0.0":
+    if config.host == "0.0.0.0":  # nosec B104
         # If server binds to all interfaces, try localhost and 127.0.0.1 for discovery
         return ["localhost", "127.0.0.1"]
     return [config.host, "localhost", "127.0.0.1"]

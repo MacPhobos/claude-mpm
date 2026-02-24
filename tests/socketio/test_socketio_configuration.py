@@ -85,7 +85,9 @@ class TestSocketIOConfiguration:
 
         # Check default values
         assert config.host == "localhost"
-        assert config.port == 8765  # NetworkConfig.DEFAULT_DASHBOARD_PORT
+        assert (
+            config.port == 8767
+        )  # NetworkConfig.DEFAULT_DASHBOARD_PORT (changed in v5+)
         assert config.server_id is None
         assert config.cors_allowed_origins == "*"
 
@@ -253,8 +255,10 @@ class TestSocketIOConfiguration:
         manager = ConfigManager()
 
         # Test Docker container detection via file
-        with patch("os.path.exists") as mock_exists:
-            mock_exists.return_value = True  # /.dockerenv exists
+        # Production uses Path("/.dockerenv").exists(), not os.path.exists()
+        with patch("claude_mpm.config.socketio_config.Path") as MockPath:
+            mock_dockerenv = MockPath.return_value
+            mock_dockerenv.exists.return_value = True
             assert manager.detect_environment() == "docker"
 
         # Test Docker container detection via environment
