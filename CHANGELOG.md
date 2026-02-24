@@ -1,3 +1,13 @@
+## v5.9.30 (2026-02-24)
+
+### Feat
+
+- **config**: add --role parameter to /mpm-configure command
+
+### Fix
+
+- **homebrew**: anchor sed patterns to top-level formula fields only
+
 ## v5.9.29 (2026-02-24)
 
 ### Fix
