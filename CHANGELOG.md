@@ -1,3 +1,9 @@
+## v5.9.32 (2026-02-24)
+
+### Fix
+
+- **setup**: replace blocking mcp-vector-search setup with non-interactive sub-commands
+
 ## v5.9.31 (2026-02-24)
 
 ### Fix
