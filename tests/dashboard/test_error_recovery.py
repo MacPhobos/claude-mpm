@@ -343,7 +343,9 @@ class TestConnectionRecovery(unittest.TestCase):
 
     def test_callbacks(self):
         """Test connection and error callbacks."""
-        manager = ConnectionRecoveryManager()
+        # Use short delays to avoid timeout (default base_delay=1.0, max_retries=5
+        # results in 1+2+4+8+16=31s total sleep, exceeding pytest-timeout limit)
+        manager = ConnectionRecoveryManager(max_retries=3, base_delay=0.01)
 
         connection_called = False
         error_called = False
