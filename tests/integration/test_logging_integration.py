@@ -5,6 +5,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Interactive integration test that runs 'claude-mpm run --monitor' and reads from "
+    "stdout in an infinite loop until Ctrl+C. Times out immediately in automated test suite. "
+    "Run manually: python tests/integration/test_logging_integration.py"
+)
+
 
 def test_manager_with_logging():
     """Test manager mode with logging enabled."""
