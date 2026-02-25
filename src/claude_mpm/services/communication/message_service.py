@@ -184,28 +184,81 @@ class MessageService:
         filesystem actually uses, regardless of what the caller typed.
 
         Falls back gracefully to Path.resolve() if any component can't be read
-        (e.g. symlink target doesn't exist, permission error).
+        (e.g. symlink target doesn't exist, permission error) or if canonicalization
+        produces unexpected results.
         """
+        original_path = path
         resolved = Path(path).expanduser().resolve()
         parts = resolved.parts  # e.g. ('/', 'Users', 'masa', 'Duetto', 'repos', 'apex')
+
         if not parts:
+            logger.debug(
+                f"_canonical_path: Empty parts for path '{original_path}', using resolved: {resolved}"
+            )
             return str(resolved)
+
+        # Extract expected project name from original path for validation
+        original_basename = Path(original_path).name
+        logger.debug(
+            f"_canonical_path: Processing '{original_path}' -> expected basename: '{original_basename}'"
+        )
 
         canonical = Path(parts[0])  # start at root '/'
         for part in parts[1:]:
             try:
                 # Find the real-cased entry in the parent directory
+                found = False
                 for entry in os.scandir(canonical):
                     if entry.name.lower() == part.lower():
                         canonical = canonical / entry.name
+                        found = True
+                        logger.debug(
+                            f"_canonical_path: Found real-cased '{entry.name}' for '{part}'"
+                        )
                         break
-                else:
+
+                if not found:
                     # Component not found on disk — append as-is
                     canonical = canonical / part
-            except OSError:
+                    logger.debug(
+                        f"_canonical_path: Component '{part}' not found on disk, appending as-is"
+                    )
+
+            except OSError as e:
                 # Can't read directory — fall back to user-supplied component
                 canonical = canonical / part
-        return str(canonical)
+                logger.debug(
+                    f"_canonical_path: OSError reading directory for '{part}': {e}, falling back to original component"
+                )
+
+        canonical_str = str(canonical)
+        canonical_basename = Path(canonical_str).name
+
+        # Validate that canonical path points to expected project
+        if (
+            original_basename
+            and canonical_basename.lower() != original_basename.lower()
+        ):
+            logger.warning(
+                f"_canonical_path: Canonical path basename '{canonical_basename}' doesn't match "
+                f"expected '{original_basename}' for path '{original_path}'. "
+                f"This may indicate path resolution issues."
+            )
+
+            # Fallback to original resolved path if canonicalization produces unexpected results
+            if resolved.exists():
+                logger.info(
+                    f"_canonical_path: Using fallback resolved path: {resolved}"
+                )
+                return str(resolved)
+            logger.warning(
+                "_canonical_path: Fallback path doesn't exist, using canonical result anyway"
+            )
+
+        logger.debug(
+            f"_canonical_path: Final result: '{original_path}' -> '{canonical_str}'"
+        )
+        return canonical_str
 
     def send_message(
         self,

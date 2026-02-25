@@ -351,9 +351,9 @@ See mpm-tool-usage-guide skill for complete tool usage patterns and examples.
 **FORBIDDEN** (MUST always delegate):
 - Verification commands (`curl`, `lsof`, `ps`, `docker ps`) → local-ops/QA
 - `mcp__mcp-ticketer__*` → Delegate to ticketing
-- `mcp__chrome-devtools__*` → Delegate to web-qa
-- `mcp__claude-in-chrome__*` → Delegate to web-qa
-- `mcp__playwright__*` → Delegate to web-qa
+- `mcp__chrome-devtools__*` → Delegate to web-qa-agent
+- `mcp__claude-in-chrome__*` → Delegate to web-qa-agent
+- `mcp__playwright__*` → Delegate to web-qa-agent
 
 ## Agent Deployment Architecture
 
@@ -490,7 +490,7 @@ PM: [All delegations use Opus — user override]
 | **Research** | Understanding codebase, investigating approaches, analyzing files | Grep, Glob, Read multiple files, WebSearch | Investigation tools |
 | **Engineer** | Writing/modifying code, implementing features, refactoring | Edit, Write, codebase knowledge, testing workflows | - |
 | **Ops** (local-ops) | Deploying apps, managing infrastructure, starting servers, port/process management | Environment config, deployment procedures | Use `local-ops` for localhost/PM2/docker |
-| **QA** (web-qa, api-qa) | Testing implementations, verifying deployments, regression tests, browser testing | Playwright (web), fetch (APIs), verification protocols | For browser: use **web-qa** (never use chrome-devtools, claude-in-chrome, or playwright directly) |
+| **QA** (web-qa-agent, api-qa-agent) | Testing implementations, verifying deployments, regression tests, browser testing | Playwright (web), fetch (APIs), verification protocols | For browser: use **web-qa-agent** (never use chrome-devtools, claude-in-chrome, or playwright directly) |
 | **Documentation** | Creating/updating docs, README, API docs, guides | Style consistency, organization standards | - |
 | **Ticketing** | ALL ticket operations (CRUD, search, hierarchy, comments) | Direct mcp-ticketer access | PM never uses `mcp__mcp-ticketer__*` directly |
 | **Version Control** | Creating PRs, managing branches, complex git ops | PR workflows, branch management | Check git user for main branch access (bobmatnyc@users.noreply.github.com only) |
@@ -610,8 +610,8 @@ PM MUST delegate to QA BEFORE claiming work complete. See mpm-verification-proto
 **Key points:**
 - **BLOCKING**: No "done/complete/ready/working/fixed" claims without QA evidence
 - Implementation → Delegate to QA → WAIT for evidence → Report WITH verification
-- Local Server UI → web-qa (Chrome DevTools MCP)
-- Deployed Web UI → web-qa (Playwright/Chrome DevTools)
+- Local Server UI → web-qa-agent (Chrome DevTools MCP)
+- Deployed Web UI → web-qa-agent (Playwright/Chrome DevTools)
 - API/Server → api-qa (HTTP responses + logs)
 - Local Backend → local-ops (lsof + curl + pm2 status)
 
@@ -680,7 +680,7 @@ Report Results with Evidence
 - Deploy using appropriate ops agent
 - **MANDATORY**: Verify deployment with appropriate agents:
   - **Backend/API**: local-ops verifies (lsof, curl, logs, health checks)
-  - **Web UI**: DELEGATE to web-qa for browser verification (Chrome DevTools MCP)
+  - **Web UI**: DELEGATE to web-qa-agent for browser verification (Chrome DevTools MCP)
   - **NEVER** tell user to open localhost URL - PM verifies via agents
 - Track any deployment configs created immediately
 - **FAILURE TO VERIFY = DEPLOYMENT INCOMPLETE**
@@ -1057,7 +1057,7 @@ When the user says "just do it" or "handle it", delegate to the full workflow pi
 
 When the user says "verify", "check", or "test", delegate to the QA agent with specific verification criteria.
 
-When the user mentions "browser", "screenshot", "click", "navigate", "DOM", "console errors", "tabs", "window", delegate to web-qa agent for browser testing (NEVER use chrome-devtools, claude-in-chrome, or playwright tools directly).
+When the user mentions "browser", "screenshot", "click", "navigate", "DOM", "console errors", "tabs", "window", delegate to web-qa-agent for browser testing (NEVER use chrome-devtools, claude-in-chrome, or playwright tools directly).
 
 When the user mentions "localhost", "local server", or "PM2", delegate to **local-ops** as the primary choice for local development operations.
 
