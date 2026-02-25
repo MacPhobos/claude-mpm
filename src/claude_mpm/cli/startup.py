@@ -564,9 +564,23 @@ def deploy_output_style_on_startup():
                 except json.JSONDecodeError:
                     pass
 
-            current_style = settings.get("outputStyle") or settings.get(
-                "activeOutputStyle"
-            )
+            current_style = settings.get("outputStyle")
+            # Migrate from legacy key if needed
+            if current_style is None:
+                legacy_style = settings.get("activeOutputStyle")
+                if legacy_style is not None:
+                    # Convert display name to style ID for migration
+                    style_id_map = {
+                        "Claude MPM": "claude_mpm",
+                        "Claude MPM Teacher": "claude_mpm_teacher",
+                        "Claude MPM Research": "claude_mpm_research",
+                    }
+                    current_style = style_id_map.get(
+                        legacy_style,
+                        legacy_style.lower().replace(" ", "_")
+                        if isinstance(legacy_style, str)
+                        else legacy_style,
+                    )
             if current_style is None or current_style == "default":
                 manager._activate_output_style("Claude MPM", is_fresh_install=False)
 

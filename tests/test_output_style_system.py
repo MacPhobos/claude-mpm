@@ -197,8 +197,8 @@ class TestOutputStyleManager:
             # Check settings were updated
             assert settings_file.exists()
             settings = json.loads(settings_file.read_text())
-            # _activate_output_style uses the style name "Claude MPM" (not style id "claude-mpm")
-            assert settings["activeOutputStyle"] == "Claude MPM"
+            # _activate_output_style now uses the style ID "claude_mpm" (native outputStyle key)
+            assert settings["outputStyle"] == "claude_mpm"
 
     def test_deploy_output_style_unsupported_version(self):
         """Test deployment fails for older Claude versions."""

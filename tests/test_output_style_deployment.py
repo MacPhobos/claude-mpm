@@ -98,13 +98,13 @@ def test_deployment_function():
                 # Check settings.json was created
                 assert settings_file.exists(), "settings.json not created"
                 settings = json.loads(settings_file.read_text())
-                assert settings.get("activeOutputStyle") == "Claude MPM", (
-                    "activeOutputStyle not set"
+                assert settings.get("outputStyle") == "claude_mpm", (
+                    "outputStyle not set"
                 )
 
                 print(f"✓ Output style file created at: {output_style_file}")
                 print(f"✓ Content matches source ({len(deployed_content)} characters)")
-                print("✓ settings.json created with activeOutputStyle: claude-mpm")
+                print("✓ settings.json created with outputStyle: claude_mpm")
                 print()
 
 

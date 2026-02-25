@@ -27,7 +27,7 @@ def test_fix_status_line_updates_old_format():
     # Verify the command was updated
     updated_command = settings["statusLine"]["command"]
     assert ".activeOutputStyle" in updated_command
-    assert '.output_style.name // .activeOutputStyle // "default"' in updated_command
+    assert '.outputStyle // .activeOutputStyle // "default"' in updated_command
 
 
 def test_fix_status_line_preserves_new_format():
@@ -37,7 +37,7 @@ def test_fix_status_line_preserves_new_format():
     installer = HookInstaller()
 
     # Create settings with new statusLine format (already fixed)
-    original_command = 'input=$(cat); style=$(echo "$input" | jq -r \'.output_style.name // .activeOutputStyle // "default"\'); echo "$style"'
+    original_command = 'input=$(cat); style=$(echo "$input" | jq -r \'.outputStyle // .activeOutputStyle // "default"\'); echo "$style"'
     settings = {
         "statusLine": {
             "type": "command",
@@ -88,22 +88,22 @@ def test_jq_expression_works_with_both_schemas():
     """Test that the new jq expression works with both input schemas."""
     import subprocess
 
-    # Test with old schema (output_style.name)
-    old_input = '{"output_style": {"name": "Test Style"}}'
+    # Test with native schema (outputStyle)
+    native_input = '{"outputStyle": "test_style"}'
     result = subprocess.run(
-        ["jq", "-r", '.output_style.name // .activeOutputStyle // "default"'],
-        input=old_input,
+        ["jq", "-r", '.outputStyle // .activeOutputStyle // "default"'],
+        input=native_input,
         capture_output=True,
         text=True,
         check=True,
     )
-    assert result.stdout.strip() == "Test Style"
+    assert result.stdout.strip() == "test_style"
 
-    # Test with new schema (activeOutputStyle)
-    new_input = '{"activeOutputStyle": "Test Style"}'
+    # Test with legacy schema (activeOutputStyle)
+    legacy_input = '{"activeOutputStyle": "Test Style"}'
     result = subprocess.run(
-        ["jq", "-r", '.output_style.name // .activeOutputStyle // "default"'],
-        input=new_input,
+        ["jq", "-r", '.outputStyle // .activeOutputStyle // "default"'],
+        input=legacy_input,
         capture_output=True,
         text=True,
         check=True,
@@ -113,7 +113,7 @@ def test_jq_expression_works_with_both_schemas():
     # Test with neither (should return default)
     empty_input = "{}"
     result = subprocess.run(
-        ["jq", "-r", '.output_style.name // .activeOutputStyle // "default"'],
+        ["jq", "-r", '.outputStyle // .activeOutputStyle // "default"'],
         input=empty_input,
         capture_output=True,
         text=True,
@@ -160,7 +160,7 @@ def test_full_install_hooks_applies_fix():
             with settings_file.open() as f:
                 updated_settings = json.load(f)
 
-            assert ".activeOutputStyle" in updated_settings["statusLine"]["command"]
+            assert ".outputStyle" in updated_settings["statusLine"]["command"]
 
         finally:
             installer.settings_file = original_settings_file
