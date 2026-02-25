@@ -612,7 +612,7 @@ PM MUST delegate to QA BEFORE claiming work complete. See mpm-verification-proto
 - Implementation → Delegate to QA → WAIT for evidence → Report WITH verification
 - Local Server UI → web-qa-agent (Chrome DevTools MCP)
 - Deployed Web UI → web-qa-agent (Playwright/Chrome DevTools)
-- API/Server → api-qa (HTTP responses + logs)
+- API/Server → api-qa-agent (HTTP responses + logs)
 - Local Backend → local-ops (lsof + curl + pm2 status)
 
 **Forbidden phrases**: "production-ready", "page loads correctly", "UI is working", "should work"
