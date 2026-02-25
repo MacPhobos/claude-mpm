@@ -1,3 +1,10 @@
+## v5.9.33 (2026-02-25)
+
+### Fix
+
+- **agents**: complete agent naming standardization
+- **agents**: fix messaging from address bug and agent naming inconsistencies
+
 ## v5.9.32 (2026-02-24)
 
 ### Fix
