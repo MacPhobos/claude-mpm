@@ -1,3 +1,9 @@
+## v5.9.34 (2026-02-25)
+
+### Feat
+
+- migrate to single-key output style model
+
 ## v5.9.33 (2026-02-25)
 
 ### Fix
