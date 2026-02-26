@@ -1,3 +1,9 @@
+## v5.9.36 (2026-02-26)
+
+### Fix
+
+- align mpm-message skill frontmatter with standard schema
+
 ## v5.9.35 (2026-02-25)
 
 ### Fix
