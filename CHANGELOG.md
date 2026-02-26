@@ -1,3 +1,9 @@
+## v5.9.35 (2026-02-25)
+
+### Fix
+
+- restore correlation_id, cwd, and subtype in monitor event processing
+
 ## v5.9.34 (2026-02-25)
 
 ### Feat
