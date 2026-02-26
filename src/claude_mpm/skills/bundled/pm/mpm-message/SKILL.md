@@ -1,12 +1,10 @@
 ---
+name: mpm-message
 description: Send cross-project messages to other Claude MPM instances
-triggers:
-  - /mpm-message
-  - send message to
-  - notify other project
-  - cross-project communication
-version: 3.0.0
-author: Claude MPM Team
+user-invocable: true
+version: "3.0.0"
+category: mpm-command
+tags: [mpm-command, communication, pm-required]
 ---
 
 # Cross-Project Messaging
