@@ -1,3 +1,9 @@
+## v5.9.37 (2026-02-26)
+
+### Feat
+
+- expand mpm core skill to comprehensive framework guide (v2.0.0)
+
 ## v5.9.36 (2026-02-26)
 
 ### Fix
