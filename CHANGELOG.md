@@ -1,3 +1,9 @@
+## v5.9.38 (2026-02-26)
+
+### Fix
+
+- provider anthropic no longer requires API key for Claude.ai login
+
 ## v5.9.37 (2026-02-26)
 
 ### Feat
