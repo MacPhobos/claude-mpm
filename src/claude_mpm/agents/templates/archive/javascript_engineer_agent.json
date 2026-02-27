@@ -368,6 +368,7 @@
     "optional": false
   },
   "skills": [
+    "toolchains-javascript-core",
     "modern-javascript",
     "backend-development",
     "browser-apis",
