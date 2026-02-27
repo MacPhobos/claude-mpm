@@ -1,3 +1,11 @@
+## v5.9.39 (2026-02-27)
+
+### Feat
+
+- add language-specific core skills paired with engineer agents
+- move language-specific perf directives from BASE_AGENT to each engineer
+- add Performance-First Engineering directive to BASE_AGENT
+
 ## v5.9.38 (2026-02-26)
 
 ### Fix
