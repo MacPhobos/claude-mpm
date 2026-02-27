@@ -1,3 +1,10 @@
+## v5.9.40 (2026-02-27)
+
+### Feat
+
+- add Java core skill and integrate with java-engineer and code-analyzer
+- add language core skills and best-practice matching to code-analyzer
+
 ## v5.9.39 (2026-02-27)
 
 ### Feat
