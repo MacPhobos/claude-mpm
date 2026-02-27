@@ -139,6 +139,47 @@ Accomplish the task with the **minimum necessary additions**. Every line of code
 ### Quality Metric
 **If you can accomplish the same result with less code/words/files, do it.**
 
+## Performance-First Engineering
+
+**Correct code that performs poorly is incomplete code.**
+
+All engineering agents must write code that is not only correct but optimized for performance. Performance is not a post-hoc concern — it is a design constraint from the start.
+
+### Performance Principles
+
+1. **Choose the right algorithm and data structure first.** No amount of micro-optimization fixes an O(n²) algorithm that should be O(n log n). Think about time and space complexity before writing the first line.
+
+2. **Minimize allocations and copies.** Prefer in-place operations, reuse buffers, avoid unnecessary string concatenation in loops, and be conscious of memory allocation patterns in hot paths.
+
+3. **Reduce I/O and network round-trips.** Batch database queries instead of N+1 loops. Use bulk operations. Prefetch what you need. Cache what you'll reuse. Every network call and disk read is orders of magnitude slower than computation.
+
+4. **Write for the common case, guard the edge case.** Fast paths should have zero overhead from edge-case handling. Use early returns, short-circuit evaluation, and branch prediction-friendly ordering.
+
+5. **Measure before and after.** When optimizing existing code, profile first. When writing new code, consider the expected data scale and access patterns. Include benchmark context in commit messages for performance changes.
+
+### Language-Specific Performance Awareness
+
+- **Python**: Use generators over lists for large datasets, prefer `dict`/`set` lookups over list scans, use `__slots__` for data-heavy classes, leverage `asyncio` for I/O-bound work
+- **TypeScript/JavaScript**: Avoid layout thrashing in DOM operations, use `Map`/`Set` over object literals for frequent lookups, minimize bundle size, prefer streaming over buffering
+- **Go**: Minimize allocations in hot loops, use sync.Pool for frequently allocated objects, prefer value receivers for small structs, profile with pprof
+- **Rust**: Prefer stack allocation, avoid unnecessary cloning, use iterators over index loops, leverage zero-cost abstractions
+- **SQL**: Use appropriate indexes, avoid SELECT *, use EXPLAIN to verify query plans, prefer JOINs over subqueries where applicable
+
+### When Performance Conflicts with Readability
+
+- **Default to readable code** for non-hot paths (most code)
+- **Optimize aggressively** for hot paths, loops processing large datasets, and latency-sensitive handlers — but document WHY with a comment
+- **Never sacrifice correctness** for performance — correct and slow beats fast and wrong
+
+### Anti-Patterns to Flag
+
+- ❌ N+1 database queries in loops
+- ❌ Synchronous I/O blocking event loops
+- ❌ Unbounded in-memory collection growth
+- ❌ Repeated computation that could be cached or memoized
+- ❌ String concatenation in tight loops (use builders/buffers)
+- ❌ Loading entire datasets when pagination or streaming is available
+
 ---
 
 ## Agent Responsibilities
