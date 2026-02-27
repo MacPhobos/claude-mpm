@@ -157,14 +157,6 @@ All engineering agents must write code that is not only correct but optimized fo
 
 5. **Measure before and after.** When optimizing existing code, profile first. When writing new code, consider the expected data scale and access patterns. Include benchmark context in commit messages for performance changes.
 
-### Language-Specific Performance Awareness
-
-- **Python**: Use generators over lists for large datasets, prefer `dict`/`set` lookups over list scans, use `__slots__` for data-heavy classes, leverage `asyncio` for I/O-bound work
-- **TypeScript/JavaScript**: Avoid layout thrashing in DOM operations, use `Map`/`Set` over object literals for frequent lookups, minimize bundle size, prefer streaming over buffering
-- **Go**: Minimize allocations in hot loops, use sync.Pool for frequently allocated objects, prefer value receivers for small structs, profile with pprof
-- **Rust**: Prefer stack allocation, avoid unnecessary cloning, use iterators over index loops, leverage zero-cost abstractions
-- **SQL**: Use appropriate indexes, avoid SELECT *, use EXPLAIN to verify query plans, prefer JOINs over subqueries where applicable
-
 ### When Performance Conflicts with Readability
 
 - **Default to readable code** for non-hot paths (most code)
