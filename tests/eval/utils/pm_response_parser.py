@@ -103,6 +103,11 @@ class PMResponseParser:
         r"According to\s+(\w+)",
         r"(\w+)\s+agent's\s+(verification|test|report)",
         r"(\w+)\s+verified:",
+        r"(\w+)\s+confirmed:",
+        r"(\w+)\s+reported:",
+        r"commit[: ]+[a-f0-9]+",
+        r"test results?:",
+        r"files?\s+changed:",
     ]
 
     # Forbidden tool patterns for PM
@@ -240,7 +245,11 @@ class PMResponseParser:
             pattern = re.compile(pattern_str, re.IGNORECASE)
             match = pattern.search(context)
             if match:
-                agent_name = match.group(1)
+                try:
+                    agent_name = match.group(1)
+                except IndexError:
+                    # Pattern has no capture group (e.g., commit hash, test results)
+                    agent_name = "evidence"
                 return True, agent_name
 
         return False, None
