@@ -346,19 +346,21 @@ and consistent response models. Strong separation of concerns with router → se
 
 **DISCOVERY PHASE:**
 
+Checking file sizes first to determine approach.
+
 Using Grep to find API patterns:
 - @router decorators: 127 endpoints
 - Response models: 45 Pydantic models
 - Dependency injection: 89 Depends() calls
 
 Using Glob to map API structure:
-- src/api/routes/ (12 router files)
+- src/api/routes/ (12 router files, each 8KB - normal read)
 - src/api/models/ (45 response models)
 - src/api/dependencies/ (8 dependency providers)
 
 **PATTERN EXTRACTION:**
 
-Sampling 5 representative route files (lines 1-150 each):
+Selected key files as representative samples. Sampling 5 route files (lines 1-150 each):
 1. src/api/routes/users.py
 2. src/api/routes/projects.py
 3. src/api/routes/tasks.py
@@ -417,7 +419,9 @@ write-through invalidation.
 
 ---
 
-**FILES ANALYZED:**
+**FILES ANALYZED (Representative Samples):**
+
+Selected key files for detailed analysis:
 
 **Core Caching (3 files):**
 1. src/cache/service.py (15KB) - Main cache service
@@ -432,7 +436,7 @@ write-through invalidation.
 
 **DISCOVERY RESULTS:**
 
-Using Grep to find caching patterns:
+Using Grep to find caching patterns and Glob to discover cache-related files:
 - @lru_cache: 34 function decorators
 - Redis cache operations: 56 calls
 - Request cache: 23 instances
