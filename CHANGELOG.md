@@ -1,3 +1,12 @@
+## v5.9.41 (2026-02-28)
+
+### Fix
+
+- repair remaining 23 eval test failures in agent infrastructure and research suites
+- repair 90+ eval test failures in PM behavioral compliance suite
+- repair E2E test_agent_discovery_and_loading for schema/API changes
+- stop forcing ANTHROPIC_MODEL and detect active model in banner (#321)
+
 ## v5.9.40 (2026-02-27)
 
 ### Feat
