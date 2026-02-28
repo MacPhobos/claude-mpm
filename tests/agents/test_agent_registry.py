@@ -34,7 +34,7 @@ class TestAgentRegistryMemoryIntegration:
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_basic_agent_loading():
+    def test_basic_agent_loading(self):
         """Test basic agent loading without memory."""
         # Create a simple agent file
         agent_dir = self.temp_dir / "agents"
@@ -70,7 +70,7 @@ class TestAgentRegistryMemoryIntegration:
             assert loaded_agent["agent_id"] == "test_agent"
             assert loaded_agent["metadata"]["name"] == "Test Agent"
 
-    def test_memory_aware_agent_creation():
+    def test_memory_aware_agent_creation(self):
         """Test creation of memory-aware agents from memory files."""
         # Create memory directory and file
         memories_dir = self.temp_dir / "memories"
@@ -139,7 +139,7 @@ class TestAgentRegistryMemoryIntegration:
                     self.registry.get_agent_tier("engineer_agent") == AgentTier.PROJECT
                 )
 
-    def test_enhance_existing_agent_with_memory():
+    def test_enhance_existing_agent_with_memory(self):
         """Test enhancing existing agent with memory content."""
         # Create agent directory and file
         agent_dir = self.temp_dir / "agents"
@@ -221,7 +221,7 @@ class TestAgentRegistryMemoryIntegration:
                     self.registry.get_agent_tier("research_agent") == AgentTier.PROJECT
                 )
 
-    def test_list_agents_includes_memory_info():
+    def test_list_agents_includes_memory_info(self):
         """Test that list_agents includes memory information."""
         # Create memory-aware agent
         memories_dir = self.temp_dir / "memories"
@@ -257,7 +257,7 @@ class TestAgentRegistryMemoryIntegration:
                 assert agent_summary["memory_size_kb"] > 0
                 assert "memory_file" in agent_summary
 
-    def test_extract_agent_name_from_memory_file():
+    def test_extract_agent_name_from_memory_file(self):
         """Test agent name extraction from memory filenames."""
         # Test various filename formats
         assert (

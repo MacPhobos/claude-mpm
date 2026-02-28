@@ -302,6 +302,11 @@ class UnifiedPathManager:
     CONFIG_DIR_NAME = ".claude-mpm"
     LEGACY_CONFIG_DIR_NAME = ".claude-pm"  # For migration support
 
+    @property
+    def CONFIG_DIR(self) -> str:
+        """Backwards-compatible alias for CONFIG_DIR_NAME."""
+        return self.CONFIG_DIR_NAME
+
     def __new__(cls) -> "UnifiedPathManager":
         """Singleton pattern to ensure single instance."""
         if cls._instance is None:

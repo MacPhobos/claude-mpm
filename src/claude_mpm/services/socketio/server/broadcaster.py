@@ -388,6 +388,12 @@ class SocketIOEventBroadcaster:
         normalized = self.normalizer.normalize(raw_event)
         event = normalized.to_dict()
 
+        # Promote session_id from data to top level for frontend compatibility
+        if "session_id" not in event and isinstance(data, dict):
+            sid = data.get("session_id") or data.get("sessionId")
+            if sid:
+                event["session_id"] = sid
+
         # Buffer the event for reliability AND add to event history for new clients
         with self.buffer_lock:
             self.event_buffer.append(event)

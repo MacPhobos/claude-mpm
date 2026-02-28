@@ -5,6 +5,8 @@ import logging
 import sys
 from pathlib import Path
 
+from claude_mpm.core.config import Config
+
 # Setup logging to see what's happening
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 

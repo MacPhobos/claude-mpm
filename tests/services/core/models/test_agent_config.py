@@ -209,10 +209,13 @@ class TestConfigurationStatus:
     def test_all_statuses_exist(self):
         """Test that all statuses are defined."""
         assert ConfigurationStatus.SUCCESS == "success"
-        assert ConfigurationStatus.PARTIAL_SUCCESS == "partial_success"
-        assert ConfigurationStatus.FAILURE == "failure"
-        assert ConfigurationStatus.VALIDATION_ERROR == "validation_error"
-        assert ConfigurationStatus.USER_CANCELLED == "user_cancelled"
+        # ConfigurationStatus is an alias for OperationResult
+        # PARTIAL_SUCCESS maps to WARNING, FAILURE maps to FAILED,
+        # VALIDATION_ERROR maps to ERROR, USER_CANCELLED maps to CANCELLED
+        assert ConfigurationStatus.WARNING == "warning"  # was PARTIAL_SUCCESS
+        assert ConfigurationStatus.FAILED == "failed"  # was FAILURE
+        assert ConfigurationStatus.ERROR == "error"  # was VALIDATION_ERROR
+        assert ConfigurationStatus.CANCELLED == "cancelled"  # was USER_CANCELLED
 
 
 class TestConfigurationResult:
@@ -235,13 +238,13 @@ class TestConfigurationResult:
         success = ConfigurationResult(status=ConfigurationStatus.SUCCESS)
         assert success.is_successful is True
 
-        failure = ConfigurationResult(status=ConfigurationStatus.FAILURE)
+        failure = ConfigurationResult(status=ConfigurationStatus.FAILED)
         assert failure.is_successful is False
 
     def test_has_failures_property(self):
         """Test has_failures property."""
         with_failures = ConfigurationResult(
-            status=ConfigurationStatus.PARTIAL_SUCCESS, failed_agents=["security"]
+            status=ConfigurationStatus.WARNING, failed_agents=["security"]
         )
         assert with_failures.has_failures is True
 

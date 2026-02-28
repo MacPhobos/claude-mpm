@@ -88,7 +88,7 @@ class TestFilterClaudeMPMArgs:
 class TestCreateSessionContext:
     """Test session context creation functionality."""
 
-    @patch("claude_mpm.core.system_context.create_simple_context")
+    @patch("claude_mpm.core.claude_runner.create_simple_context")
     def test_creates_base_context_when_no_session(self, mock_create_context):
         """Test base context creation when session not found."""
         mock_create_context.return_value = "base context"
@@ -100,7 +100,7 @@ class TestCreateSessionContext:
         assert result == "base context"
         mock_manager.get_session_info.assert_called_once_with("session-123")
 
-    @patch("claude_mpm.core.system_context.create_simple_context")
+    @patch("claude_mpm.core.claude_runner.create_simple_context")
     def test_enhances_context_with_session_info(self, mock_create_context):
         """Test context enhancement with session information."""
         mock_create_context.return_value = "base context"

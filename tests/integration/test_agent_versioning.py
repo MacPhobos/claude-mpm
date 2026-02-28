@@ -22,7 +22,13 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import pytest
+
 from claude_mpm.services.agents.deployment import AgentDeploymentService
+
+pytestmark = pytest.mark.skip(
+    reason="AgentDeploymentService._extract_version() removed in v5+."
+)
 
 
 def test_versioning():

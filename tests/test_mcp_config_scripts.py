@@ -10,8 +10,8 @@ import tempfile
 from pathlib import Path
 
 
-def test_json_validity(config_path: Path) -> bool:
-    """Test if a JSON file is valid.
+def _test_json_validity(config_path: Path) -> bool:
+    """Helper function (not a pytest test) to check if a JSON file is valid.
 
     Args:
         config_path: Path to JSON file
@@ -77,7 +77,7 @@ def test_registration_script():
             return False
 
         # Verify JSON is still valid
-        if not test_json_validity(tmp_path):
+        if not _test_json_validity(tmp_path):
             print("❌ JSON became invalid after registration")
             return False
 

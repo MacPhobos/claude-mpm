@@ -31,10 +31,10 @@ class TestAgentEnvironmentManager:
         return AgentEnvironmentManager()
 
     @pytest.fixture
-    def temp_dir(self):
+    def temp_dir(self, tmp_path):
         """Create temporary directory for testing."""
-        with tmp_path as temp_dir:
-            yield Path(temp_dir)
+        temp_dir = tmp_path
+        yield Path(temp_dir)
 
     @pytest.fixture
     def clean_environment(self):
@@ -54,10 +54,10 @@ class TestAgentEnvironmentManager:
         os.environ.clear()
         os.environ.update(original_env)
 
-    def test_initialization(self):
+    def test_initialization(self, env_manager):
         """Test AgentEnvironmentManager initialization."""
-        assert hasattr(self, "logger")
-        assert self.logger is not None
+        assert hasattr(env_manager, "logger")
+        assert env_manager.logger is not None
 
     def test_set_claude_environment_default_dir(
         self, env_manager, temp_dir, clean_environment
@@ -92,11 +92,13 @@ class TestAgentEnvironmentManager:
         # Check that custom directory was created
         assert custom_config.exists()
 
-    def test_get_current_environment_empty(self, clean_environment):
-        """Test getting current environment when no Claude variables are set."""
-        current_env = self.get_current_environment()
+    def test_get_current_environment_empty(self, env_manager, clean_environment):
+        """Test getting current environment when no CLAUDE_ variables are set."""
+        current_env = env_manager.get_current_environment()
         assert isinstance(current_env, dict)
-        assert len(current_env) == 0
+        # clean_environment fixture removes CLAUDE_* vars; ANTHROPIC_* may still exist
+        # Verify no CLAUDE_ prefixed vars are in the result
+        assert not any(k.startswith("CLAUDE_") for k in current_env)
 
     def test_get_current_environment_with_variables(
         self, env_manager, clean_environment
@@ -223,13 +225,13 @@ class TestAgentEnvironmentManager:
         assert not setup_results["success"]
         assert len(setup_results["errors"]) > 0
 
-    def test_get_environment_info(self, clean_environment):
+    def test_get_environment_info(self, env_manager, clean_environment):
         """Test getting comprehensive environment information."""
         # Set some test environment variables
         os.environ["CLAUDE_CONFIG_DIR"] = "/test/config"
         os.environ["PYTHONPATH"] = "/test/python"
 
-        info = self.get_environment_info()
+        info = env_manager.get_environment_info()
 
         assert "claude_environment_variables" in info
         assert "python_path" in info
@@ -242,7 +244,7 @@ class TestAgentEnvironmentManager:
         )
         assert info["python_path"] == "/test/python"
 
-    def test_cleanup_environment(self, clean_environment):
+    def test_cleanup_environment(self, env_manager, clean_environment):
         """Test cleaning up environment variables."""
         # Set some Claude environment variables
         os.environ["CLAUDE_CONFIG_DIR"] = "/test/config"
@@ -250,7 +252,7 @@ class TestAgentEnvironmentManager:
         os.environ["CLAUDE_MAX_PARALLEL_SUBAGENTS"] = "3"
         os.environ["OTHER_VAR"] = "should-remain"
 
-        cleanup_results = self.cleanup_environment()
+        cleanup_results = env_manager.cleanup_environment()
 
         assert len(cleanup_results["removed_variables"]) == 3
         assert len(cleanup_results["errors"]) == 0
@@ -263,7 +265,7 @@ class TestAgentEnvironmentManager:
         # Check that other variables remain
         assert os.environ.get("OTHER_VAR") == "should-remain"
 
-    def test_find_claude_config_locations(self, temp_dir):
+    def test_find_claude_config_locations(self, env_manager, temp_dir):
         """Test finding Claude configuration locations."""
         # Create some test config directories
         test_configs = [
@@ -278,7 +280,7 @@ class TestAgentEnvironmentManager:
         with patch("pathlib.Path.cwd", return_value=temp_dir), patch(
             "pathlib.Path.home", return_value=temp_dir / "home"
         ):
-            locations = self._find_claude_config_locations()
+            locations = env_manager._find_claude_config_locations()
 
         # Should find the existing directories
         assert len(locations) >= 2  # At least cwd/.claude and home/.claude

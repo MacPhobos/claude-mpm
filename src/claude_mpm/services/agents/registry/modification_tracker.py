@@ -244,7 +244,7 @@ class AgentModificationTracker(BaseService):
         self.watched_paths: Set[Path] = set()
 
         # Persistence paths
-        self.persistence_root = get_path_manager().get_tracking_dir()
+        self.persistence_root = get_path_manager().get_cache_dir() / "tracking"
         self.backup_root = self.persistence_root / "backups"
         self.history_root = self.persistence_root / "history"
 
@@ -437,7 +437,7 @@ class AgentModificationTracker(BaseService):
         """Initialize cache and registry integrations."""
         try:
             self.shared_cache = SharedPromptCache.get_instance()
-            self.agent_registry = AgentRegistry(cache_service=self.shared_cache)
+            self.agent_registry = AgentRegistry()
             self.logger.info("Successfully initialized cache and registry integrations")
         except Exception as e:
             self.logger.warning(f"Failed to initialize integrations: {e}")

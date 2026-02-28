@@ -420,12 +420,18 @@ class ClaudeHookHandler:
                 )
 
             # Route event to appropriate handler
-            # Handlers can optionally return modified input for PreToolUse events
-            modified_input = self._route_event(event)
+            # Returns modified_input for PreToolUse, or decision dict for Stop hooks
+            handler_result = self._route_event(event)
 
-            # Always continue execution (only if not already sent)
+            # Send response (only if not already sent)
             if not _continue_sent:
-                self._continue_execution(modified_input)
+                # Check if this is a Stop hook decision (block/allow)
+                if isinstance(handler_result, dict) and "decision" in handler_result:
+                    # Stop hook returned a decision - output it directly
+                    print(json.dumps(handler_result), flush=True)
+                else:
+                    # Normal continue (with optional modified input for PreToolUse)
+                    self._continue_execution(handler_result)
                 _continue_sent = True
 
         except Exception:
@@ -536,8 +542,13 @@ class ClaudeHookHandler:
                 # Handlers can optionally return modified input
                 result = handler(event)
                 success = True
-                # Only PreToolUse handlers should return modified input
-                if hook_type == "PreToolUse" and result is not None:
+                # PreToolUse handlers return modified input
+                # Stop handlers can return decision dicts (e.g., {"decision": "block", "reason": "..."})
+                if (hook_type == "PreToolUse" and result is not None) or (
+                    hook_type == "Stop"
+                    and isinstance(result, dict)
+                    and "decision" in result
+                ):
                     return_value = result
                 else:
                     return_value = None

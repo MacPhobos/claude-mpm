@@ -38,6 +38,9 @@ class TestAgentDeploymentService:
     @pytest.fixture
     def mock_dependencies(self):
         """Create mock instances of all helper services."""
+        multi_source = Mock()
+        # Ensure cleanup_excluded_agents returns a proper dict (not a Mock)
+        multi_source.cleanup_excluded_agents.return_value = {"removed": []}
         return {
             "template_builder": Mock(),
             "version_manager": Mock(),
@@ -46,7 +49,7 @@ class TestAgentDeploymentService:
             "validator": Mock(),
             "filesystem_manager": Mock(),
             "discovery_service": Mock(),
-            "multi_source_service": Mock(),
+            "multi_source_service": multi_source,
             "configuration_manager": Mock(),
             "format_converter": Mock(),
         }

@@ -18,8 +18,10 @@ from .commands import (
     manage_gh,
     manage_mcp,
     manage_memory,
+    manage_messages,
     manage_monitor,
     manage_tickets,
+    message_queue,
     run_doctor,
     run_session,
     show_info,
@@ -158,6 +160,13 @@ def execute_command(command: str, args) -> int:
         from .commands.oauth import manage_oauth
 
         result = manage_oauth(args)
+        return result if result is not None else 0
+
+    # Handle auth command with lazy import
+    if command == "auth":
+        from .commands.auth import manage_auth
+
+        result = manage_auth(args)
         return result if result is not None else 0
 
     # Handle slack command with lazy import
@@ -393,6 +402,8 @@ def execute_command(command: str, args) -> int:
         CLICommands.SKILLS.value: manage_skills,
         "debug": manage_debug,  # Add debug command
         "gh": manage_gh,  # GitHub multi-account management
+        "message": manage_messages,  # Cross-project messaging
+        "queue": message_queue,  # Message queue management
         "mpm-init": None,  # Will be handled separately with lazy import
     }
 

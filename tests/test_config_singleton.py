@@ -5,6 +5,8 @@ import logging
 import sys
 from pathlib import Path
 
+from claude_mpm.core.config import Config
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

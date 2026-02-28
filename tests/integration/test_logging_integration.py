@@ -5,8 +5,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Interactive integration test that runs 'claude-mpm run --monitor' and reads from "
+    "stdout in an infinite loop until Ctrl+C. Times out immediately in automated test suite. "
+    "Run manually: python tests/integration/test_logging_integration.py"
+)
 
 
 def test_manager_with_logging():

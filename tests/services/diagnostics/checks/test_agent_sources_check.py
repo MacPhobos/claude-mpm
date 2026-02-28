@@ -31,7 +31,7 @@ def config_dir():
 def cache_dir():
     """Create temporary cache directory."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        cache_path = Path(tmpdir) / ".claude-mpm" / "cache" / "remote-agents"
+        cache_path = Path(tmpdir) / ".claude-mpm" / "cache" / "agents"
         cache_path.mkdir(parents=True)
         yield cache_path
 

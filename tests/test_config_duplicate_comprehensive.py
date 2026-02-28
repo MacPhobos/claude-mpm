@@ -6,6 +6,8 @@ import logging
 import sys
 from pathlib import Path
 
+from claude_mpm.core.config import Config
+
 # Capture all logs to analyze them
 log_capture = io.StringIO()
 

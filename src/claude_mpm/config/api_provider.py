@@ -163,11 +163,11 @@ class APIProviderConfig:
             os.environ["ANTHROPIC_MODEL"] = self.anthropic.model
             changes["ANTHROPIC_MODEL"] = self.anthropic.model
 
-            # Verify API key is available
+            # Note: API key is optional when using Claude.ai OAuth login
             if "ANTHROPIC_API_KEY" not in os.environ:  # pragma: allowlist secret
-                logger.warning(
+                logger.debug(
                     "ANTHROPIC_API_KEY not found in environment. "  # pragma: allowlist secret
-                    "Anthropic backend requires this variable to be set."
+                    "Claude Code will use Claude.ai login or prompt for authentication."
                 )
 
             logger.debug(f"Configured Anthropic backend: model={self.anthropic.model}")

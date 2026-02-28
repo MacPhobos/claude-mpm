@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-mpm"
-version = "5.9.20"
+version = "5.9.40"
 description = "Claude Code workflow and agent management framework - Multi-agent orchestration, skills system, MCP integration, session management, and semantic code search for AI-powered development"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -63,7 +63,44 @@ classifiers = [
     "Topic :: System :: Software Distribution",
     "Typing :: Typed",
 ]
-dependencies = [ "ai-trackdown-pytools>=1.4.0", "pyyaml>=6.0", "python-dotenv>=1.0.0", "click>=8.0.0", "pexpect>=4.8.0", "psutil>=5.9.0", "requests>=2.25.0", "flask>=3.0.0", "flask-cors>=4.0.0", "watchdog>=3.0.0", "python-socketio>=5.14.0", "aiohttp>=3.9.0", "aiohttp-cors>=0.7.0,<0.8.0", "python-engineio>=4.8.0", "aiofiles>=23.0.0", "websockets>=12.0", "python-frontmatter>=1.0.0", "mistune>=3.0.0", "tree-sitter>=0.21.0", "ijson>=3.2.0", "toml>=0.10.2", "packaging>=21.0", "pydantic>=2.0.0", "pydantic-settings>=2.0.0", "rich>=13.0.0", "questionary>=2.0.0", "pyee>=13.0.0", "pathspec>=0.11.0", "fastapi>=0.100.0", "uvicorn>=0.20.0", "httpx>=0.24.0", "keyring>=24.0.0", "cryptography>=41.0.0", "mcp>=1.0.0",]
+dependencies = [
+ "ai-trackdown-pytools>=1.4.0",
+ "pyyaml>=6.0",
+ "python-dotenv>=1.0.0",
+ "click>=8.0.0",
+ "pexpect>=4.8.0",
+ "psutil>=5.9.0",
+ "requests>=2.25.0",
+ "flask>=3.0.0",
+ "flask-cors>=4.0.0",
+ "watchdog>=3.0.0",
+ "python-socketio>=5.14.0",
+ "aiohttp>=3.9.0",
+ "aiohttp-cors>=0.7.0,<0.8.0",
+ "python-engineio>=4.8.0",
+ "aiofiles>=23.0.0",
+ "websockets>=12.0",
+ "python-frontmatter>=1.0.0",
+ "mistune>=3.0.0",
+ "tree-sitter>=0.21.0",
+ "ijson>=3.2.0",
+ "toml>=0.10.2",
+ "packaging>=21.0",
+ "pydantic>=2.0.0",
+ "pydantic-settings>=2.0.0",
+ "rich>=13.0.0",
+ "questionary>=2.0.0",
+ "pyee>=13.0.0",
+ "pathspec>=0.11.0",
+ "fastapi>=0.100.0",
+ "uvicorn>=0.20.0",
+ "httpx>=0.24.0",
+ "keyring>=24.0.0",
+ "cryptography>=41.0.0",
+ "mcp>=1.0.0",
+ "huey>=2.5.0",
+ "commitizen>=4.13.9",
+]
 [[project.authors]]
 name = "Bob Matsuoka"
 email = "bob@matsuoka.com"
@@ -129,6 +166,8 @@ dev = [
  "types-requests>=2.25.0",
  "pytest-xdist>=3.8.0",
  "playwright>=1.40.0",
+ "pytest-timeout>=2.4.0",
+ "commitizen>=4.13.9",
 ]
 
 [tool.mypy]
@@ -270,8 +309,8 @@ ignore-imports = false
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "5.9.20"
-version_files = [ "VERSION", "src/claude_mpm/VERSION", "package.json:version",]
+version = "5.9.40"
+version_files = [ "VERSION", "src/claude_mpm/VERSION", "package.json:version", "pyproject.toml:version",]
 tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true

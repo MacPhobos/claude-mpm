@@ -14,10 +14,15 @@ import os
 import subprocess
 import sys
 
+import pytest
+
 # Add the source directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
+@pytest.mark.timeout(
+    60
+)  # 4 subprocess commands * 5s each = up to 20s; allow 60s margin
 def test_cli_commands():
     """Test that all CLI commands work without AttributeError."""
     print("=" * 60)

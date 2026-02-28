@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
 from claude_mpm.services.cli.startup_checker import (
     IStartupChecker,
     StartupCheckerService,
@@ -150,6 +152,10 @@ class TestStartupCheckerService:
                 warning = service.check_memory(resume_enabled=True)
                 assert warning is None
 
+    @pytest.mark.skip(
+        reason="Python version check removed from check_environment() - "
+        "implementation no longer validates Python version in this method"
+    )
     def test_check_environment_python_version(self):
         """Test environment check for Python version."""
         config_service = MockConfigService()
@@ -232,7 +238,7 @@ class TestStartupCheckerService:
 
         assert "❌ Error message" in captured.out
         assert "⚠️  Warning message" in captured.out
-        assert "ℹ️  Info message" in captured.out  # noqa: RUF001
+        assert "[INFO]️  Info message" in captured.out  # noqa: RUF001
         assert "💡 Consider this" in captured.out
 
     def test_display_warnings_empty_list(self, capsys):
@@ -282,7 +288,13 @@ class TestStartupCheckerService:
         config_service = MockConfigService()
         service = StartupCheckerService(config_service)
 
-        with patch("sys.version_info", side_effect=Exception("Version error")):
+        # Patch _check_required_directories to raise an exception since
+        # check_environment delegates to that method internally
+        with patch.object(
+            service,
+            "_check_required_directories",
+            side_effect=Exception("Directory check error"),
+        ):
             warnings = service.check_environment()
             # Should handle the error and return some warnings
             assert any("Environment check failed" in w.message for w in warnings)
@@ -335,7 +347,7 @@ class TestStartupCheckerService:
             # Find positions of each severity marker
             error_pos = output.find("❌")
             warning_pos = output.find("⚠️")
-            info_pos = output.find("ℹ️")  # noqa: RUF001
+            info_pos = output.find("[INFO]️")  # noqa: RUF001
 
             # Errors should come first, then warnings, then info
             assert error_pos < warning_pos < info_pos

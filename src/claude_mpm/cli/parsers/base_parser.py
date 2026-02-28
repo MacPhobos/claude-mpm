@@ -466,6 +466,20 @@ def create_parser(
         pass
 
     try:
+        from .messages_parser import add_messages_subparser
+
+        add_messages_subparser(subparsers)
+    except ImportError:
+        pass
+
+    try:
+        from .queue_parser import add_queue_subparser
+
+        add_queue_subparser(subparsers)
+    except ImportError:
+        pass
+
+    try:
         from .config_parser import add_config_subparser
 
         add_config_subparser(subparsers)
@@ -525,6 +539,13 @@ def create_parser(
         from .oauth_parser import add_oauth_subparser
 
         add_oauth_subparser(subparsers)
+    except ImportError:
+        pass
+
+    try:
+        from .auth_parser import add_auth_subparser
+
+        add_auth_subparser(subparsers)
     except ImportError:
         pass
 

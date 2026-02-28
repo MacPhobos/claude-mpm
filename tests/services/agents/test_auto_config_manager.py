@@ -292,7 +292,7 @@ async def test_auto_configure_validation_failure(service, temp_project_dir):
         dry_run=False,
     )
 
-    assert result.status == ConfigurationStatus.VALIDATION_ERROR
+    assert result.status == ConfigurationStatus.ERROR
     assert len(result.validation_errors) > 0
     assert len(result.deployed_agents) == 0
 
@@ -321,7 +321,7 @@ async def test_auto_configure_partial_deployment_failure(service, temp_project_d
         dry_run=False,
     )
 
-    assert result.status == ConfigurationStatus.PARTIAL_SUCCESS
+    assert result.status == ConfigurationStatus.WARNING
     assert len(result.deployed_agents) == 1
     assert len(result.failed_agents) == 1
     assert "vercel-ops" in result.failed_agents
@@ -668,7 +668,7 @@ async def test_auto_configure_handles_analyzer_error(service, temp_project_dir):
         confirmation_required=False,
     )
 
-    assert result.status == ConfigurationStatus.FAILURE
+    assert result.status == ConfigurationStatus.FAILED
     assert "analysis failed" in result.message.lower()
 
 
@@ -684,7 +684,7 @@ async def test_auto_configure_handles_recommender_error(service, temp_project_di
         confirmation_required=False,
     )
 
-    assert result.status == ConfigurationStatus.FAILURE
+    assert result.status == ConfigurationStatus.FAILED
     assert "recommendation failed" in result.message.lower()
 
 

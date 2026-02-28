@@ -323,11 +323,23 @@ class OutputStyleManager:
             self.logger.error(f"Failed to deploy {style} style: {e}")
             return False
 
+    # Mapping from display names to Claude Code's outputStyle IDs (frontmatter `name:` field)
+    _STYLE_ID_MAP: dict = {
+        "Claude MPM": "claude_mpm",
+        "Claude MPM Teacher": "claude_mpm_teacher",
+        "Claude MPM Research": "claude_mpm_research",
+    }
+
     def _activate_output_style(
         self, style_name: str = "Claude MPM", is_fresh_install: bool = False
     ) -> bool:
         """
         Update Claude Code settings to activate a specific output style.
+
+        Writes the native Claude Code ``outputStyle`` key (matching the frontmatter
+        ``name:`` field in the style file) so that Claude Code actually applies the
+        style. Migrates away from the legacy ``activeOutputStyle`` key to prevent
+        synchronization issues.
 
         Only activates the style if:
         1. No active style is currently set (first deployment), OR
@@ -336,13 +348,18 @@ class OutputStyleManager:
         This preserves user preferences if they've manually changed their active style.
 
         Args:
-            style_name: Name of the style to activate (e.g., "Claude MPM", "Claude MPM Teacher")
+            style_name: Display name of the style (e.g., "Claude MPM", "Claude MPM Teacher")
             is_fresh_install: Whether this is a fresh install (style file didn't exist before)
 
         Returns:
             True if activated successfully, False otherwise
         """
         try:
+            # Resolve the frontmatter `name:` value that Claude Code uses as the style ID
+            style_id = self._STYLE_ID_MAP.get(
+                style_name, style_name.lower().replace(" ", "_")
+            )
+
             # Load existing settings or create new
             settings = {}
             if self.settings_file.exists():
@@ -353,10 +370,28 @@ class OutputStyleManager:
                         "Could not parse existing settings.json, using defaults"
                     )
 
-            # Check current active style
-            current_style = settings.get("activeOutputStyle")
+            # Migrate from dual-key model: check both keys but prefer outputStyle
+            current_style = settings.get("outputStyle")
+            legacy_style = settings.get("activeOutputStyle")
 
-            # Only set activeOutputStyle if:
+            # Track if we're migrating from legacy
+            is_migrating_from_legacy = (
+                current_style is None and legacy_style is not None
+            )
+
+            # If only legacy key exists, we'll migrate it
+            if is_migrating_from_legacy:
+                self.logger.info(f"Migrating legacy activeOutputStyle: {legacy_style}")
+                migrated_style_id = (
+                    self._STYLE_ID_MAP.get(
+                        legacy_style, legacy_style.lower().replace(" ", "_")
+                    )
+                    if isinstance(legacy_style, str)
+                    else legacy_style
+                )
+                current_style = migrated_style_id
+
+            # Only set outputStyle if:
             # 1. No active style is set (first deployment), OR
             # 2. Current style is "default" (not a real user preference), OR
             # 3. This is a fresh install (file didn't exist before deployment)
@@ -364,8 +399,17 @@ class OutputStyleManager:
                 current_style is None or current_style == "default" or is_fresh_install
             )
 
-            if should_activate and current_style != style_name:
-                settings["activeOutputStyle"] = style_name
+            # Special case: If we're migrating from legacy, preserve the migrated style
+            # unless it's a fresh install (which means we should reset to default)
+            if is_migrating_from_legacy and not is_fresh_install:
+                # Write the migrated style, don't force the default
+                settings["outputStyle"] = current_style
+
+                # Clean up legacy key
+                del settings["activeOutputStyle"]
+                self.logger.debug(
+                    "Removed legacy activeOutputStyle key during migration"
+                )
 
                 # Ensure settings directory exists
                 self.settings_file.parent.mkdir(parents=True, exist_ok=True)
@@ -376,9 +420,39 @@ class OutputStyleManager:
                 )
 
                 self.logger.info(
-                    f"✅ Activated {style_name} output style (was: {current_style or 'none'})"
+                    f"✅ Migrated to outputStyle: {current_style} (was activeOutputStyle: {legacy_style})"
+                )
+            elif is_fresh_install or (should_activate and current_style != style_id):
+                # Normal activation logic for new deployments
+                settings["outputStyle"] = style_id
+
+                # Clean up legacy key to prevent future synchronization issues
+                if "activeOutputStyle" in settings:
+                    del settings["activeOutputStyle"]
+                    self.logger.debug(
+                        "Removed legacy activeOutputStyle key during activation"
+                    )
+
+                # Ensure settings directory exists
+                self.settings_file.parent.mkdir(parents=True, exist_ok=True)
+
+                # Write updated settings
+                self.settings_file.write_text(
+                    json.dumps(settings, indent=2), encoding="utf-8"
+                )
+
+                self.logger.info(
+                    f"✅ Activated {style_name} output style (id={style_id}, was: {current_style or 'none'})"
                 )
             else:
+                # Even if we're not changing the active style, clean up legacy key if present
+                if "activeOutputStyle" in settings:
+                    del settings["activeOutputStyle"]
+                    self.settings_file.write_text(
+                        json.dumps(settings, indent=2), encoding="utf-8"
+                    )
+                    self.logger.debug("Cleaned up legacy activeOutputStyle key")
+
                 self.logger.debug(
                     f"Preserving user preference: {current_style or 'none'} "
                     f"(skipping activation of {style_name})"
@@ -418,7 +492,7 @@ class OutputStyleManager:
             if self.settings_file.exists():
                 try:
                     settings = json.loads(self.settings_file.read_text())
-                    status["active_style"] = settings.get("activeOutputStyle", "none")
+                    status["active_style"] = settings.get("outputStyle", "none")
                 except Exception:
                     status["active_style"] = "Error reading settings"
         else:
@@ -487,11 +561,63 @@ class OutputStyleManager:
             success = self.deploy_output_style(style=style_type, activate=False)
             results[style_type] = success
 
-        # Activate the default style if requested AND this is first deployment
+        # Activate the default style if requested AND deployment succeeded
         if activate_default and results.get("professional", False):
-            self._activate_output_style(
-                "Claude MPM", is_fresh_install=not professional_style_existed
-            )
+            file_fresh_install = not professional_style_existed
+
+            # Check for existing preferences (both native and legacy)
+            existing_preference = None
+            has_settings_file = False
+            if self.settings_file.exists():
+                has_settings_file = True
+                try:
+                    settings = json.loads(self.settings_file.read_text())
+                    existing_preference = settings.get("outputStyle") or settings.get(
+                        "activeOutputStyle"
+                    )
+                except json.JSONDecodeError:
+                    pass
+
+            # Determine the activation strategy:
+            # 1. True fresh install: No files AND no settings -> Activate default
+            # 2. File deleted but settings exist: Reset to default (user deleted files intentionally)
+            # 3. Migration case: Files didn't exist but settings do -> Preserve/migrate setting
+            # 4. Normal case: Files exist, maybe settings -> Only set if no preference
+
+            if file_fresh_install and not has_settings_file:
+                # True fresh install: no files, no settings
+                self._activate_output_style("Claude MPM", is_fresh_install=True)
+            elif file_fresh_install and has_settings_file and existing_preference:
+                # Check if this is a migration case vs file deletion case
+                # Migration case: preference is a known MPM style (exact match or mappable)
+                known_mpm_styles = {
+                    "Claude MPM",
+                    "claude_mpm",
+                    "Claude MPM Teacher",
+                    "claude_mpm_teacher",
+                    "Claude MPM Research",
+                    "claude_mpm_research",
+                }
+
+                if existing_preference in known_mpm_styles:
+                    # Migration case: settings exist with known MPM style but files don't exist yet
+                    # Preserve the user's original style choice
+                    self._activate_output_style(
+                        existing_preference, is_fresh_install=False
+                    )
+                else:
+                    # File deletion case: user had custom style but files were deleted
+                    # Reset to default as files were intentionally removed
+                    self._activate_output_style("Claude MPM", is_fresh_install=True)
+            elif file_fresh_install and has_settings_file:
+                # File deletion case: settings exist but no preference or default
+                self._activate_output_style("Claude MPM", is_fresh_install=True)
+            # Normal case: files exist, check preferences
+            elif existing_preference is None or existing_preference == "default":
+                self._activate_output_style("Claude MPM", is_fresh_install=False)
+            else:
+                # Existing preference, just clean up dual keys
+                self._activate_output_style("Claude MPM", is_fresh_install=False)
 
         return results
 

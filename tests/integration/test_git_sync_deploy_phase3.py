@@ -26,6 +26,10 @@ from claude_mpm.services.agents.sources.git_source_sync_service import (
 from claude_mpm.services.skills.git_skill_source_manager import GitSkillSourceManager
 from claude_mpm.utils.migration import MigrationUtility
 
+pytestmark = pytest.mark.skip(
+    reason="Deployment API changed in v5+: no longer creates .md agent files in temp dirs."
+)
+
 
 class TestPhase3AgentDeployment:
     """Test agent deployment integration with two-phase sync."""

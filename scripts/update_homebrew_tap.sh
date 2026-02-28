@@ -263,15 +263,17 @@ update_formula() {
         return 0
     fi
 
-    # Update URL
-    if ! sed -i.bak "s|url \".*\"|url \"${PACKAGE_URL}\"|" "$formula_path"; then
+    # Update URL — anchor to exactly 2 leading spaces so we only match the top-level
+    # formula `url` field, NOT the `url` lines inside `resource` stanzas (4 spaces).
+    if ! sed -i.bak "s|^  url \".*\"|  url \"${PACKAGE_URL}\"|" "$formula_path"; then
         log ERROR "Failed to update formula URL"
         mv "$backup_file" "$formula_path"
         return 1
     fi
 
-    # Update SHA256
-    if ! sed -i.bak "s|sha256 \".*\"|sha256 \"${PACKAGE_SHA256}\"|" "$formula_path"; then
+    # Update SHA256 — same anchoring: match only the top-level sha256 (2 spaces indent),
+    # not sha256 lines inside resource blocks (4 spaces indent).
+    if ! sed -i.bak "s|^  sha256 \".*\"|  sha256 \"${PACKAGE_SHA256}\"|" "$formula_path"; then
         log ERROR "Failed to update formula SHA256"
         mv "$backup_file" "$formula_path"
         return 1

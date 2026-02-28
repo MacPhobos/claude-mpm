@@ -488,7 +488,7 @@ def test_default_config_loads_successfully():
     # Test a known mapping from default config
     agents = mapper.get_agents_for_skill("toolchains/python/frameworks/django")
     assert "python-engineer" in agents
-    assert "engineer" in agents
+    assert "data-engineer" in agents
 
 
 def test_default_config_all_agents_expansion():

@@ -96,11 +96,11 @@ class DuplicateEventDetector:
         cutoff_time = current_time - self.duplicate_window_seconds
 
         with self._events_lock:
-            # Create a new deque with only recent events
-            recent_only = deque(
+            # Create a new deque with only recent events, preserving maxlen
+            maxlen = self._recent_events.maxlen
+            recent_items = [
                 (key, timestamp)
                 for key, timestamp in self._recent_events
                 if timestamp > cutoff_time
-            )
-            recent_only.maxlen = self._recent_events.maxlen
-            self._recent_events = recent_only
+            ]
+            self._recent_events = deque(recent_items, maxlen=maxlen)

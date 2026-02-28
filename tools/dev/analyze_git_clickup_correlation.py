@@ -72,7 +72,7 @@ class GitCommitExtractor:
         Returns:
             Dictionary mapping ticket IDs to list of commits
         """
-        since_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        since_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")  # noqa: DTZ005
 
         # Git log format: hash|author|date|subject|body
         git_cmd = [
@@ -189,7 +189,9 @@ class ClickUpClient:
                     "include_closed": "true",
                 }
 
-                response = requests.get(search_url, headers=self.headers, params=params)
+                response = requests.get(
+                    search_url, headers=self.headers, params=params, timeout=30
+                )  # nosec B113
 
                 if response.status_code == 200:
                     data = response.json()
@@ -322,9 +324,11 @@ class DataAnalyzer:
             "commit_count"
         ].sum()
         weekly_dist["percentage"] = weekly_dist.apply(
-            lambda row: row["commit_count"]
-            / weekly_totals[(row["commit_year"], row["commit_week"])]
-            * 100,
+            lambda row: (
+                row["commit_count"]
+                / weekly_totals[(row["commit_year"], row["commit_week"])]
+                * 100
+            ),
             axis=1,
         )
 

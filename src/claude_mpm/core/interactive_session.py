@@ -366,10 +366,31 @@ class InteractiveSession:
                             import json
 
                             settings = json.loads(settings_file.read_text())
-                            active_style = settings.get("activeOutputStyle")
-                            if active_style in ("Claude MPM", "Claude MPM Teacher"):
-                                return f"Output Style: {active_style} ✅"
-                            return f"Output Style: {active_style or 'none'}"
+                            # Use native outputStyle key, fallback to legacy for backward compatibility
+                            active_style = settings.get("outputStyle")
+                            if active_style is None:
+                                # Fallback to legacy key
+                                legacy_style = settings.get("activeOutputStyle")
+                                display_name = legacy_style
+                            else:
+                                # Convert style ID to display name
+                                style_display_map = {
+                                    "claude_mpm": "Claude MPM",
+                                    "claude_mpm_teacher": "Claude MPM Teacher",
+                                    "claude_mpm_research": "Claude MPM Research",
+                                }
+                                display_name = style_display_map.get(
+                                    active_style, active_style
+                                )
+
+                            if display_name in (
+                                "Claude MPM",
+                                "Claude MPM Teacher",
+                                "claude_mpm",
+                                "claude_mpm_teacher",
+                            ):
+                                return f"Output Style: {display_name} ✅"
+                            return f"Output Style: {display_name or 'none'}"
                         return "Output Style: Available"
                     return "Output Style: Injected (legacy)"
         except Exception:  # nosec B110

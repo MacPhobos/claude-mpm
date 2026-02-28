@@ -242,6 +242,13 @@ class EventNormalizer:
                 correlation_id = event_data.get("correlation_id")
                 # Try both naming conventions for session_id
                 session_id = event_data.get("session_id") or event_data.get("sessionId")
+                # Also check inside the data payload if not found at top level
+                if not session_id:
+                    data_payload = event_data.get("data", {})
+                    if isinstance(data_payload, dict):
+                        session_id = data_payload.get("session_id") or data_payload.get(
+                            "sessionId"
+                        )
                 # Try multiple field names for working directory
                 cwd = (
                     event_data.get("cwd")
@@ -308,6 +315,13 @@ class EventNormalizer:
 
         # Extract session_id and cwd, trying multiple naming conventions
         session_id = event_data.get("session_id") or event_data.get("sessionId")
+        # Also check inside the data payload if not found at top level
+        if not session_id:
+            data_payload = event_data.get("data", {})
+            if isinstance(data_payload, dict):
+                session_id = data_payload.get("session_id") or data_payload.get(
+                    "sessionId"
+                )
         cwd = (
             event_data.get("cwd")
             or event_data.get("working_directory")
@@ -603,7 +617,7 @@ class EventNormalizer:
                             return datetime.fromtimestamp(
                                 timestamp, tz=timezone.utc
                             ).isoformat()
-                    except Exception:
+                    except Exception:  # nosec B110
                         pass
 
         # Generate new timestamp if not found

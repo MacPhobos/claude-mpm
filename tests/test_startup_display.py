@@ -301,23 +301,18 @@ class TestDisplayStartupBanner:
         display_startup_banner("4.24.0", "OFF")
         captured = capsys.readouterr()
 
-        assert (
-            "Launching Claude Multi-agent Product Manager (claude-mpm)..."
-            in captured.out
-        )
+        # Banner was redesigned from text to visual box layout; "Launching..." text removed
         assert "Claude MPM v4.24.0" in captured.out
         assert "Welcome back" in captured.out
-        assert "Sonnet 4.5" in captured.out
+        # Banner shows "Sonnet" in activity/model line
+        assert "Sonnet" in captured.out
 
     def test_display_startup_banner_info_logging(self, capsys):
         """Test banner with INFO logging level."""
         display_startup_banner("4.24.0", "INFO")
         captured = capsys.readouterr()
 
-        assert (
-            "Launching Claude Multi-agent Product Manager (claude-mpm)..."
-            in captured.out
-        )
+        # Banner was redesigned from text to visual box layout; "Launching..." text removed
         assert "Claude MPM v4.24.0" in captured.out
 
     def test_display_startup_banner_debug_logging(self, capsys):
@@ -325,10 +320,7 @@ class TestDisplayStartupBanner:
         display_startup_banner("4.24.0", "DEBUG")
         captured = capsys.readouterr()
 
-        assert (
-            "Launching Claude Multi-agent Product Manager (claude-mpm)..."
-            in captured.out
-        )
+        # Banner was redesigned from text to visual box layout; "Launching..." text removed
         assert "Claude MPM v4.24.0" in captured.out
 
     def test_display_startup_banner_includes_aliens(self, capsys):

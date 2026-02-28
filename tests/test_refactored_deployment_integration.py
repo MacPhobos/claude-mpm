@@ -6,6 +6,7 @@ and that the service maintains compatibility with existing functionality.
 
 import json
 import shutil
+import tempfile
 from pathlib import Path
 
 from claude_mpm.core.interfaces import AgentDeploymentInterface
@@ -25,7 +26,7 @@ class TestRefactoredServiceIntegration:
 
     def setup_method(self):
         """Set up test environment for each test."""
-        self.temp_dir = tmp_path
+        self.temp_dir = Path(tempfile.mkdtemp())
         self.working_dir = Path(self.temp_dir)
         self.templates_dir = self.working_dir / "agents"
         self.templates_dir.mkdir()
@@ -63,8 +64,9 @@ This is the base agent configuration.
             Path to the created template file
         """
         template_file = self.templates_dir / f"{agent_name}.json"
+        # Use current schema (1.3.0): instructions is a string, capabilities has resource_tier
         template_data = {
-            "schema_version": "1.2.0",
+            "schema_version": "1.3.0",
             "agent_id": agent_name,
             "agent_version": "1.0.0",
             "agent_type": agent_type,
@@ -74,15 +76,17 @@ This is the base agent configuration.
                 "category": "testing",
                 "tags": ["test", agent_type],
             },
-            "capabilities": {"model": "sonnet", "tools": ["Read", "Write", "Edit"]},
-            "instructions": {
-                "system_prompt": f"You are a {agent_type} agent for testing purposes."
+            "capabilities": {
+                "model": "sonnet",
+                "tools": ["Read", "Write", "Edit"],
+                "resource_tier": "standard",
             },
+            "instructions": f"You are a {agent_type} agent for testing purposes.",
         }
         template_file.write_text(json.dumps(template_data, indent=2))
         return template_file
 
-    def test_refactored_service_basic_deployment():
+    def test_refactored_service_basic_deployment(self):
         """Test basic deployment functionality with refactored service."""
         # Create test templates
         self.create_test_template("test-agent", "qa")
@@ -113,9 +117,13 @@ This is the base agent configuration.
         # Verify service status
         status = service.get_deployment_status()
         assert status["service_version"] == "refactored-1.0.0"
-        assert status["status"] == "ready"
+        # status is an OperationResult enum; check its value
+        status_val = status["status"]
+        assert (
+            hasattr(status_val, "value") and status_val.value == "success"
+        ) or status_val == "ready"
 
-    def test_interface_adapter_integration():
+    def test_interface_adapter_integration(self):
         """Test interface adapter with actual deployment service."""
         # Create test template
         self.create_test_template("adapter-test", "qa")
@@ -148,7 +156,7 @@ This is the base agent configuration.
         cleanup_result = adapter.clean_deployment(preserve_user_agents=True)
         assert isinstance(cleanup_result, bool)
 
-    def test_deployment_strategies_integration():
+    def test_deployment_strategies_integration(self):
         """Test deployment strategies with actual service."""
         # Create test template
         self.create_test_template("strategy-test", "qa")
@@ -187,7 +195,7 @@ This is the base agent configuration.
             target_dir = strategy.determine_target_directory(context)
             assert isinstance(target_dir, Path)
 
-    def test_validation_integration():
+    def test_validation_integration(self):
         """Test validation components with actual files."""
         # Create test template and agent files
         template_file = self.create_test_template("validation-test", "qa")
@@ -233,7 +241,7 @@ This agent is for validation testing.
         assert is_valid is False
         assert len(errors) > 0
 
-    def test_facade_integration():
+    def test_facade_integration(self):
         """Test deployment facade integration."""
         # Create test template
         self.create_test_template("facade-test", "qa")
@@ -268,7 +276,7 @@ This agent is for validation testing.
         assert "metadata" in result
         assert "facade_version" in result["metadata"]
 
-    def test_error_handling_integration():
+    def test_error_handling_integration(self):
         """Test error handling across components."""
         # Create service with invalid paths to test error handling
         service = RefactoredAgentDeploymentService(
@@ -295,7 +303,7 @@ This agent is for validation testing.
         assert isinstance(status, dict)
         assert "service_version" in status
 
-    def test_metrics_collection_integration():
+    def test_metrics_collection_integration(self):
         """Test metrics collection across deployment."""
         # Create multiple test templates
         self.create_test_template("metrics-test-1", "qa")

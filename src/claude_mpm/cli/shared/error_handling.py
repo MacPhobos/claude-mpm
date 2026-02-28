@@ -125,6 +125,8 @@ def handle_cli_errors(command_name: str):
                     return result.exit_code
                 return 0  # Success
 
+            except KeyboardInterrupt:
+                return 130  # Standard SIGINT exit code
             except Exception as e:
                 return error_handler.handle_error(e)
 

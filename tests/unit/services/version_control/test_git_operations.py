@@ -312,7 +312,6 @@ class TestBranchOperations:
         # Arrange
         mock_run.side_effect = [
             Mock(returncode=0, stdout="main\n"),  # get_current_branch
-            Mock(returncode=0, stdout="main\n"),  # current_branch again
             Mock(returncode=0, stdout="origin/main\n"),  # upstream
             Mock(returncode=0, stdout="0\t2\n"),  # ahead/behind count
             Mock(returncode=0, stdout="abc123\n"),  # last commit
@@ -562,6 +561,9 @@ class TestMergeOperations:
         # Arrange
         mock_run.side_effect = [
             Mock(returncode=0, stdout="feature-branch\n"),  # get_current_branch
+            Mock(
+                returncode=0, stdout="bobmatnyc@users.noreply.github.com\n"
+            ),  # git config user.email (privileged)
             Mock(returncode=0, stdout="main\n"),  # get_current_branch in switch
             Mock(returncode=0, stdout=""),  # status --porcelain
             Mock(returncode=0, stdout="Switched\n"),  # checkout main
@@ -584,6 +586,9 @@ class TestMergeOperations:
         # Arrange
         mock_run.side_effect = [
             Mock(returncode=0, stdout="main\n"),  # get_current_branch
+            Mock(
+                returncode=0, stdout="bobmatnyc@users.noreply.github.com\n"
+            ),  # git config user.email (privileged)
             Mock(returncode=0, stdout="Already up to date\n"),  # pull
             Mock(returncode=0, stdout="Squash commit\n"),  # merge --squash
             Mock(returncode=0, stdout="Deleted branch\n"),  # branch -d
@@ -604,6 +609,9 @@ class TestMergeOperations:
         # Arrange
         mock_run.side_effect = [
             Mock(returncode=0, stdout="main\n"),  # get_current_branch
+            Mock(
+                returncode=0, stdout="bobmatnyc@users.noreply.github.com\n"
+            ),  # git config user.email (privileged)
             Mock(returncode=0, stdout="Already up to date\n"),  # pull
             Mock(returncode=0, stdout="Successfully rebased\n"),  # rebase
             Mock(returncode=0, stdout="Deleted branch\n"),  # branch -d
@@ -624,6 +632,9 @@ class TestMergeOperations:
         # Arrange
         mock_run.side_effect = [
             Mock(returncode=0, stdout="main\n"),  # get_current_branch
+            Mock(
+                returncode=0, stdout="bobmatnyc@users.noreply.github.com\n"
+            ),  # git config user.email (privileged)
             Mock(returncode=0, stdout="Already up to date\n"),  # pull
             Mock(returncode=0, stdout="Merge made\n"),  # merge
         ]
@@ -633,8 +644,8 @@ class TestMergeOperations:
 
         # Assert
         assert result.success is True
-        # Should not call branch -d
-        assert len(mock_run.call_args_list) == 3
+        # Should not call branch -d (4 calls: get_current_branch + user.email + pull + merge)
+        assert len(mock_run.call_args_list) == 4
 
 
 # ============================================================================
@@ -651,6 +662,9 @@ class TestRemoteOperations:
         # Arrange
         mock_run.side_effect = [
             Mock(returncode=0, stdout="main\n"),  # get_current_branch
+            Mock(
+                returncode=0, stdout="bobmatnyc@users.noreply.github.com\n"
+            ),  # git config user.email (privileged)
             Mock(returncode=0, stdout="Everything up-to-date\n"),  # push
         ]
 
@@ -666,6 +680,9 @@ class TestRemoteOperations:
         # Arrange
         mock_run.side_effect = [
             Mock(returncode=0, stdout="main\n"),  # get_current_branch
+            Mock(
+                returncode=0, stdout="bobmatnyc@users.noreply.github.com\n"
+            ),  # git config user.email (privileged)
             Mock(returncode=0, stdout="Branch set up\n"),  # push -u
         ]
 
@@ -775,18 +792,31 @@ class TestRepositoryStatus:
         """Test getting comprehensive repository status."""
         # Arrange
         mock_run.side_effect = [
-            Mock(returncode=0, stdout="main\n"),  # get_current_branch (multiple calls)
-            Mock(returncode=0, stdout="main\n"),
-            Mock(returncode=1, stdout=""),  # upstream
+            Mock(returncode=0, stdout="main\n"),  # get_current_branch
+            Mock(
+                returncode=0, stdout="main\n"
+            ),  # get_current_branch inside get_branch_info
+            Mock(returncode=1, stdout=""),  # upstream for current branch (no upstream)
             Mock(returncode=0, stdout="abc123\n"),  # last commit
             Mock(returncode=0, stdout="Initial commit\n"),  # commit message
-            Mock(returncode=0, stdout=""),  # status --porcelain
+            Mock(returncode=0, stdout=""),  # status --porcelain (modified files)
             Mock(returncode=0, stdout="  main\n* develop\n"),  # branch --list
-            Mock(returncode=0, stdout="main\n"),  # for main branch info
-            Mock(returncode=1, stdout=""),  # upstream for main
+            Mock(
+                returncode=0, stdout="main\n"
+            ),  # get_current_branch for main in get_all_branches
+            Mock(returncode=1, stdout=""),  # upstream for main (no upstream)
             Mock(returncode=0, stdout="abc123\n"),  # commit for main
             Mock(returncode=0, stdout="Initial commit\n"),  # message for main
-            Mock(returncode=0, stdout=""),  # status --porcelain
+            Mock(
+                returncode=0, stdout=""
+            ),  # status --porcelain for main (modified files)
+            Mock(returncode=0, stdout="main\n"),  # get_current_branch for develop
+            Mock(returncode=1, stdout=""),  # upstream for develop (no upstream)
+            Mock(returncode=0, stdout="def456\n"),  # commit for develop
+            Mock(returncode=0, stdout="Feature commit\n"),  # message for develop
+            # develop is not current so no status --porcelain
+            Mock(returncode=0, stdout=""),  # is_working_directory_clean
+            Mock(returncode=0, stdout=""),  # get_modified_files
         ]
 
         # Act

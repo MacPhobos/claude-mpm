@@ -35,9 +35,16 @@ class PerformanceMetric:
     unit: str
     threshold: float
     passed: bool = False
+    lower_is_better: bool = (
+        True  # Set to False for throughput metrics (higher is better)
+    )
 
     def __post_init__(self):
-        self.passed = self.value <= self.threshold
+        if self.lower_is_better:
+            self.passed = self.value <= self.threshold
+        else:
+            # Higher is better (e.g., throughput, ops/second)
+            self.passed = self.value >= self.threshold
 
 
 class EventStreamBenchmark:
@@ -110,6 +117,7 @@ class EventStreamBenchmark:
             value=throughput,
             unit="events/second",
             threshold=5000,  # Should process at least 5000 events/second
+            lower_is_better=False,  # Higher throughput is better
         )
 
         print("Event Stream Benchmark:")
@@ -146,6 +154,7 @@ class EventStreamBenchmark:
             value=ops_per_second,
             unit="operations/second",
             threshold=10000,  # Should handle at least 10k ops/second
+            lower_is_better=False,  # Higher throughput is better
         )
 
         print("\nEvent Filtering Benchmark:")

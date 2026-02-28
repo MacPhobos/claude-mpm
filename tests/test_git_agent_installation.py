@@ -369,9 +369,7 @@ class TestGitSourceSyncServiceInitialization:
 
             service = GitSourceSyncService(cache_dir=temp_cache_dir)
 
-            expected_url = (
-                "https://raw.githubusercontent.com/bobmatnyc/claude-mpm-agents/main"
-            )
+            expected_url = "https://raw.githubusercontent.com/bobmatnyc/claude-mpm-agents/main/agents"
             assert service.source_url == expected_url
             assert service.source_id == "github-remote"
             assert service.cache_dir == temp_cache_dir
@@ -430,19 +428,26 @@ class TestGitSourceSyncServiceAgentSync:
     """Test agent synchronization functionality."""
 
     def test_get_agent_list(self, git_sync_service):
-        """Test hardcoded agent list returns expected agents."""
+        """Test agent list returns expected agents (from Git Tree API or fallback)."""
         agent_list = git_sync_service._get_agent_list()
-
-        # Verify expected agents
-        assert "research.md" in agent_list
-        assert "engineer.md" in agent_list
-        assert "qa.md" in agent_list
-        assert "documentation.md" in agent_list
-        assert "security.md" in agent_list
-        assert "ops.md" in agent_list
 
         # Verify list is not empty
         assert len(agent_list) > 0
+
+        # Check that expected agents are present - could be at root or in paths
+        # The Git Tree API returns full paths; fallback returns just filenames
+        all_items = " ".join(agent_list)
+        for expected_agent in [
+            "research.md",
+            "engineer.md",
+            "qa.md",
+            "documentation.md",
+            "security.md",
+            "ops.md",
+        ]:
+            assert expected_agent in all_items, (
+                f"Expected agent '{expected_agent}' not found in agent list"
+            )
 
     @patch("requests.Session.get")
     def test_fetch_with_etag_new_content(

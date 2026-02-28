@@ -207,7 +207,8 @@ class TestEnsureClaudeMpmGitignore:
         result = ensure_claude_mpm_gitignore(str(tmp_path))
 
         assert result["status"] == "success"
-        assert len(result["added"]) == 2
+        # v5+ adds 5 entries: .claude-mpm/, .claude/agents/, .mcp.json, .claude.json, .claude/
+        assert len(result["added"]) == 5
         assert ".claude-mpm/" in result["added"]
         assert ".claude/agents/" in result["added"]
         assert result["gitignore_path"] == str(tmp_path / ".gitignore")
@@ -226,13 +227,16 @@ class TestEnsureClaudeMpmGitignore:
     def test_all_entries_exist(self, tmp_path):
         """Test when all entries already exist."""
         gitignore = tmp_path / ".gitignore"
-        gitignore.write_text(".claude-mpm/\n.claude/agents/\n")
+        # v5+ adds 5 entries: .claude-mpm/, .claude/agents/, .mcp.json, .claude.json, .claude/
+        gitignore.write_text(
+            ".claude-mpm/\n.claude/agents/\n.mcp.json\n.claude.json\n.claude/\n"
+        )
 
         result = ensure_claude_mpm_gitignore(str(tmp_path))
 
         assert result["status"] == "success"
         assert len(result["added"]) == 0
-        assert len(result["existing"]) == 2
+        assert len(result["existing"]) == 5
 
     def test_default_current_directory(self, tmp_path, monkeypatch):
         """Test using default current directory."""
@@ -241,7 +245,8 @@ class TestEnsureClaudeMpmGitignore:
         result = ensure_claude_mpm_gitignore()  # No argument
 
         assert result["status"] == "success"
-        assert len(result["added"]) == 2
+        # v5+ adds 5 entries: .claude-mpm/, .claude/agents/, .mcp.json, .claude.json, .claude/
+        assert len(result["added"]) == 5
         assert (tmp_path / ".gitignore").exists()
 
     def test_permission_error_handling(self, tmp_path):
@@ -346,7 +351,8 @@ class TestIntegrationScenarios:
         result = ensure_claude_mpm_gitignore(str(tmp_path))
 
         assert result["status"] == "success"
-        assert len(result["added"]) == 2
+        # v5+ adds 5 entries: .claude-mpm/, .claude/agents/, .mcp.json, .claude.json, .claude/
+        assert len(result["added"]) == 5
 
         gitignore = tmp_path / ".gitignore"
         assert gitignore.exists()
@@ -379,7 +385,8 @@ Thumbs.db
         result = ensure_claude_mpm_gitignore(str(tmp_path))
 
         assert result["status"] == "success"
-        assert len(result["added"]) == 2
+        # v5+ adds 5 entries: .claude-mpm/, .claude/agents/, .mcp.json, .claude.json, .claude/
+        assert len(result["added"]) == 5
 
         content = gitignore.read_text()
 
@@ -397,17 +404,18 @@ Thumbs.db
         """Test that repeated initialization is idempotent."""
         # First initialization
         result1 = ensure_claude_mpm_gitignore(str(tmp_path))
-        assert len(result1["added"]) == 2
+        # v5+ adds 5 entries: .claude-mpm/, .claude/agents/, .mcp.json, .claude.json, .claude/
+        assert len(result1["added"]) == 5
 
         # Second initialization
         result2 = ensure_claude_mpm_gitignore(str(tmp_path))
         assert len(result2["added"]) == 0
-        assert len(result2["existing"]) == 2
+        assert len(result2["existing"]) == 5
 
         # Third initialization
         result3 = ensure_claude_mpm_gitignore(str(tmp_path))
         assert len(result3["added"]) == 0
-        assert len(result3["existing"]) == 2
+        assert len(result3["existing"]) == 5
 
         # File should only have entries once
         content = (tmp_path / ".gitignore").read_text()

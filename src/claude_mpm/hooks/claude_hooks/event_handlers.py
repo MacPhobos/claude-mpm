@@ -306,6 +306,21 @@ class EventHandlers:
                 if DEBUG:
                     _log(f"Auto-pause user message recording error: {e}")
 
+        # Check for incoming messages (cross-project messaging)
+        try:
+            from claude_mpm.hooks import message_check_hook
+
+            message_notification = message_check_hook()
+            if message_notification:
+                # Inject message notification into PM context
+                # This will appear in the next system reminder
+                prompt_data["message_notification"] = message_notification
+                if DEBUG:
+                    _log("Message notification added to prompt data")
+        except Exception as e:
+            if DEBUG:
+                _log(f"Message check hook error: {e}")
+
         # Emit normalized event (namespace no longer needed with normalized events)
         self.hook_handler._emit_socketio_event("", "user_prompt", prompt_data)
 
@@ -931,8 +946,56 @@ class EventHandlers:
             # Response tracking is optional
             pass
 
+        # Check for unread cross-project messages
+        # If unread messages exist AND this isn't a re-triggered stop (stop_hook_active),
+        # block the stop so Claude sees the unread messages and can act on them.
+        try:
+            from claude_mpm.core.unified_paths import UnifiedPathManager
+            from claude_mpm.services.communication.message_service import MessageService
+
+            # Don't block if this stop was already triggered by a previous block
+            # (stop_hook_active prevents infinite loop)
+            stop_hook_active = event.get("stop_hook_active", False)
+            if not stop_hook_active:
+                project_root = UnifiedPathManager().project_root
+                service = MessageService(project_root)
+                unread = service.list_messages(status="unread")
+                if unread:
+                    _log(
+                        f"📬 {len(unread)} unread cross-project message(s) at session end - blocking stop"
+                    )
+
+                    # Build summary
+                    from collections import Counter
+
+                    sources = Counter(Path(m.from_project).name for m in unread)
+                    source_summary = ", ".join(
+                        f"{count} from {name}" for name, count in sources.most_common()
+                    )
+
+                    high_priority = [
+                        m for m in unread if m.priority in ("high", "urgent")
+                    ]
+                    priority_note = (
+                        f" ({len(high_priority)} high priority)"
+                        if high_priority
+                        else ""
+                    )
+
+                    reason = (
+                        f"📬 {len(unread)} unread cross-project message(s){priority_note}: "
+                        f"{source_summary}. "
+                        f"Read and act on them with: `claude-mpm message list --status unread`"
+                    )
+
+                    return {"decision": "block", "reason": reason}
+        except Exception as e:
+            if DEBUG:
+                _log(f"Message check on stop error: {e}")
+
         # Emit stop event to Socket.IO
         self._emit_stop_event(event, session_id, metadata)
+        return None
 
     def _extract_stop_metadata(self, event: dict) -> dict:
         """Extract metadata from stop event."""

@@ -14,6 +14,7 @@ from claude_mpm.config.api_provider import (
     BedrockConfig,
     apply_api_provider_config,
 )
+from claude_mpm.core.config import Config
 
 
 class TestAPIBackend:

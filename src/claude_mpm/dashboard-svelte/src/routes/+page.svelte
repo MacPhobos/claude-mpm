@@ -70,7 +70,6 @@
 					event.sessionId ||
 					(event.data as any)?.session_id ||
 					(event.data as any)?.sessionId ||
-					event.source ||
 					null
 				);
 				return streamId === $selectedStream;

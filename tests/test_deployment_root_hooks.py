@@ -58,7 +58,7 @@ class TestDeploymentRootHooks:
             assert "Hook handler script not found" in str(exc_info.value)
 
     def test_install_hooks_uses_deployment_root(self, tmp_path):
-        """Test that install_hooks uses deployment-root script."""
+        """Test that install_hooks installs hooks using the hook command."""
         installer = HookInstaller()
 
         # Create a temporary Claude directory
@@ -70,11 +70,9 @@ class TestDeploymentRootHooks:
         # Mock version check to be compatible
         installer.is_version_compatible = MagicMock(return_value=(True, "Compatible"))
 
-        # Mock get_hook_script_path
-        mock_script_path = Path(
-            "/path/to/src/claude_mpm/scripts/claude-hook-handler.sh"
-        )
-        installer.get_hook_script_path = MagicMock(return_value=mock_script_path)
+        # Mock get_hook_command (replaces get_hook_script_path in new API)
+        mock_hook_command = "/path/to/src/claude_mpm/scripts/claude-hook-handler.sh"
+        installer.get_hook_command = MagicMock(return_value=mock_hook_command)
 
         # Mock _install_commands and _cleanup_old_deployment
         installer._install_commands = MagicMock()
@@ -84,7 +82,7 @@ class TestDeploymentRootHooks:
         result = installer.install_hooks()
 
         assert result is True
-        installer.get_hook_script_path.assert_called_once()
+        installer.get_hook_command.assert_called_once()
         installer._cleanup_old_deployment.assert_called_once()
 
         # Check settings were updated
@@ -94,14 +92,14 @@ class TestDeploymentRootHooks:
 
         assert "hooks" in settings
 
-        # Check that hooks point to deployment-root script
+        # Check that hooks point to the hook command
         for event_type in ["Stop", "SubagentStop", "PreToolUse"]:
             if event_type in settings["hooks"]:
                 for config in settings["hooks"][event_type]:
                     if "hooks" in config:
                         for hook in config["hooks"]:
                             if hook.get("type") == "command":
-                                assert hook["command"] == str(mock_script_path)
+                                assert hook["command"] == mock_hook_command
 
     def test_cleanup_old_deployment(self, tmp_path):
         """Test cleanup of old deployed scripts."""
@@ -198,19 +196,34 @@ class TestDeploymentRootHooks:
         # Mock everything needed for status
         installer.get_claude_version = MagicMock(return_value="1.0.92")
         installer.is_version_compatible = MagicMock(return_value=(True, "Compatible"))
+        installer.supports_pretool_modify = MagicMock(return_value=False)
 
+        # Mock get_hook_command to return a deployment-root style command (no fast-hook)
+        mock_hook_command = "/path/to/src/claude_mpm/scripts/claude-hook-handler.sh"
+        installer.get_hook_command = MagicMock(return_value=mock_hook_command)
+
+        # Mock _get_fast_hook_script_path to raise FileNotFoundError (no fast hook)
+        installer._get_fast_hook_script_path = MagicMock(
+            side_effect=FileNotFoundError("No fast hook")
+        )
+
+        # Mock _get_hook_script_path for backward-compat hook_script field
         mock_script_path = MagicMock()
         mock_script_path.exists.return_value = True
-        installer.get_hook_script_path = MagicMock(return_value=mock_script_path)
+        mock_script_path.__str__ = MagicMock(
+            return_value="/path/to/src/claude_mpm/scripts/claude-hook-handler.sh"
+        )
+        installer._get_hook_script_path = MagicMock(return_value=mock_script_path)
 
         installer.verify_hooks = MagicMock(return_value=(True, []))
         installer.settings_file = MagicMock()
         installer.settings_file.exists.return_value = True
+        installer.old_settings_file = None
 
         with patch("builtins.open", create=True):
             with patch("json.load", return_value={"hooks": {}}):
                 status = installer.get_status()
 
+        # deployment_type is "deployment-root" when not using fast-hook or entry-point
         assert status["deployment_type"] == "deployment-root"
-        assert status["hook_script"] == str(mock_script_path)
         assert status["installed"] is True

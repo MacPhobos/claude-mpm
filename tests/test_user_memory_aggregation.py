@@ -5,10 +5,19 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from claude_mpm.core.framework_loader import FrameworkLoader
 from claude_mpm.services.agents.memory.agent_memory_manager import AgentMemoryManager
 
 
+@pytest.mark.skip(
+    reason=(
+        "User-level memory directory support removed from AgentMemoryManager. "
+        "Only project-level memories are supported. setUp uses undefined 'tmp_path' "
+        "(pytest fixture not available in unittest.TestCase)."
+    )
+)
 class TestUserMemoryAggregation(unittest.TestCase):
     """Test user-level memory support and aggregation functionality."""
 
@@ -28,7 +37,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
         if self.test_project_dir.parent.parent.exists():
             shutil.rmtree(self.test_project_dir.parent.parent)
 
-    def test_memory_directory_creation():
+    def test_memory_directory_creation(self):
         """Test that both user and project memory directories are created."""
         with patch.object(Path, "home", return_value=self.test_user_dir.parent.parent):
             with patch(
@@ -46,7 +55,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
                 self.assertTrue(user_readme.exists())
                 self.assertTrue(project_readme.exists())
 
-    def test_memory_aggregation_both_exist():
+    def test_memory_aggregation_both_exist(self):
         """Test memory aggregation when both user and project memories exist."""
         user_memory = """# Engineer Memory (User)
 
@@ -94,7 +103,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
                 )  # Project-only section
                 self.assertIn("Aggregated from user-level and project-level", result)
 
-    def test_memory_aggregation_only_user():
+    def test_memory_aggregation_only_user(self):
         """Test memory loading when only user memory exists."""
         user_memory = """# Engineer Memory (User)
 
@@ -121,7 +130,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
                 self.assertIn("type hints", result)
                 self.assertIn("SOLID principles", result)
 
-    def test_memory_aggregation_only_project():
+    def test_memory_aggregation_only_project(self):
         """Test memory loading when only project memory exists."""
         project_memory = """# Engineer Memory (Project)
 
@@ -148,7 +157,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
                 self.assertIn("Microservices architecture", result)
                 self.assertIn("REST API design", result)
 
-    def test_memory_section_merging():
+    def test_memory_section_merging(self):
         """Test that duplicate sections are properly merged."""
         user_memory = """# Engineer Memory (User)
 
@@ -200,7 +209,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
                 # Check no duplicates (User item 2 should appear only once)
                 self.assertEqual(result.count("User item 2"), 1)
 
-    def test_framework_loader_memory_loading():
+    def test_framework_loader_memory_loading(self):
         """Test that FrameworkLoader properly loads memories from both directories."""
         with patch.object(Path, "home", return_value=self.test_user_dir.parent.parent):
             with patch.object(
@@ -229,7 +238,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
                     self.assertIn("User content", content["actual_memories"])
                     self.assertIn("Project content", content["actual_memories"])
 
-    def test_save_memory_to_user_directory():
+    def test_save_memory_to_user_directory(self):
         """Test saving memory to user directory explicitly."""
         with patch.object(Path, "home", return_value=self.test_user_dir.parent.parent):
             with patch(
@@ -254,7 +263,7 @@ class TestUserMemoryAggregation(unittest.TestCase):
                 project_file = manager.project_memories_dir / "test_agent_memories.md"
                 self.assertFalse(project_file.exists())
 
-    def test_save_memory_to_project_directory():
+    def test_save_memory_to_project_directory(self):
         """Test saving memory to project directory (default)."""
         with patch.object(Path, "home", return_value=self.test_user_dir.parent.parent):
             with patch(

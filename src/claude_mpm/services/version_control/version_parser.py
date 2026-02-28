@@ -107,6 +107,7 @@ class EnhancedVersionParser:
         self.project_root = project_root or Path.cwd()
         self.cache_ttl = cache_ttl
         self._cache: Dict[str, Tuple[datetime, any]] = {}
+        self.logger = get_logger(__name__)
 
         # Compile regex patterns once for efficiency
         self._version_pattern = re.compile(

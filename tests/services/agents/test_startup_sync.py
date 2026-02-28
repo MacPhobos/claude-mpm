@@ -391,7 +391,7 @@ class TestGetSyncStatus:
 
         status = get_sync_status()
 
-        assert "~/.claude-mpm/cache/remote-agents" in status["cache_dir"]
+        assert "~/.claude-mpm/cache/agents" in status["cache_dir"]
 
     @patch("claude_mpm.services.agents.startup_sync.Config")
     def test_get_status_handles_exceptions_gracefully(self, mock_config_class):

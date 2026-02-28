@@ -7,8 +7,14 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import pytest
+
 from claude_mpm.core.framework_loader import FrameworkLoader
 from claude_mpm.services.memory.router import MemoryRouter
+
+pytestmark = pytest.mark.skip(
+    reason="_load_memory_routing_from_template removed from FrameworkLoader; memory routing implementation has been refactored"
+)
 
 
 def test_memory_routing():

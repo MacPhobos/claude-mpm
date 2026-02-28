@@ -33,6 +33,64 @@ from ...services.agents.auto_config_manager import AutoConfigManagerService
 from ...services.agents.observers import NullObserver
 from ..shared import BaseCommand, CommandResult
 
+# ---------------------------------------------------------------------------
+# Role-based configuration presets
+# When --role is specified, toolchain detection is bypassed and these curated
+# agent/skill lists are used instead.
+# ---------------------------------------------------------------------------
+
+ROLE_AGENT_PRESETS: dict[str, list[str]] = {
+    "developer": [
+        "engineer",
+        "python-engineer",
+        "typescript-engineer",
+        "qa",
+        "research",
+        "documentation",
+        "local-ops",
+    ],
+    "product-manager": [
+        "product-owner",
+        "research",
+        "documentation",
+        "ticketing",
+        "qa",
+    ],
+    "executive": [
+        "research",
+        "documentation",
+        "product-owner",
+    ],
+}
+
+ROLE_SKILL_PRESETS: dict[str, list[str]] = {
+    "developer": [
+        "universal-testing-test-driven-development",
+        "universal-debugging-systematic-debugging",
+        "universal-collaboration-git-workflow",
+        "universal-collaboration-requesting-code-review",
+        "universal-data-database-migration",
+    ],
+    "product-manager": [
+        "mpm-ticketing-integration",
+        "mpm-delegation-patterns",
+        "universal-web-api-documentation",
+        "universal-collaboration-writing-plans",
+        "universal-collaboration-brainstorming",
+    ],
+    "executive": [
+        "universal-web-api-documentation",
+        "universal-collaboration-writing-plans",
+        "universal-main-internal-comms",
+    ],
+}
+
+ROLE_DESCRIPTIONS: dict[str, str] = {
+    "developer": "Software developer — code, testing, debugging, ops",
+    "product-manager": "Product manager — tickets, planning, documentation, stakeholder comms",
+    "executive": "Executive — research, documentation, high-level planning",
+}
+
 
 class RichProgressObserver(NullObserver):
     """
@@ -207,6 +265,7 @@ class AutoConfigureCommand(BaseCommand):
             # Determine what to configure (agents, skills, or both)
             configure_agents = not getattr(args, "skills_only", False)
             configure_skills = not getattr(args, "agents_only", False)
+            role = getattr(args, "role", None)
 
             # Run preview or full configuration
             if dry_run:
@@ -216,6 +275,7 @@ class AutoConfigureCommand(BaseCommand):
                     json_output,
                     configure_agents,
                     configure_skills,
+                    role=role,
                 )
             return self._run_full_configuration(
                 project_path,
@@ -224,6 +284,7 @@ class AutoConfigureCommand(BaseCommand):
                 json_output,
                 configure_agents,
                 configure_skills,
+                role=role,
             )
 
         except KeyboardInterrupt:
@@ -249,11 +310,22 @@ class AutoConfigureCommand(BaseCommand):
         json_output: bool,
         configure_agents: bool = True,
         configure_skills: bool = True,
+        role: Optional[str] = None,
     ) -> CommandResult:
         """Run configuration preview without deploying."""
-        # Get agent preview (needed for both agent deployment AND skill recommendations)
+        # Show role banner when a role preset is active
+        if role and self.console and not json_output:
+            desc = ROLE_DESCRIPTIONS.get(role, role)
+            self.console.print(
+                f"\n[bold cyan]Role:[/bold cyan] [bold]{role}[/bold] — {desc}"
+            )
+            self.console.print(
+                "[dim]Bypassing toolchain detection, using role preset[/dim]\n"
+            )
+
+        # Get agent preview (skipped for role presets — preset list used directly)
         agent_preview = None
-        if configure_agents or configure_skills:
+        if (configure_agents or configure_skills) and not role:
             if self.console and not json_output:
                 with self.console.status("[bold green]Analyzing project toolchain..."):
                     agent_preview = self.auto_config_manager.preview_configuration(
@@ -263,6 +335,10 @@ class AutoConfigureCommand(BaseCommand):
                 agent_preview = self.auto_config_manager.preview_configuration(
                     project_path, min_confidence
                 )
+
+        # Inject role preset agents when --role is specified
+        if role and configure_agents:
+            agent_preview = self._build_role_preview(role)
 
         # Review existing project agents
         agent_review_results = None
@@ -278,9 +354,13 @@ class AutoConfigureCommand(BaseCommand):
         if configure_skills:
             if self.console and not json_output:
                 with self.console.status("[bold green]Analyzing skill requirements..."):
-                    skills_recommendations = self._recommend_skills(agent_preview)
+                    skills_recommendations = self._recommend_skills(
+                        agent_preview, role=role
+                    )
             else:
-                skills_recommendations = self._recommend_skills(agent_preview)
+                skills_recommendations = self._recommend_skills(
+                    agent_preview, role=role
+                )
 
         # Output results
         if json_output:
@@ -307,11 +387,22 @@ class AutoConfigureCommand(BaseCommand):
         json_output: bool,
         configure_agents: bool = True,
         configure_skills: bool = True,
+        role: Optional[str] = None,
     ) -> CommandResult:
         """Run full auto-configuration with deployment."""
-        # Get agent preview (needed for both agent deployment AND skill recommendations)
+        # Show role banner when a role preset is active
+        if role and self.console and not json_output:
+            desc = ROLE_DESCRIPTIONS.get(role, role)
+            self.console.print(
+                f"\n[bold cyan]Role:[/bold cyan] [bold]{role}[/bold] — {desc}"
+            )
+            self.console.print(
+                "[dim]Bypassing toolchain detection, using role preset[/dim]\n"
+            )
+
+        # Get agent preview (skipped for role presets — preset list used directly)
         agent_preview = None
-        if configure_agents or configure_skills:
+        if (configure_agents or configure_skills) and not role:
             if self.console and not json_output:
                 with self.console.status("[bold green]Analyzing project toolchain..."):
                     agent_preview = self.auto_config_manager.preview_configuration(
@@ -321,6 +412,10 @@ class AutoConfigureCommand(BaseCommand):
                 agent_preview = self.auto_config_manager.preview_configuration(
                     project_path, min_confidence
                 )
+
+        # Inject role preset agents when --role is specified
+        if role and configure_agents:
+            agent_preview = self._build_role_preview(role)
 
         # Review existing project agents
         agent_review_results = None
@@ -336,9 +431,13 @@ class AutoConfigureCommand(BaseCommand):
         if configure_skills:
             if self.console and not json_output:
                 with self.console.status("[bold green]Analyzing skill requirements..."):
-                    skills_recommendations = self._recommend_skills(agent_preview)
+                    skills_recommendations = self._recommend_skills(
+                        agent_preview, role=role
+                    )
             else:
-                skills_recommendations = self._recommend_skills(agent_preview)
+                skills_recommendations = self._recommend_skills(
+                    agent_preview, role=role
+                )
 
         # Display preview (unless JSON output)
         if not json_output:
@@ -379,18 +478,22 @@ class AutoConfigureCommand(BaseCommand):
         # Execute agent configuration
         agent_result = None
         if configure_agents and agent_preview:
-            import asyncio
+            if role:
+                # Role preset: deploy specific agents directly, bypassing toolchain detection
+                agent_result = self._deploy_role_agents(role, project_path)
+            else:
+                import asyncio
 
-            observer = RichProgressObserver(self.console) if self.console else None
-            agent_result = asyncio.run(
-                self.auto_config_manager.auto_configure(
-                    project_path,
-                    confirmation_required=False,  # Already confirmed above
-                    dry_run=False,
-                    min_confidence=min_confidence,
-                    observer=observer,
+                observer = RichProgressObserver(self.console) if self.console else None
+                agent_result = asyncio.run(
+                    self.auto_config_manager.auto_configure(
+                        project_path,
+                        confirmation_required=False,  # Already confirmed above
+                        dry_run=False,
+                        min_confidence=min_confidence,
+                        observer=observer,
+                    )
                 )
-            )
 
         # Deploy skills
         skills_result = None
@@ -872,15 +975,131 @@ class AutoConfigureCommand(BaseCommand):
             "Configuration failed or partial", exit_code=1, data=output
         )
 
-    def _recommend_skills(self, agent_preview):
+    def _build_role_preview(self, role: str):
+        """Build a ConfigurationPreview-compatible object for a role preset.
+
+        Returns a lightweight object with a ``recommendations`` list of
+        AgentRecommendation instances so it is compatible with
+        ``_display_preview()``, ``_review_project_agents()``, etc.
+
+        Args:
+            role: Role key from ROLE_AGENT_PRESETS
+
+        Returns:
+            Object with ``.recommendations`` list of AgentRecommendation
+        """
+        from ...services.core.models.agent_config import AgentRecommendation
+
+        role_agents = ROLE_AGENT_PRESETS.get(role, [])
+        desc = ROLE_DESCRIPTIONS.get(role, role)
+        recommendations = [
+            AgentRecommendation(
+                agent_id=agent_id,
+                agent_name=agent_id.replace("-", " ").title(),
+                confidence_score=1.0,
+                match_reasons=[f"Role preset: {desc}"],
+            )
+            for agent_id in role_agents
+        ]
+        # Return a simple namespace-like object compatible with ConfigurationPreview
+        return type(
+            "_RolePreview",
+            (),
+            {
+                "recommendations": recommendations,
+                "validation_result": None,
+                "detected_toolchain": None,
+            },
+        )()
+
+    def _deploy_role_agents(self, role: str, project_path: Path):
+        """Deploy role preset agents directly, bypassing toolchain detection.
+
+        Uses GitSourceSyncService to sync cache then deploy the curated role
+        agent list to the project directory.
+
+        Args:
+            role: Role key from ROLE_AGENT_PRESETS
+            project_path: Project root directory
+
+        Returns:
+            ConfigurationResult compatible object
+        """
+        from ...core.enums import OperationResult
+        from ...services.agents.sources.git_source_sync_service import (
+            GitSourceSyncService,
+        )
+        from ...services.core.models.agent_config import ConfigurationResult
+
+        role_agents = ROLE_AGENT_PRESETS.get(role, [])
+        if not role_agents:
+            return ConfigurationResult(
+                status=OperationResult.SUCCESS,
+                message=f"No agents defined for role '{role}'",
+            )
+
+        try:
+            git_sync = GitSourceSyncService()
+
+            # Phase 1: ensure cache is up to date
+            self.logger.info("Syncing agent cache for role deployment...")
+            git_sync.sync_repository(force=False)
+
+            # Phase 2: deploy role agents to project
+            self.logger.info(
+                f"Deploying {len(role_agents)} agents for role '{role}'..."
+            )
+            deploy_result = git_sync.deploy_agents_to_project(
+                project_path, agent_list=role_agents, force=False
+            )
+
+            deployed = deploy_result.get("deployed", []) + deploy_result.get(
+                "updated", []
+            )
+            failed = deploy_result.get("failed", [])
+
+            if failed and not deployed:
+                return ConfigurationResult(
+                    status=OperationResult.FAILED,
+                    failed_agents=failed,
+                    message=f"Role '{role}' agent deployment failed",
+                )
+            if failed:
+                return ConfigurationResult(
+                    status=OperationResult.WARNING,
+                    deployed_agents=deployed,
+                    failed_agents=failed,
+                    message=f"Role '{role}' partially deployed ({len(deployed)} ok, {len(failed)} failed)",
+                )
+            return ConfigurationResult(
+                status=OperationResult.SUCCESS,
+                deployed_agents=deployed,
+                message=f"Role '{role}': {len(deployed)} agents deployed",
+            )
+        except Exception as exc:
+            self.logger.error(f"Role agent deployment failed: {exc}")
+            return ConfigurationResult(
+                status=OperationResult.FAILED,
+                failed_agents=role_agents,
+                message=f"Role deployment error: {exc}",
+            )
+
+    def _recommend_skills(self, agent_preview, role: Optional[str] = None):
         """Recommend skills based on deployed/recommended agents.
 
         Args:
             agent_preview: Agent preview result with recommendations
+            role: Optional role preset — when set, return role-specific skill list
+                  directly without consulting agent-skill mapping.
 
         Returns:
             List of recommended skill names, or None if no agents recommended
         """
+        # When a role preset is active, return the curated role skill list directly
+        if role and role in ROLE_SKILL_PRESETS:
+            skills = ROLE_SKILL_PRESETS[role]
+            return skills if skills else None
+
         if not agent_preview or not agent_preview.recommendations:
             return None
 

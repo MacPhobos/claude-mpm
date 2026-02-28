@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Test script to verify dashboard fixes:
 1. Activity tab text displays horizontally
@@ -13,6 +12,7 @@ import random
 import time
 from pathlib import Path
 
+import pytest
 import socketio
 
 # Connect to the Claude MPM dashboard
@@ -42,6 +42,12 @@ def emit_test_event(event_type, subtype, tool_name=None, file_path=None):
     return event
 
 
+@pytest.mark.skip(
+    reason=(
+        "Integration test requiring a running dashboard server on localhost:5173. "
+        "Run manually with: claude-mpm monitor, then python tests/dashboard/test_dashboard_fixes.py"
+    )
+)
 def test_file_operations():
     """Test file operation tracking"""
     print("\n=== Testing File Operations ===")
@@ -71,6 +77,12 @@ def test_file_operations():
     print(f"Emitted {len(test_files) * 2} file operation events")
 
 
+@pytest.mark.skip(
+    reason=(
+        "Integration test requiring a running dashboard server on localhost:5173. "
+        "Run manually with: claude-mpm monitor, then python tests/dashboard/test_dashboard_fixes.py"
+    )
+)
 def test_tool_operations():
     """Test general tool operations"""
     print("\n=== Testing Tool Operations ===")
@@ -105,6 +117,12 @@ def test_tool_operations():
     print(f"Emitted {len(tools) * 2} tool operation events")
 
 
+@pytest.mark.skip(
+    reason=(
+        "Integration test requiring a running dashboard server on localhost:5173. "
+        "Run manually with: claude-mpm monitor, then python tests/dashboard/test_dashboard_fixes.py"
+    )
+)
 def test_agent_events():
     """Test agent tracking events"""
     print("\n=== Testing Agent Events ===")

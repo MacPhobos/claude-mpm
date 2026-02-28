@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
 """
 Claude MPM Dashboard Connection Stability Test
 
 This script tests the stability of WebSocket connections to the Claude MPM dashboard
 for the specified duration using browser automation with Playwright.
+
+NOTE: These tests require a running dashboard server and browser automation.
+They are marked as skip for automated test runs.
 """
 
 import asyncio
@@ -14,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
+import pytest
 from playwright.async_api import (
     BrowserContext,
     ConsoleMessage,
@@ -215,6 +218,12 @@ class ConnectionMonitor:
         }
 
 
+@pytest.mark.skip(
+    reason=(
+        "Browser integration test requiring a running dashboard server at localhost:8765 "
+        "and Playwright browser_context fixture. Run manually with: claude-mpm monitor"
+    )
+)
 async def test_single_tab_stability(
     browser_context: BrowserContext, duration_minutes: int
 ) -> ConnectionMonitor:
@@ -270,6 +279,12 @@ async def test_single_tab_stability(
     return monitor
 
 
+@pytest.mark.skip(
+    reason=(
+        "Browser integration test requiring a running dashboard server at localhost:8765 "
+        "and Playwright browser_context fixture. Run manually with: claude-mpm monitor"
+    )
+)
 async def test_multi_tab_stability(
     browser_context: BrowserContext, tab_count: int, duration_minutes: int
 ) -> List[ConnectionMonitor]:

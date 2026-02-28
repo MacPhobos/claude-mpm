@@ -93,6 +93,10 @@ class AgentMemoryManager(MemoryServiceInterface):
         self.format_service = MemoryFormatService()
         self.categorization_service = MemoryCategorizationService()
 
+        # Memory system settings (read from config with defaults)
+        self.memory_enabled = self.config.get("memory.enabled", True)
+        self.auto_learning = self.config.get("memory.auto_learning", True)
+
         # Ensure project directory exists
         self.file_service.ensure_memories_directory()
 

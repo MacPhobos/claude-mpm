@@ -56,7 +56,13 @@ class TestPostmortemService:
             context={"error_type": "import-error"},
         )
 
-        analysis = service._analyze_failure(failure)
+        # Mock file path to a script location so categorization works
+        with patch.object(
+            service,
+            "_extract_file_path",
+            return_value=Path("scripts/test.py"),
+        ):
+            analysis = service._analyze_failure(failure)
 
         assert analysis.category == ErrorCategory.SCRIPT
         assert analysis.action_type == ActionType.AUTO_FIX
@@ -223,14 +229,14 @@ class TestPostmortemService:
         mock_mgr._session_start_time = datetime.now(timezone.utc)
         mock_session_mgr.return_value = mock_mgr
 
-        # Add test failures
+        # Add test failures (include file path so categorization works)
         tracker.failures = [
             FailureEvent(
                 task_id="f1",
                 task_type="script",
                 tool_name="Bash",
                 error_message="ImportError: No module named 'foo'",
-                context={"error_type": "import-error"},
+                context={"error_type": "import-error", "file": "scripts/test.py"},
             ),
             FailureEvent(
                 task_id="f2",
@@ -248,7 +254,7 @@ class TestPostmortemService:
         assert report.session_id == "test-session-123"
         assert report.total_errors == 2
         assert len(report.analyses) == 2
-        assert len(report.actions) >= 1  # At least some actions generated
+        assert len(report.actions) >= 1  # At least one action for the script failure
         assert report.stats["total_errors"] == 2
 
     def test_report_statistics(self, service, tracker):

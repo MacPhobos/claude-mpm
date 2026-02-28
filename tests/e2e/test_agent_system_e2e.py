@@ -168,7 +168,7 @@ class TestAgentSystemE2E:
 
         return agent_data
 
-    def test_agent_discovery_and_loading():
+    def test_agent_discovery_and_loading(self):
         """
         Test complete agent discovery and loading lifecycle.
 
@@ -282,7 +282,7 @@ class TestAgentSystemE2E:
             f"Agent discovery completed in {self.performance_metrics['operation_times']['discovery_and_loading']:.3f}s"
         )
 
-    def test_agent_prompt_caching_and_performance():
+    def test_agent_prompt_caching_and_performance(self):
         """
         Test agent prompt caching mechanism and performance.
 
@@ -339,7 +339,7 @@ class TestAgentSystemE2E:
         )
         logger.info(f"Cache speedup: {first_load_time / cached_load_time:.2f}x")
 
-    def test_multi_agent_deployment_lifecycle():
+    def test_multi_agent_deployment_lifecycle(self):
         """
         Test complete lifecycle of deploying multiple agents.
 
@@ -399,7 +399,7 @@ class TestAgentSystemE2E:
         self.performance_metrics["operation_times"]["deployment"] = deployment_time
         logger.info(f"Deployed {len(agents)} agents in {deployment_time:.3f}s")
 
-    def test_concurrent_agent_operations():
+    def test_concurrent_agent_operations(self):
         """
         Test agent system under concurrent load.
 
@@ -481,7 +481,7 @@ class TestAgentSystemE2E:
         logger.info(f"Average access time: {avg_duration:.6f}s")
         logger.info(f"Cache hit rate: {cache_hit_rate:.2%}")
 
-    def test_agent_lifecycle_manager_integration():
+    def test_agent_lifecycle_manager_integration(self):
         """
         Test the complete agent lifecycle management.
 
@@ -522,7 +522,7 @@ class TestAgentSystemE2E:
         #     yaml_data = yaml.safe_load(f)
         #     assert "v1.1.0" in yaml_data.get('instructions', '')
 
-    def test_agent_discovery_service_integration():
+    def test_agent_discovery_service_integration(self):
         """
         Test deployed agent discovery service.
 
@@ -569,7 +569,7 @@ class TestAgentSystemE2E:
             f"Discovered {num_discovery_agents} agents in {discovery_time:.3f}s"
         )
 
-    def test_error_handling_and_recovery():
+    def test_error_handling_and_recovery(self):
         """
         Test error handling and recovery mechanisms.
 
@@ -615,7 +615,7 @@ class TestAgentSystemE2E:
         assert len(results["deployed"]) >= 1
         assert len(results["errors"]) >= 2
 
-    def test_agent_handoff_simulation():
+    def test_agent_handoff_simulation(self):
         """
         Test multi-agent handoff scenarios.
 
@@ -718,7 +718,7 @@ class TestAgentSystemE2E:
         logger.info(f"Workflow simulation completed in {workflow_duration:.3f}s")
         logger.info(f"Workflow steps: {[r['agent'] for r in workflow_results]}")
 
-    def test_memory_and_resource_usage():
+    def test_memory_and_resource_usage(self):
         """
         Test memory and resource usage patterns.
 
@@ -791,7 +791,7 @@ class TestAgentSystemE2E:
             f"Average memory per agent {avg_memory_per_agent:.2f} MB is too high"
         )
 
-    def test_production_readiness_checks():
+    def test_production_readiness_checks(self):
         """
         Comprehensive production readiness validation.
 
@@ -881,7 +881,7 @@ class TestAgentSystemE2E:
         assert final_metrics["cache_hit_rate_percent"] > 80, "Cache hit rate below 80%"
 
 
-def test_hook_system_integration():
+def test_hook_system_integration(tmp_path):
     """
     Test integration between agent system and hook system.
 
@@ -893,54 +893,54 @@ def test_hook_system_integration():
     WHY: The hook system is a key integration point that allows
     Claude Code to interact with the agent system.
     """
-    with tmp_path as temp_dir:
-        temp_path = Path(temp_dir)
-        claude_dir = temp_path / ".claude"
-        agents_dir = claude_dir / "agents"
-        agents_dir.mkdir(parents=True)
+    temp_dir = tmp_path
+    temp_path = Path(temp_dir)
+    claude_dir = temp_path / ".claude"
+    agents_dir = claude_dir / "agents"
+    agents_dir.mkdir(parents=True)
 
-        # Create and deploy test agents
-        templates_dir = temp_path / "templates"
-        templates_dir.mkdir()
+    # Create and deploy test agents
+    templates_dir = temp_path / "templates"
+    templates_dir.mkdir()
 
-        # Create test agent
-        agent_data = {
-            "agent_id": "hook_test_agent",
-            "version": "1.0.0",
-            "metadata": {
-                "name": "Hook Test Agent",
-                "description": "Agent for hook system testing",
-                "category": "test",
-            },
-            "capabilities": {
-                "model": "claude-sonnet-4-20250514",
-                "resource_tier": "standard",
-                "tools": ["code_analysis"],
-            },
-            "instructions": "Test agent for hook system integration.",
-            "knowledge": {"domain_expertise": ["testing"]},
-            "interactions": {"user_interaction": "batch"},
-        }
+    # Create test agent
+    agent_data = {
+        "agent_id": "hook_test_agent",
+        "version": "1.0.0",
+        "metadata": {
+            "name": "Hook Test Agent",
+            "description": "Agent for hook system testing",
+            "category": "test",
+        },
+        "capabilities": {
+            "model": "claude-sonnet-4-20250514",
+            "resource_tier": "standard",
+            "tools": ["code_analysis"],
+        },
+        "instructions": "Test agent for hook system integration.",
+        "knowledge": {"domain_expertise": ["testing"]},
+        "interactions": {"user_interaction": "batch"},
+    }
 
-        with open(templates_dir / "hook_test_agent.json", "w") as f:
-            json.dump(agent_data, f)
+    with open(templates_dir / "hook_test_agent.json", "w") as f:
+        json.dump(agent_data, f)
 
-        # Deploy agent
-        deployment_service = AgentDeploymentService(templates_dir=templates_dir)
-        deployment_results = deployment_service.deploy_agents(agents_dir)
+    # Deploy agent
+    deployment_service = AgentDeploymentService(templates_dir=templates_dir)
+    deployment_results = deployment_service.deploy_agents(agents_dir)
 
-        assert len(deployment_results["deployed"]) == 1
+    assert len(deployment_results["deployed"]) == 1
 
-        # Simulate hook system discovering agents
-        # In real system, this would be done by ClaudeHookHandler
-        md_files = list(agents_dir.glob("*.md"))
-        assert len(md_files) == 1
+    # Simulate hook system discovering agents
+    # In real system, this would be done by ClaudeHookHandler
+    md_files = list(agents_dir.glob("*.md"))
+    assert len(md_files) == 1
 
-        # Verify agent Markdown is readable by hook system
-        with open(md_files[0]) as f:
-            yaml_content = yaml.safe_load(f)
-            assert yaml_content["name"] == "Hook Test Agent"
-            assert "instructions" in yaml_content
+    # Verify agent Markdown is readable by hook system
+    with open(md_files[0]) as f:
+        yaml_content = yaml.safe_load(f)
+        assert yaml_content["name"] == "Hook Test Agent"
+        assert "instructions" in yaml_content
 
 
 if __name__ == "__main__":

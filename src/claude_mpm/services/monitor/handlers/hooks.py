@@ -427,6 +427,13 @@ class HookHandler:
             "metadata": data.get("metadata", {}),
             "processed_at": asyncio.get_event_loop().time(),
             "original_event": data,  # Keep original for debugging
+            "correlation_id": data.get(
+                "correlation_id"
+            ),  # Required for pre/post tool correlation
+            "cwd": data.get("cwd"),  # Required for project/stream identification
+            "event": data.get(
+                "event"
+            ),  # Preserve original event name (e.g., "mpm_event")
         }
 
     def _process_hook_event(self, data: Dict) -> Dict:
@@ -440,11 +447,17 @@ class HookHandler:
         """
         return {
             "type": data.get("type"),
+            "subtype": data.get("subtype"),
             "timestamp": data.get("timestamp"),
             "session_id": data.get("session_id"),
+            "source": data.get("source"),
             "data": data.get("data", {}),
             "metadata": data.get("metadata", {}),
             "processed_at": asyncio.get_event_loop().time(),
+            "correlation_id": data.get(
+                "correlation_id"
+            ),  # Required for pre/post tool correlation
+            "cwd": data.get("cwd"),  # Required for project/stream identification
         }
 
     def _update_session_tracking(self, session_id: str, event: Dict):

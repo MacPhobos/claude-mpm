@@ -139,7 +139,7 @@ class TestGitRepositoryCachePath:
         # Should be ~/.claude-mpm/cache/remote-agents/owner/repo/agents/
         assert cache_path.parts[-5:] == (
             "cache",
-            "remote-agents",
+            "agents",
             "owner",
             "repo",
             "agents",
@@ -152,7 +152,7 @@ class TestGitRepositoryCachePath:
         cache_path = repo.cache_path
 
         # Should be ~/.claude-mpm/cache/remote-agents/owner/repo/
-        assert cache_path.parts[-4:] == ("cache", "remote-agents", "owner", "repo")
+        assert cache_path.parts[-4:] == ("cache", "agents", "owner", "repo")
 
     def test_cache_path_with_nested_subdirectory(self):
         """Test cache path with nested subdirectory."""
@@ -163,7 +163,7 @@ class TestGitRepositoryCachePath:
 
         assert cache_path.parts[-7:] == (
             "cache",
-            "remote-agents",
+            "agents",
             "owner",
             "repo",
             "tools",

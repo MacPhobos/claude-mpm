@@ -39,6 +39,7 @@ class TestLoggerConsolidation(unittest.TestCase):
         """Set up test environment."""
         # Reset logging configuration
         logging.root.handlers = []
+        logging.root.level = 0  # Reset to NOTSET so initialize_logging can configure it
         LoggerFactory._initialized = False
         LoggerFactory._handlers = {}
         self.temp_dir = Path(tempfile.mkdtemp())
@@ -47,6 +48,7 @@ class TestLoggerConsolidation(unittest.TestCase):
         """Clean up test environment."""
         # Reset logging
         logging.root.handlers = []
+        logging.root.level = 0  # Reset to NOTSET to avoid affecting subsequent tests
         LoggerFactory._initialized = False
         LoggerFactory._handlers = {}
         # Clean up temp directory

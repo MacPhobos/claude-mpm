@@ -71,7 +71,7 @@ class TestHookRoutingRegression(unittest.TestCase):
         self.connection_handler.broadcast_event = AsyncMock()
         self.connection_handler._send_event_history = AsyncMock()
 
-    def test_hook_event_routing_with_prefix():
+    def test_hook_event_routing_with_prefix(self):
         """Regression test: hook events with prefix should be routed to HookEventHandler.
 
         WHY: Events like "hook.user_prompt" and "hook.pre_tool" should be routed
@@ -125,7 +125,7 @@ class TestHookRoutingRegression(unittest.TestCase):
                     test_case
                 )
 
-    def test_exact_hook_not_routed():
+    def test_exact_hook_not_routed(self):
         """Regression test: exact 'hook' type should NOT be routed to HookEventHandler.
 
         WHY: Events with exactly "hook" type are not real hook events and should
@@ -148,7 +148,7 @@ class TestHookRoutingRegression(unittest.TestCase):
         # But verify the event was still added to history
         self.assertEqual(len(self.mock_server.event_history), 1)
 
-    def test_non_hook_events_not_routed():
+    def test_non_hook_events_not_routed(self):
         """Test: non-hook events should not be routed to HookEventHandler."""
         non_hook_events = [
             {
@@ -190,7 +190,7 @@ class TestHookRoutingRegression(unittest.TestCase):
                 # But verify the event was still processed normally
                 self.assertEqual(len(self.mock_server.event_history), 1)
 
-    def test_edge_cases():
+    def test_edge_cases(self):
         """Test edge cases in hook routing logic."""
         edge_cases = [
             # Empty type
@@ -246,7 +246,7 @@ class TestHookRoutingRegression(unittest.TestCase):
                 # Hook handler should not be called for any of these
                 self.mock_hook_handler.process_hook_event.assert_not_called()
 
-    def test_hook_routing_logic_startswith():
+    def test_hook_routing_logic_startswith(self):
         """Test the exact startswith() logic used in routing.
 
         WHY: This test verifies the core logic change from exact matching
@@ -285,7 +285,7 @@ class TestHookRoutingRegression(unittest.TestCase):
                     f"Event type '{event_type}' should {'match' if should_match else 'not match'} hook routing logic",
                 )
 
-    def test_missing_hook_handler_graceful_failure():
+    def test_missing_hook_handler_graceful_failure(self):
         """Test that missing HookEventHandler is handled gracefully."""
         # Remove hook handler from registry
         self.mock_server.event_registry.handlers = []
@@ -308,7 +308,7 @@ class TestHookRoutingRegression(unittest.TestCase):
         # Event should still be processed normally
         self.assertEqual(len(self.mock_server.event_history), 1)
 
-    def test_missing_event_registry_graceful_failure():
+    def test_missing_event_registry_graceful_failure(self):
         """Test that missing event_registry is handled gracefully."""
         # Remove event_registry
         delattr(self.mock_server, "event_registry")
@@ -433,7 +433,7 @@ class TestHookRoutingIntegration(unittest.TestCase):
         self.connection_handler.emit_to_client = AsyncMock()
         self.connection_handler.broadcast_event = AsyncMock()
 
-    def test_real_hook_handler_integration():
+    def test_real_hook_handler_integration(self):
         """Test integration with real HookEventHandler instance."""
         hook_event = {
             "type": "hook.user_prompt",
@@ -454,7 +454,7 @@ class TestHookRoutingIntegration(unittest.TestCase):
         self.assertEqual(stored_event["type"], "hook")
         self.assertEqual(stored_event["event"], "user_prompt")
 
-    def test_hook_event_types_processing():
+    def test_hook_event_types_processing(self):
         """Test different hook event types are processed correctly."""
         test_events = [
             ("hook.user_prompt", "user_prompt"),

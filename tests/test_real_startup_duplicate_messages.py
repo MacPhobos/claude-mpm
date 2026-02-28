@@ -13,94 +13,91 @@ def count_success_messages(output):
     return sum(1 for line in lines if "Successfully loaded configuration" in line)
 
 
-def test_with_real_cli():
+def test_with_real_cli(tmp_path):
     """Test using actual CLI startup."""
     print("=" * 70)
     print("Testing Real CLI Startup for Duplicate Messages")
     print("=" * 70)
 
     # Create a temporary configuration file to ensure we get a success message
-    with tmp_path as tmpdir:
-        config_dir = Path(tmpdir) / ".claude-mpm"
-        config_dir.mkdir()
-        config_file = config_dir / "configuration.yaml"
+    tmpdir = tmp_path
+    config_dir = Path(tmpdir) / ".claude-mpm"
+    config_dir.mkdir()
+    config_file = config_dir / "configuration.yaml"
 
-        # Write minimal config
-        config_file.write_text(
-            """
+    # Write minimal config
+    config_file.write_text(
+        """
 response_logging:
   enabled: true
   format: json
 """
-        )
+    )
 
-        # Run claude-mpm config validate command which should trigger config loading
-        # Use the CLI in a way that loads configuration
-        cmd = [sys.executable, "-m", "claude_mpm.cli", "config", "validate"]
+    # Run claude-mpm config validate command which should trigger config loading
+    # Use the CLI in a way that loads configuration
+    cmd = [sys.executable, "-m", "claude_mpm.cli", "config", "validate"]
 
-        env = {
-            **subprocess.os.environ,
-            "PYTHONPATH": str(Path(__file__).parent.parent / "src"),
-            # Set debug logging to see all messages
-            "LOG_LEVEL": "DEBUG",
-        }
+    env = {
+        **subprocess.os.environ,
+        "PYTHONPATH": str(Path(__file__).parent.parent / "src"),
+        # Set debug logging to see all messages
+        "LOG_LEVEL": "DEBUG",
+    }
 
-        print(f"\nRunning command: {' '.join(cmd)}")
-        print(f"Working directory: {tmpdir}")
-        print(f"Config file: {config_file}")
+    print(f"\nRunning command: {' '.join(cmd)}")
+    print(f"Working directory: {tmpdir}")
+    print(f"Config file: {config_file}")
 
-        # Run the command and capture output
-        result = subprocess.run(
-            cmd,
-            cwd=tmpdir,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
+    # Run the command and capture output
+    result = subprocess.run(
+        cmd,
+        cwd=tmpdir,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
 
-        # Combine stdout and stderr to check all output
-        full_output = result.stdout + result.stderr
+    # Combine stdout and stderr to check all output
+    full_output = result.stdout + result.stderr
 
-        # Count success messages
-        success_count = count_success_messages(full_output)
+    # Count success messages
+    success_count = count_success_messages(full_output)
 
-        print("\n" + "=" * 70)
-        print("OUTPUT ANALYSIS:")
-        print("=" * 70)
+    print("\n" + "=" * 70)
+    print("OUTPUT ANALYSIS:")
+    print("=" * 70)
 
-        # Show relevant lines
-        print("\nRelevant log lines containing 'configuration' or 'Config':")
-        for line in full_output.split("\n"):
-            if any(
-                keyword in line.lower()
-                for keyword in ["configuration", "config", "loaded"]
-            ):
-                print(f"  {line[:120]}")
+    # Show relevant lines
+    print("\nRelevant log lines containing 'configuration' or 'Config':")
+    for line in full_output.split("\n"):
+        if any(
+            keyword in line.lower() for keyword in ["configuration", "config", "loaded"]
+        ):
+            print(f"  {line[:120]}")
 
-        print("\n" + "=" * 70)
-        print("RESULTS:")
-        print(f"Success messages found: {success_count}")
+    print("\n" + "=" * 70)
+    print("RESULTS:")
+    print(f"Success messages found: {success_count}")
 
-        if success_count == 0:
-            print(
-                "⚠ No success messages found (may be normal if version command doesn't load config)"
-            )
-            return True
-        if success_count == 1:
-            print("✓ SUCCESS: Configuration success message appeared exactly ONCE!")
-            return True
+    if success_count == 0:
         print(
-            f"✗ FAILURE: Configuration success message appeared {success_count} times!"
+            "⚠ No success messages found (may be normal if version command doesn't load config)"
         )
+        return True
+    if success_count == 1:
+        print("✓ SUCCESS: Configuration success message appeared exactly ONCE!")
+        return True
+    print(f"✗ FAILURE: Configuration success message appeared {success_count} times!")
 
-        # Show all occurrences
-        print("\nAll success message occurrences:")
-        for i, line in enumerate(full_output.split("\n"), 1):
-            if "Successfully loaded configuration" in line:
-                print(f"  Line {i}: {line}")
-        return False
+    # Show all occurrences
+    print("\nAll success message occurrences:")
+    for i, line in enumerate(full_output.split("\n"), 1):
+        if "Successfully loaded configuration" in line:
+            print(f"  Line {i}: {line}")
+    return False
 
 
 def test_with_multiple_imports():

@@ -223,15 +223,17 @@ class TestDelegationScanning:
         assert mock_event_log.append_event.call_count == 2  # Two patterns detected
         calls = mock_event_log.append_event.call_args_list
 
-        # Check first autotodo
-        assert calls[0][1]["event_type"] == "autotodo.delegation"
-        assert "Verify" in calls[0][1]["payload"]["content"]
-        assert ".env.local" in calls[0][1]["payload"]["original_text"]
+        # Check first violation (delegation anti-pattern = pm.violation)
+        assert calls[0][1]["event_type"] == "pm.violation"
+        payload0 = calls[0][1]["payload"]
+        assert ".env.local" in payload0["original_text"]
+        assert payload0["violation_type"] == "delegation_anti_pattern"
 
-        # Check second autotodo
-        assert calls[1][1]["event_type"] == "autotodo.delegation"
-        assert "Task" in calls[1][1]["payload"]["content"]
-        assert "npm install" in calls[1][1]["payload"]["original_text"]
+        # Check second violation
+        assert calls[1][1]["event_type"] == "pm.violation"
+        payload1 = calls[1][1]["payload"]
+        assert "npm install" in payload1["original_text"]
+        assert payload1["violation_type"] == "delegation_anti_pattern"
 
     def test_scan_for_delegation_patterns_no_patterns(self):
         """Test that no autotodos are created when no patterns are detected."""

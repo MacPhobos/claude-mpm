@@ -24,16 +24,29 @@ from claude_mpm.services.agents.deployment.agent_version_manager import (
 class TestAgentVersionManager:
     """Test suite for AgentVersionManager."""
 
+    def setup_method(self):
+        """Create AgentVersionManager instance and delegate methods to self."""
+        self.vm = AgentVersionManager()
+        self.logger = self.vm.logger
+        self.parse_version = self.vm.parse_version
+        self.compare_versions = self.vm.compare_versions
+        self.extract_version_from_content = self.vm.extract_version_from_content
+        self.extract_version_from_frontmatter = self.vm.extract_version_from_frontmatter
+        self.format_version_display = self.vm.format_version_display
+        self.is_old_version_format = self.vm.is_old_version_format
+        self.check_agent_needs_update = self.vm.check_agent_needs_update
+        self.validate_version_in_content = self.vm.validate_version_in_content
+
     @pytest.fixture
     def version_manager(self):
         """Create AgentVersionManager instance."""
         return AgentVersionManager()
 
     @pytest.fixture
-    def temp_dir(self):
+    def temp_dir(self, tmp_path):
         """Create temporary directory for testing."""
-        with tmp_path as temp_dir:
-            yield Path(temp_dir)
+        temp_dir = tmp_path
+        yield Path(temp_dir)
 
     def test_initialization(self):
         """Test AgentVersionManager initialization."""

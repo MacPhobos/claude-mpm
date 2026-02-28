@@ -73,6 +73,7 @@ REQUIRED_PM_SKILLS = [
     "mpm-session-management",
     "mpm-session-pause",
     "mpm-session-resume",
+    "mpm-message",
 ]
 
 # Tier 2: Recommended skills (deployed with standard install)
