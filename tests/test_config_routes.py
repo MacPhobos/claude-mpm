@@ -709,6 +709,20 @@ class TestSkillsDeployedEnriched(AioHTTPTestCase):
         ), patch(
             "claude_mpm.services.skills.selective_skill_deployer.load_deployment_index",
             return_value=mock_index,
+        ), patch(
+            "claude_mpm.services.monitor.config_routes._build_manifest_lookup",
+            return_value={
+                "tdd": {
+                    "name": "tdd",
+                    "description": "Comprehensive TDD patterns",
+                    "version": "1.0.0",
+                    "toolchain": None,
+                    "framework": None,
+                    "tags": ["testing", "tdd", "quality"],
+                    "full_tokens": 3200,
+                    "entry_point_tokens": 85,
+                }
+            },
         ):
             resp = await self.client.request("GET", "/api/config/skills/deployed")
             assert resp.status == 200
@@ -754,6 +768,9 @@ class TestSkillsDeployedEnriched(AioHTTPTestCase):
         ), patch(
             "claude_mpm.services.skills.selective_skill_deployer.load_deployment_index",
             return_value=mock_index,
+        ), patch(
+            "claude_mpm.services.monitor.config_routes._build_manifest_lookup",
+            return_value={},
         ):
             resp = await self.client.request("GET", "/api/config/skills/deployed")
             assert resp.status == 200
@@ -762,9 +779,9 @@ class TestSkillsDeployedEnriched(AioHTTPTestCase):
             skill = data["skills"][0]
             assert skill["name"] == "custom-skill"
             assert skill["description"] == "Custom skill"
-            # Manifest fields should NOT be present (graceful degradation)
-            assert "version" not in skill
-            assert "tags" not in skill
+            # Manifest fields have sensible defaults (graceful degradation)
+            assert skill["version"] == ""
+            assert skill["tags"] == []
 
 
 class TestAgentDetail(AioHTTPTestCase):

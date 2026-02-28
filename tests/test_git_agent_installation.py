@@ -960,7 +960,7 @@ class TestHashMismatchHandling:
 
         Covers lines 298-317: ETag returns 304 but hash doesn't match
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         cache_file = git_sync_service.cache_dir / filename
 
         # Create cached file
@@ -1008,7 +1008,7 @@ class TestHashMismatchHandling:
 
         Covers lines 316-317: Re-download failure handling
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         cache_file = git_sync_service.cache_dir / filename
 
         # Create cached file with wrong hash
@@ -1045,7 +1045,7 @@ class TestCacheFileMissing:
 
         Covers lines 325-349: ETag 304 but cache file missing
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         url = f"{git_sync_service.source_url}/{filename}"
 
         # Set ETag as if file was cached
@@ -1084,7 +1084,7 @@ class TestCacheFileMissing:
 
         Covers lines 343-344: Re-download failure path
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         url = f"{git_sync_service.source_url}/{filename}"
 
         # Set ETag but no cache file
@@ -1167,7 +1167,7 @@ class TestExtendedErrorHandling:
 
         Covers lines 346-349: Unexpected status handling
         """
-        filename = "research.md"
+        filename = "research-agent.md"
 
         # Mock 418 I'm a teapot (unexpected status)
         mock_response = Mock()

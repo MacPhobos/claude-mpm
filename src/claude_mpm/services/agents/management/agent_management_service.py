@@ -63,7 +63,7 @@ class AgentManager:
             self.framework_dir = framework_dir
 
         if project_dir is None:
-            project_root = get_path_manager().get_project_root()
+            project_root = get_path_manager().project_root
             # Use direct agents directory without subdirectory to match deployment expectations
             self.project_dir = project_root / get_path_manager().CONFIG_DIR / "agents"
         else:

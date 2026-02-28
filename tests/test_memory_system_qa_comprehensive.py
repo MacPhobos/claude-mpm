@@ -486,9 +486,12 @@ class TestMemorySystemQA:
             project_pm_file = self.project_memories_dir / "PM_memories.md"
             project_pm_file.write_text(project_pm_content)
 
-            # Create deployed agents file
+            # Create deployed agents directory with a stub agent
+            # so FrameworkLoader sets content["loaded"] = True
             deployed_agents_dir = self.test_project_dir / ".claude" / "agents"
             deployed_agents_dir.mkdir(parents=True)
+            stub_agent = deployed_agents_dir / "stub-agent.md"
+            stub_agent.write_text("# Stub Agent\nFor testing only.\n")
 
             # Mock working directory for framework loader
             with patch("pathlib.Path.cwd", return_value=self.test_project_dir):

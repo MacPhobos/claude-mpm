@@ -76,7 +76,7 @@ class MemoryOptimizer(LoggerMixin):
         """
         super().__init__()
         self.config = config or Config()
-        self.project_root = get_path_manager().get_project_root()
+        self.project_root = get_path_manager().project_root
         # Use current working directory by default, not project root
         self.working_directory = working_directory or Path(Path.cwd())
         self.memories_dir = self.working_directory / ".claude-mpm" / "memories"

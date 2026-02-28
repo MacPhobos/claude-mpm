@@ -398,7 +398,7 @@ async def handle_agents_available(request: web.Request) -> web.Response:
             deployed_names = agent_mgr.list_agent_names(location="project")
 
             for agent in agents:
-                agent_key = agent.get("agent_id", "")
+                agent_key = agent.get("agent_id") or agent.get("name", "")
                 agent["is_deployed"] = agent_key in deployed_names
 
             return agents
@@ -471,6 +471,13 @@ async def handle_skills_deployed(request: web.Request) -> web.Response:
                                 else "agent_referenced"
                             ),
                             "deploy_date": meta.get("deployed_at", ""),
+                            # Default manifest fields (overwritten by _enrich_skill_from_manifest when found)
+                            "version": "",
+                            "toolchain": None,
+                            "framework": None,
+                            "tags": [],
+                            "full_tokens": 0,
+                            "entry_point_tokens": 0,
                         }
                     )
 

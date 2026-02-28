@@ -111,9 +111,7 @@ class ProjectAnalyzer(ProjectAnalyzerInterface):
             metrics_collector: Optional injected metrics collector service
         """
         self.config = config or Config()
-        self.working_directory = (
-            working_directory or get_path_manager().get_project_root()
-        )
+        self.working_directory = working_directory or get_path_manager().project_root
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
         # Initialize services (use injected or create new)
