@@ -225,7 +225,7 @@ class AutoConfigureCommand(BaseCommand):
             return f"Project path does not exist: {project_path}"
 
         # Validate min_confidence range
-        if hasattr(args, "min_confidence") and args.min_confidence:
+        if hasattr(args, "min_confidence") and args.min_confidence is not None:
             if not 0.0 <= args.min_confidence <= 1.0:
                 return "min_confidence must be between 0.0 and 1.0"
 
@@ -255,7 +255,7 @@ class AutoConfigureCommand(BaseCommand):
             )
             min_confidence = (
                 args.min_confidence
-                if hasattr(args, "min_confidence") and args.min_confidence
+                if hasattr(args, "min_confidence") and args.min_confidence is not None
                 else 0.5
             )
             dry_run = getattr(args, "preview", False)
@@ -325,7 +325,7 @@ class AutoConfigureCommand(BaseCommand):
 
         # Get agent preview (skipped for role presets — preset list used directly)
         agent_preview = None
-        if configure_agents and not role:
+        if (configure_agents or configure_skills) and not role:
             if self.console and not json_output:
                 with self.console.status("[bold green]Analyzing project toolchain..."):
                     agent_preview = self.auto_config_manager.preview_configuration(
@@ -402,7 +402,7 @@ class AutoConfigureCommand(BaseCommand):
 
         # Get agent preview (skipped for role presets — preset list used directly)
         agent_preview = None
-        if configure_agents and not role:
+        if (configure_agents or configure_skills) and not role:
             if self.console and not json_output:
                 with self.console.status("[bold green]Analyzing project toolchain..."):
                     agent_preview = self.auto_config_manager.preview_configuration(
