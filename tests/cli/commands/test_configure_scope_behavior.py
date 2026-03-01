@@ -406,3 +406,165 @@ class TestConfigureScopeValidation:
         )
         error = cmd.validate_args(args)
         assert error is None
+
+
+# ==============================================================================
+# Phase 2-D: Scope Switch Tests
+# ==============================================================================
+
+
+class TestConfigureScopeSwitch:
+    """Tests for _switch_scope() reinitializing all dependent managers."""
+
+    # TC-2-18
+    def test_switch_scope_reinitializes_agent_manager(
+        self, project_scope_dirs, user_scope_dirs
+    ):
+        """After scope switch to user, agent_manager points to user config_dir."""
+        cmd = _make_project_cmd(project_scope_dirs["root"])
+
+        # Initialize agent_manager for project scope
+        from claude_mpm.cli.commands.agent_state_manager import SimpleAgentManager
+        from claude_mpm.cli.commands.configure_behavior_manager import BehaviorManager
+
+        config_dir = cmd._ctx.config_dir
+        cmd.agent_manager = SimpleAgentManager(config_dir)
+        cmd.behavior_manager = BehaviorManager(
+            config_dir, cmd.current_scope, cmd.console
+        )
+
+        # Capture old agent_manager reference
+        old_agent_manager = cmd.agent_manager
+        old_config_dir = cmd._ctx.config_dir
+
+        # Switch to user scope (mock navigation.switch_scope to toggle)
+        with patch(_HOME_PATCH, return_value=user_scope_dirs["home"]):
+            # Simulate what navigation.switch_scope does
+            with patch.object(
+                cmd.navigation,
+                "switch_scope",
+                side_effect=lambda: setattr(cmd.navigation, "current_scope", "user"),
+            ):
+                cmd._switch_scope()
+
+            # agent_manager must be a NEW instance
+            assert cmd.agent_manager is not old_agent_manager
+            # config_dir must point to user scope
+            assert cmd._ctx.config_dir != old_config_dir
+
+    # TC-2-19
+    def test_switch_scope_deploy_targets_new_scope(
+        self, project_scope_dirs, user_scope_dirs, source_agent_file
+    ):
+        """After switching to user scope, _deploy_single_agent writes to user dir."""
+        cmd = _make_project_cmd(project_scope_dirs["root"])
+
+        from claude_mpm.cli.commands.agent_state_manager import SimpleAgentManager
+        from claude_mpm.cli.commands.configure_behavior_manager import BehaviorManager
+
+        config_dir = cmd._ctx.config_dir
+        cmd.agent_manager = SimpleAgentManager(config_dir)
+        cmd.behavior_manager = BehaviorManager(
+            config_dir, cmd.current_scope, cmd.console
+        )
+
+        # Deploy agent in project scope first
+        agent = Mock()
+        agent.name = "test-agent"
+        agent.full_agent_id = "test-agent"
+        agent.source_dict = {"source_file": str(source_agent_file)}
+
+        cmd._deploy_single_agent(agent, show_feedback=False)
+        assert (project_scope_dirs["agents"] / "test-agent.md").exists()
+
+        # Switch to user scope
+        with patch(_HOME_PATCH, return_value=user_scope_dirs["home"]):
+            with patch.object(
+                cmd.navigation,
+                "switch_scope",
+                side_effect=lambda: setattr(cmd.navigation, "current_scope", "user"),
+            ):
+                cmd._switch_scope()
+
+            # Deploy same agent -- should now go to user dir
+            cmd._deploy_single_agent(agent, show_feedback=False)
+            assert (user_scope_dirs["agents"] / "test-agent.md").exists()
+
+    # TC-2-20
+    def test_switch_scope_back_is_consistent(self, project_scope_dirs, user_scope_dirs):
+        """Switching project -> user -> project restores project state."""
+        cmd = _make_project_cmd(project_scope_dirs["root"])
+
+        from claude_mpm.cli.commands.agent_state_manager import SimpleAgentManager
+        from claude_mpm.cli.commands.configure_behavior_manager import BehaviorManager
+
+        config_dir = cmd._ctx.config_dir
+        cmd.agent_manager = SimpleAgentManager(config_dir)
+        cmd.behavior_manager = BehaviorManager(
+            config_dir, cmd.current_scope, cmd.console
+        )
+
+        original_config_dir = cmd._ctx.config_dir
+        original_agents_dir = cmd._ctx.agents_dir
+
+        # Switch to user scope
+        with patch(_HOME_PATCH, return_value=user_scope_dirs["home"]):
+            with patch.object(
+                cmd.navigation,
+                "switch_scope",
+                side_effect=lambda: setattr(cmd.navigation, "current_scope", "user"),
+            ):
+                cmd._switch_scope()
+
+            assert cmd.current_scope == "user"
+            assert cmd._ctx.agents_dir == user_scope_dirs["agents"]
+
+        # Switch back to project scope
+        with patch.object(
+            cmd.navigation,
+            "switch_scope",
+            side_effect=lambda: setattr(cmd.navigation, "current_scope", "project"),
+        ):
+            cmd._switch_scope()
+
+        assert cmd.current_scope == "project"
+        assert cmd._ctx.config_dir == original_config_dir
+        assert cmd._ctx.agents_dir == original_agents_dir
+
+    # TC-2-21
+    def test_switch_scope_resets_lazy_objects(
+        self, project_scope_dirs, user_scope_dirs
+    ):
+        """After scope switch, lazy-initialized objects are reset to None."""
+        cmd = _make_project_cmd(project_scope_dirs["root"])
+
+        from claude_mpm.cli.commands.agent_state_manager import SimpleAgentManager
+        from claude_mpm.cli.commands.configure_behavior_manager import BehaviorManager
+
+        config_dir = cmd._ctx.config_dir
+        cmd.agent_manager = SimpleAgentManager(config_dir)
+        cmd.behavior_manager = BehaviorManager(
+            config_dir, cmd.current_scope, cmd.console
+        )
+
+        # Force lazy init of template_editor to populate it
+        cmd._template_editor = Mock()
+        cmd._agent_display = Mock()
+        cmd._persistence = Mock()
+        cmd._startup_manager = Mock()
+
+        # Switch scope
+        with patch(_HOME_PATCH, return_value=user_scope_dirs["home"]):
+            with patch.object(
+                cmd.navigation,
+                "switch_scope",
+                side_effect=lambda: setattr(cmd.navigation, "current_scope", "user"),
+            ):
+                cmd._switch_scope()
+
+        # All lazy objects must be reset
+        assert cmd._template_editor is None
+        assert cmd._agent_display is None
+        assert cmd._persistence is None
+        assert cmd._startup_manager is None
+        assert cmd._navigation is None
