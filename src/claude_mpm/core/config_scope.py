@@ -10,7 +10,7 @@ against raw "project"/"user" strings continues working unchanged.
 
 NOTE: This module resolves CLAUDE CODE deployment directories (.claude/agents/,
 ~/.claude/skills/). For MPM configuration directories (.claude-mpm/agents/,
-.claude-mpm/behaviors/), see cli/commands/configure_paths.py.
+.claude-mpm/behaviors/), see configure_template_editor.py.
 """
 
 from enum import Enum
