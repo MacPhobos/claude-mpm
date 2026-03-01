@@ -34,6 +34,11 @@ def validate_args(args: Namespace) -> Optional[str]:
     if getattr(args, "enable_agent", None) and getattr(args, "disable_agent", None):
         return "Cannot enable and disable agents at the same time"
 
+    # Validate scope if provided
+    scope = getattr(args, "scope", None)
+    if scope is not None and scope not in ("project", "user"):
+        return f"Invalid scope '{scope}'. Must be 'project' or 'user'"
+
     return None
 
 

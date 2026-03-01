@@ -10,10 +10,9 @@ Write-first, commit before refactoring.
 Phase: 0 (characterization)
 """
 
-import shutil
 from argparse import Namespace
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -121,93 +120,8 @@ class TestConfigureScopeCurrentBehavior:
 
         assert cmd.current_scope == "project"
 
-    # TC-0-04
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Documents BROKEN behavior: _deploy_single_agent always uses "
-        "project_dir/.claude/agents/ even when scope='user'. "
-        "Will be deleted when Phase 4A fixes this.",
-    )
-    def test_deploy_agent_current_target_is_always_project_dir(self, tmp_path):
-        """_deploy_single_agent() uses project_dir/.claude/agents/ even when scope='user'.
-
-        This test documents the current BROKEN behavior where scope='user' does
-        NOT cause agent deployment to target ~/.claude/agents/.
-        """
-        project_dir = tmp_path / "my_project"
-        project_dir.mkdir()
-        fake_home = tmp_path / "fake_home"
-        fake_home.mkdir()
-
-        # Create a source agent file
-        source_file = tmp_path / "source_agent.md"
-        source_file.write_text("# Test Agent\nThis is a test agent.")
-
-        with patch(
-            "claude_mpm.cli.commands.configure.Path.home", return_value=fake_home
-        ):
-            cmd = self._make_cmd_with_scope("user", project_dir)
-
-        # Create an agent with source_dict
-        agent = Mock()
-        agent.name = "test-agent"
-        agent.full_agent_id = "test-agent"
-        agent.source_dict = {"source_file": str(source_file)}
-
-        with patch("claude_mpm.cli.commands.configure.shutil.copy2") as mock_copy:
-            cmd._deploy_single_agent(agent, show_feedback=False)
-
-        # BROKEN: even with scope='user', the target is project_dir/.claude/agents/
-        # The xfail expects the assertion below to FAIL because it asserts the
-        # CORRECT (fixed) behavior. The current code deploys to project_dir.
-        mock_copy.assert_called_once()
-        actual_target = mock_copy.call_args[0][1]
-        # Assert the target is in the user home (this SHOULD be the correct behavior)
-        assert str(fake_home) in str(actual_target), (
-            f"Expected target in user home {fake_home}, got {actual_target}"
-        )
-
-    # TC-0-05
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Documents BROKEN behavior: _install_skill_from_dict always uses "
-        "Path.cwd()/.claude/skills/ regardless of scope. "
-        "Will be deleted when Phase 4A fixes this.",
-    )
-    def test_deploy_skill_current_target_is_always_cwd(self, tmp_path):
-        """_install_skill_from_dict() writes to Path.cwd()/.claude/skills/ regardless of scope.
-
-        This test documents the current BROKEN behavior where scope='user' does
-        NOT cause skill deployment to target ~/.claude/skills/.
-        """
-        project_dir = tmp_path / "my_project"
-        project_dir.mkdir()
-        fake_home = tmp_path / "fake_home"
-        fake_home.mkdir()
-        fake_cwd = tmp_path / "fake_cwd"
-        fake_cwd.mkdir()
-
-        with patch(
-            "claude_mpm.cli.commands.configure.Path.home", return_value=fake_home
-        ):
-            cmd = self._make_cmd_with_scope("user", project_dir)
-
-        skill_dict = {
-            "name": "test-skill",
-            "deployment_name": "test-skill",
-            "content": "# Test Skill\nThis is a test skill.",
-        }
-
-        with patch("claude_mpm.cli.commands.configure.Path.cwd", return_value=fake_cwd):
-            cmd._install_skill_from_dict(skill_dict)
-
-        # BROKEN: skill written to cwd/.claude/skills/ instead of ~/.claude/skills/
-        # The xfail expects this assertion to FAIL because it asserts the
-        # CORRECT behavior. The current code writes to cwd.
-        skill_file = fake_home / ".claude" / "skills" / "test-skill" / "skill.md"
-        assert skill_file.exists(), (
-            f"Expected skill at {skill_file}, but it was written to cwd instead"
-        )
+    # TC-0-04: DELETED in Phase 4A — replaced by TC-2-01/TC-2-02 in test_configure_scope_behavior.py
+    # TC-0-05: DELETED in Phase 4A — replaced by TC-2-07/TC-2-08 in test_configure_scope_behavior.py
 
     # TC-0-06
     def test_scope_toggle_only_switches_current_scope_string(self, tmp_path):
@@ -235,35 +149,41 @@ class TestSkillsScopeCurrentBehavior:
     """Characterization tests for skills scope handling in ConfigureCommand."""
 
     # TC-0-07
-    def test_get_deployed_skill_ids_reads_from_cwd(self, tmp_path):
-        """_get_deployed_skill_ids() always reads from Path.cwd()/.claude/skills/."""
-        # Create skill dirs under tmp_path (simulating cwd)
+    def test_get_deployed_skill_ids_reads_from_project_dir(self, tmp_path):
+        """_get_deployed_skill_ids() reads from self._ctx.skills_dir (project scope)."""
+        # Create skill dirs under tmp_path (simulating project dir)
         skills_dir = tmp_path / ".claude" / "skills"
         skills_dir.mkdir(parents=True)
         (skills_dir / "skill-alpha").mkdir()
         (skills_dir / "skill-beta").mkdir()
 
         cmd = ConfigureCommand()
+        cmd.project_dir = tmp_path
+        from claude_mpm.core.deployment_context import DeploymentContext
 
-        with patch("claude_mpm.cli.commands.configure.Path.cwd", return_value=tmp_path):
-            result = cmd._get_deployed_skill_ids()
+        cmd._ctx = DeploymentContext.from_project(tmp_path)
+
+        result = cmd._get_deployed_skill_ids()
 
         assert "skill-alpha" in result
         assert "skill-beta" in result
 
     # TC-0-08
-    def test_uninstall_skill_removes_from_cwd(self, tmp_path):
-        """_uninstall_skill_by_name() calls shutil.rmtree on Path.cwd()/.claude/skills/{name}."""
-        # Create real skill dir under tmp_path (simulating cwd)
+    def test_uninstall_skill_removes_from_project_dir(self, tmp_path):
+        """_uninstall_skill_by_name() removes from self._ctx.skills_dir (project scope)."""
+        # Create real skill dir under tmp_path (simulating project dir)
         skills_dir = tmp_path / ".claude" / "skills"
         skill_dir = skills_dir / "my-skill"
         skill_dir.mkdir(parents=True)
         (skill_dir / "skill.md").write_text("# My Skill")
 
         cmd = ConfigureCommand()
+        cmd.project_dir = tmp_path
+        from claude_mpm.core.deployment_context import DeploymentContext
 
-        with patch("claude_mpm.cli.commands.configure.Path.cwd", return_value=tmp_path):
-            cmd._uninstall_skill_by_name("my-skill")
+        cmd._ctx = DeploymentContext.from_project(tmp_path)
+
+        cmd._uninstall_skill_by_name("my-skill")
 
         # Verify skill directory was removed
         assert not skill_dir.exists()

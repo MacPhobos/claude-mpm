@@ -1272,14 +1272,12 @@ class ConfigureCommand(BaseCommand):
         )
 
     def _get_deployed_skill_ids(self) -> set:
-        """Get set of deployed skill IDs from .claude/skills/ directory.
+        """Get set of deployed skill IDs from scope-aware skills directory.
 
         Returns:
             Set of skill directory names and common variations for matching.
         """
-        from pathlib import Path
-
-        skills_dir = Path.cwd() / ".claude" / "skills"
+        skills_dir = self._ctx.skills_dir
         if not skills_dir.exists():
             return set()
 
@@ -1296,12 +1294,11 @@ class ConfigureCommand(BaseCommand):
         return deployed_ids
 
     def _install_skill(self, skill) -> None:
-        """Install a skill to .claude/skills/ directory."""
+        """Install a skill to scope-aware skills directory."""
         import shutil
-        from pathlib import Path
 
         # Target directory
-        target_dir = Path.cwd() / ".claude" / "skills" / skill.skill_id
+        target_dir = self._ctx.skills_dir / skill.skill_id
         target_dir.mkdir(parents=True, exist_ok=True)
 
         # Copy skill file(s)
@@ -1317,22 +1314,19 @@ class ConfigureCommand(BaseCommand):
                     shutil.copytree(item, target_dir / item.name, dirs_exist_ok=True)
 
     def _uninstall_skill(self, skill) -> None:
-        """Uninstall a skill from .claude/skills/ directory."""
+        """Uninstall a skill from scope-aware skills directory."""
         import shutil
-        from pathlib import Path
 
-        target_dir = Path.cwd() / ".claude" / "skills" / skill.skill_id
+        target_dir = self._ctx.skills_dir / skill.skill_id
         if target_dir.exists():
             shutil.rmtree(target_dir)
 
     def _install_skill_from_dict(self, skill_dict: dict) -> None:
-        """Install a skill from Git skill dict to .claude/skills/ directory.
+        """Install a skill from Git skill dict to scope-aware skills directory.
 
         Args:
             skill_dict: Skill metadata dict from GitSkillSourceManager.get_all_skills()
         """
-        from pathlib import Path
-
         skill_id = skill_dict.get("name", skill_dict.get("skill_id", "unknown"))
         content = skill_dict.get("content", "")
 
@@ -1344,7 +1338,7 @@ class ConfigureCommand(BaseCommand):
 
         # Target directory using deployment_name if available
         deploy_name = skill_dict.get("deployment_name", skill_id)
-        target_dir = Path.cwd() / ".claude" / "skills" / deploy_name
+        target_dir = self._ctx.skills_dir / deploy_name
         target_dir.mkdir(parents=True, exist_ok=True)
 
         # Write skill content to skill.md
@@ -1352,15 +1346,14 @@ class ConfigureCommand(BaseCommand):
         skill_file.write_text(content, encoding="utf-8")
 
     def _uninstall_skill_by_name(self, skill_name: str) -> None:
-        """Uninstall a skill by name from .claude/skills/ directory.
+        """Uninstall a skill by name from scope-aware skills directory.
 
         Args:
             skill_name: Name of skill directory to remove
         """
         import shutil
-        from pathlib import Path
 
-        target_dir = Path.cwd() / ".claude" / "skills" / skill_name
+        target_dir = self._ctx.skills_dir / skill_name
         if target_dir.exists():
             shutil.rmtree(target_dir)
 
@@ -3077,8 +3070,8 @@ class ConfigureCommand(BaseCommand):
                 else:
                     target_name = full_agent_id + ".md"
 
-                # Deploy to project-level agents directory
-                target_dir = self.project_dir / ".claude" / "agents"
+                # Deploy to scope-aware agents directory
+                target_dir = self._ctx.agents_dir
                 target_dir.mkdir(parents=True, exist_ok=True)
                 target_file = target_dir / target_name
 
