@@ -44,9 +44,11 @@ _agent_deployment_service = None
 def _get_backup_manager():
     global _backup_manager
     if _backup_manager is None:
+        from claude_mpm.core.deployment_context import DeploymentContext
         from claude_mpm.services.config_api.backup_manager import BackupManager
 
-        _backup_manager = BackupManager()
+        ctx = DeploymentContext.from_project()
+        _backup_manager = BackupManager(agents_dir=ctx.agents_dir)
     return _backup_manager
 
 
@@ -182,7 +184,9 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                         )
 
                     # 4. Verify
-                    verification = verifier.verify_agent_deployed(agent_name)
+                    verification = verifier.verify_agent_deployed(
+                        agent_name, agents_dir=agents_dir
+                    )
 
                     # 5. Complete journal
                     journal.complete_operation(op_id)
@@ -290,7 +294,9 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                     agent_path.unlink()
 
                     # 4. Verify removal
-                    verification = verifier.verify_agent_undeployed(agent_name)
+                    verification = verifier.verify_agent_undeployed(
+                        agent_name, agents_dir=agents_dir
+                    )
 
                     # 5. Complete
                     journal.complete_operation(op_id)
@@ -391,7 +397,9 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                             raise RuntimeError(
                                 f"deploy_agent returned False for '{name}'"
                             )
-                        verification = verifier.verify_agent_deployed(name)
+                        verification = verifier.verify_agent_deployed(
+                            name, agents_dir=agents_dir
+                        )
                         journal.complete_operation(op_id)
                         return {
                             "success": True,

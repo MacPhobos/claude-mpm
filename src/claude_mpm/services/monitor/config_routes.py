@@ -25,24 +25,33 @@ from claude_mpm.services.monitor.pagination import (
 logger = logging.getLogger(__name__)
 
 # Lazy-initialized service singletons (per-process, not per-request)
-_agent_manager = None
+_agent_managers: Dict[str, Any] = {}
 _git_source_manager = None
 _skills_deployer_service = None
 _skill_to_agent_mapper = None
 _config_validation_service = None
 
 
-def _get_agent_manager(project_dir: Optional[Path] = None):
-    """Lazy singleton for AgentManager."""
-    global _agent_manager
-    if _agent_manager is None:
+def _get_agent_manager(scope: str = "project") -> Any:
+    """Return a scope-appropriate AgentManager.
+
+    Keyed by scope string so project-scope and user-scope managers are
+    independent. The user-scope manager reads from ~/.claude/agents/.
+    """
+    if scope not in _agent_managers:
+        from claude_mpm.core.deployment_context import DeploymentContext
         from claude_mpm.services.agents.management.agent_management_service import (
             AgentManager,
         )
 
-        agents_dir = project_dir or (Path.cwd() / ".claude" / "agents")
-        _agent_manager = AgentManager(project_dir=agents_dir)
-    return _agent_manager
+        if scope == "project":
+            ctx = DeploymentContext.from_project()
+        elif scope == "user":
+            ctx = DeploymentContext.from_user()
+        else:
+            raise ValueError(f"Invalid scope '{scope}'. Must be 'project' or 'user'.")
+        _agent_managers[scope] = AgentManager(project_dir=ctx.agents_dir)
+    return _agent_managers[scope]
 
 
 def _get_git_source_manager():
@@ -245,7 +254,7 @@ async def handle_project_summary(request: web.Request) -> web.Response:
 
         def _get_summary():
             # Count deployed agents
-            agent_mgr = _get_agent_manager()
+            agent_mgr = _get_agent_manager("project")
             deployed_agents = agent_mgr.list_agents(location="project")
             deployed_count = len(deployed_agents)
 
@@ -309,7 +318,7 @@ async def handle_agents_deployed(request: web.Request) -> web.Response:
         def _list_deployed():
             from claude_mpm.config.agent_presets import CORE_AGENTS
 
-            agent_mgr = _get_agent_manager()
+            agent_mgr = _get_agent_manager("project")
             agents_data = agent_mgr.list_agents(location="project")
 
             # list_agents returns Dict[str, Dict[str, Any]]
@@ -394,7 +403,7 @@ async def handle_agents_available(request: web.Request) -> web.Response:
 
             # Enrich with is_deployed flag by checking project agents
             # Use lightweight list_agent_names() to avoid parsing all agent files
-            agent_mgr = _get_agent_manager()
+            agent_mgr = _get_agent_manager("project")
             deployed_names = agent_mgr.list_agent_names(location="project")
 
             for agent in agents:
@@ -716,7 +725,7 @@ async def handle_agent_detail(request: web.Request) -> web.Response:
         def _get_detail() -> Optional[Dict[str, Any]]:
             import frontmatter as fm_lib
 
-            agent_mgr = _get_agent_manager()
+            agent_mgr = _get_agent_manager("project")
             agent_def = agent_mgr.read_agent(agent_name)
             if not agent_def:
                 return None

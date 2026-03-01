@@ -34,9 +34,11 @@ _skills_deployer = None
 def _get_backup_manager():
     global _backup_manager
     if _backup_manager is None:
+        from claude_mpm.core.deployment_context import DeploymentContext
         from claude_mpm.services.config_api.backup_manager import BackupManager
 
-        _backup_manager = BackupManager()
+        ctx = DeploymentContext.from_project()
+        _backup_manager = BackupManager(skills_dir=ctx.skills_dir)
     return _backup_manager
 
 
@@ -151,6 +153,11 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
         try:
 
             def _deploy_sync():
+                from claude_mpm.core.deployment_context import DeploymentContext
+
+                ctx = DeploymentContext.from_project()
+                skills_dir = ctx.skills_dir
+
                 backup_mgr = _get_backup_manager()
                 journal = _get_operation_journal()
                 verifier = _get_deployment_verifier()
@@ -195,7 +202,9 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                             )
 
                     # 4. Verify
-                    verification = verifier.verify_skill_deployed(skill_name)
+                    verification = verifier.verify_skill_deployed(
+                        skill_name, skills_dir=skills_dir
+                    )
 
                     # 5. Complete
                     journal.complete_operation(op_id)
@@ -267,6 +276,11 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
         try:
 
             def _undeploy_sync():
+                from claude_mpm.core.deployment_context import DeploymentContext
+
+                ctx = DeploymentContext.from_project()
+                skills_dir = ctx.skills_dir
+
                 backup_mgr = _get_backup_manager()
                 journal = _get_operation_journal()
                 verifier = _get_deployment_verifier()
@@ -288,7 +302,9 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                         raise RuntimeError(f"Skill removal errors: {result['errors']}")
 
                     # 4. Verify
-                    verification = verifier.verify_skill_undeployed(skill_name)
+                    verification = verifier.verify_skill_undeployed(
+                        skill_name, skills_dir=skills_dir
+                    )
 
                     # 5. Complete
                     journal.complete_operation(op_id)
