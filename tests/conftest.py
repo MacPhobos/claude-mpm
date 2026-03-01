@@ -182,6 +182,61 @@ def verify_agents_untouched():
     )
 
 
+@pytest.fixture(autouse=True)
+def verify_source_agents_untouched():
+    """Detect any test that modifies source agent files in the package.
+
+    Guards against tests that write back to src/claude_mpm/agents/ source
+    files (e.g. via save_output_style()). Under parallel execution
+    (pytest -n auto), concurrent write_text() calls can truncate these
+    files to 0 bytes due to the open(mode='w') truncation window.
+
+    Checks both file existence AND content checksums to catch truncation.
+    """
+    import hashlib
+
+    source_agents_dir = Path.cwd() / "src" / "claude_mpm" / "agents"
+
+    def _content_snapshot(directory: Path) -> dict:
+        if not directory.exists():
+            return {}
+        result = {}
+        for f in directory.glob("*.md"):
+            content = f.read_bytes()
+            result[f.name] = {
+                "size": len(content),
+                "hash": hashlib.md5(content).hexdigest(),
+            }
+        return result
+
+    before = _content_snapshot(source_agents_dir)
+
+    yield
+
+    after = _content_snapshot(source_agents_dir)
+
+    problems = []
+    for name, before_info in before.items():
+        after_info = after.get(name)
+        if after_info is None:
+            problems.append(f"source file DELETED: {name}")
+        elif after_info["size"] == 0 and before_info["size"] > 0:
+            problems.append(
+                f"source file EMPTIED: {name} "
+                f"(was {before_info['size']} bytes, now 0 bytes)"
+            )
+        elif after_info["hash"] != before_info["hash"]:
+            problems.append(
+                f"source file MODIFIED: {name} "
+                f"(size {before_info['size']} -> {after_info['size']})"
+            )
+
+    assert not problems, (
+        "TEST BUG: Source agent files in src/claude_mpm/agents/ were modified.\n"
+        + "\n".join(f"  - {p}" for p in problems)
+    )
+
+
 # ===== Mock Objects Fixtures =====
 
 
