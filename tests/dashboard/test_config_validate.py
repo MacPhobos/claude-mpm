@@ -36,6 +36,7 @@ class TestValidateEndpoint:
     async def test_validate_clean_config(self, mock_validation_service):
         """Test validation with no issues returns valid=True."""
         request = MagicMock()
+        request.query = {}
 
         with patch(
             "claude_mpm.services.monitor.config_routes._get_config_validation_service",
@@ -67,6 +68,7 @@ class TestValidateEndpoint:
         }
 
         request = MagicMock()
+        request.query = {}
 
         with patch(
             "claude_mpm.services.monitor.config_routes._get_config_validation_service",
@@ -108,6 +110,7 @@ class TestValidateEndpoint:
         }
 
         request = MagicMock()
+        request.query = {}
 
         with patch(
             "claude_mpm.services.monitor.config_routes._get_config_validation_service",
@@ -130,6 +133,7 @@ class TestValidateEndpoint:
         mock_svc.validate_cached.side_effect = RuntimeError("service crashed")
 
         request = MagicMock()
+        request.query = {}
 
         with patch(
             "claude_mpm.services.monitor.config_routes._get_config_validation_service",
@@ -161,6 +165,7 @@ class TestValidateEndpoint:
         }
 
         request = MagicMock()
+        request.query = {}
 
         with patch(
             "claude_mpm.services.monitor.config_routes._get_config_validation_service",

@@ -248,7 +248,7 @@ def _validate_get_scope(request: web.Request) -> tuple:
     Returns (scope_str, ctx, error_response). If error_response is not None,
     return it immediately. Otherwise use scope_str and ctx.
     """
-    scope_str = request.rel_url.query.get("scope", "project") or "project"
+    scope_str = request.query.get("scope", "project") or "project"
     try:
         ctx = DeploymentContext.from_request_scope(scope_str)
         return scope_str, ctx, None
