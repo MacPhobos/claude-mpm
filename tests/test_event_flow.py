@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Test script to verify event flow from hooks to dashboard."""
 
 import json
@@ -7,6 +6,8 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+import pytest
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -20,6 +21,9 @@ from claude_mpm.services.event_bus import EventBus
 from claude_mpm.services.socketio.server.main import SocketIOServer
 
 
+@pytest.mark.skip(
+    reason="Requires starting a real Socket.IO server on port 8765 - port may be in use; use for manual integration testing only"
+)
 def test_event_flow():
     """Test that events flow from hooks through EventBus to Socket.IO."""
 

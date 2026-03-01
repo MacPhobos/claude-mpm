@@ -225,7 +225,7 @@ class TestPhase2CacheArchitecture:
         mock_get.side_effect = [refs_response, tree_response, file_response]
 
         # Sync repository
-        _files_updated, _files_cached = manager._recursive_sync_repository(
+        files_updated, files_cached = manager._recursive_sync_repository(
             source, cache_path, force=False
         )
 

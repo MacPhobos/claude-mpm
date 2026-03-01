@@ -145,9 +145,9 @@ MODEL_THRESHOLDS = {
 }
 
 MODEL_NAME_MAPPINGS = {
-    ModelType.HAIKU: "claude-3-haiku-20240307",  # Fast, cost-effective
-    ModelType.SONNET: "claude-sonnet-4-20250514",  # Balanced performance
-    ModelType.OPUS: "claude-opus-4-20250514",  # Maximum capability
+    ModelType.HAIKU: "haiku",  # Fast, cost-effective (generic alias, always current)
+    ModelType.SONNET: "sonnet",  # Balanced performance (generic alias, always current)
+    ModelType.OPUS: "opus",  # Maximum capability (generic alias, always current)
 }
 
 
@@ -180,12 +180,12 @@ class AgentLoader:
         # Initialize the agent registry
         self.registry = get_agent_registry()
 
-        # Load agents through registry
-        self.registry.load_agents()
+        # Load agents through registry (list_agents triggers lazy loading)
+        self.registry.list_agents()
 
         init_time = (time.time() - start_time) * 1000
         logger.debug(
-            f"AgentLoader initialized in {init_time:.2f}ms with {len(self.registry._agent_registry)} agents"
+            f"AgentLoader initialized in {init_time:.2f}ms with {len(self.registry.registry)} agents"
         )
 
     def get_agent(self, agent_id: str) -> Optional[Dict[str, Any]]:
@@ -196,9 +196,52 @@ class AgentLoader:
             agent_id: Agent identifier
 
         Returns:
-            Agent configuration or None if not found
+            Agent configuration dict or None if not found
         """
-        return self.registry.get_agent(agent_id)
+        import json as _json
+
+        agent_data = self.registry.get_agent(agent_id)
+        if agent_data is None:
+            return None
+
+        # If registry returns AgentMetadata dataclass (unified_agent_registry),
+        # convert it to a dict by loading the underlying JSON file.
+        # This ensures all downstream code using .get() works correctly.
+        if hasattr(agent_data, "path") and not isinstance(agent_data, dict):
+            agent_path = Path(agent_data.path) if agent_data.path else None
+            if agent_path and agent_path.exists():
+                try:
+                    with open(agent_path) as f:
+                        raw = _json.load(f)
+                    # Merge AgentMetadata fields as fallback for missing keys
+                    raw.setdefault("id", agent_id)
+                    raw.setdefault("name", getattr(agent_data, "name", agent_id))
+                    raw.setdefault(
+                        "description", getattr(agent_data, "description", "")
+                    )
+                    raw.setdefault("version", getattr(agent_data, "version", "1.0.0"))
+                    tier = getattr(agent_data, "tier", None)
+                    raw.setdefault(
+                        "tier",
+                        tier.value if hasattr(tier, "value") else str(tier or "system"),
+                    )
+                    return raw
+                except (OSError, _json.JSONDecodeError):
+                    pass
+            # Fallback: build dict from AgentMetadata attributes
+            tier = getattr(agent_data, "tier", None)
+            return {
+                "id": agent_id,
+                "name": getattr(agent_data, "name", agent_id),
+                "description": getattr(agent_data, "description", ""),
+                "version": getattr(agent_data, "version", "1.0.0"),
+                "tier": tier.value if hasattr(tier, "value") else str(tier or "system"),
+                "instructions": "",
+                "capabilities": {},
+                "metadata": {},
+            }
+
+        return agent_data
 
     def list_agents(self) -> List[Dict[str, Any]]:
         """
@@ -226,13 +269,37 @@ class AgentLoader:
         if not agent_data:
             return None
 
-        # Extract instructions
-        instructions = agent_data.get("instructions", "")
-        if not instructions:
-            logger.warning(f"Agent '{agent_id}' has no instructions")
-            return None
+        # Handle AgentMetadata dataclass (has .path attribute pointing to JSON file)
+        # vs legacy dict format (has .get() method)
+        if hasattr(agent_data, "path") and agent_data.path:
+            import json as _json
 
-        return instructions
+            agent_path = Path(agent_data.path)
+            if agent_path.exists():
+                try:
+                    with open(agent_path) as f:
+                        raw_data = _json.load(f)
+                    instructions = raw_data.get("instructions", "")
+                    if not instructions:
+                        logger.warning(f"Agent '{agent_id}' has no instructions")
+                        return None
+                    return instructions
+                except (OSError, _json.JSONDecodeError) as e:
+                    logger.warning(f"Failed to read agent file '{agent_path}': {e}")
+                    return None
+            else:
+                logger.warning(f"Agent '{agent_id}' file not found: {agent_path}")
+                return None
+        elif hasattr(agent_data, "get"):
+            # Legacy dict format
+            instructions = agent_data.get("instructions", "")
+            if not instructions:
+                logger.warning(f"Agent '{agent_id}' has no instructions")
+                return None
+            return instructions
+        else:
+            logger.warning(f"Agent '{agent_id}' has unknown data format")
+            return None
 
     def get_agent_metadata(self, agent_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -271,7 +338,7 @@ class AgentLoader:
             "description": metadata.get("description", ""),
             "category": category.value,  # Store as string for backward compatibility
             "version": metadata.get("version", "1.0.0"),
-            "model": agent_data.get("model", "claude-sonnet-4-20250514"),
+            "model": agent_data.get("model", "sonnet"),
             "resource_tier": agent_data.get("resource_tier", "standard"),
             "tier": tier.value if tier else "unknown",
             "tools": agent_data.get("tools", []),
@@ -298,9 +365,7 @@ class AgentLoader:
         # Reload registry
         self.registry.reload()
 
-        logger.debug(
-            f"Agent system reloaded with {len(self.registry._agent_registry)} agents"
-        )
+        logger.debug(f"Agent system reloaded with {len(self.registry.registry)} agents")
 
 
 # Global loader instance (singleton pattern)
@@ -335,27 +400,53 @@ def list_available_agents() -> Dict[str, Dict[str, Any]]:
     agents_list = loader.list_agents()
 
     # Convert list to dictionary for easier access
+    # Handles both AgentMetadata dataclass objects and legacy dict formats
     agents_dict = {}
     for agent in agents_list:
-        agent_id = agent["id"]
-        agent_info = {
-            "name": agent["name"],
-            "description": agent["description"],
-            "category": agent["category"],
-            "version": agent.get("version", "1.0.0"),
-            "model": agent.get("model", "claude-sonnet-4-20250514"),
-            "resource_tier": agent.get("resource_tier", "standard"),
-            "tier": agent.get("tier", "system"),
-            "has_project_memory": agent.get("has_project_memory", False),
-        }
+        # Support AgentMetadata dataclass (unified_agent_registry) and dict
+        if hasattr(agent, "name"):
+            # AgentMetadata dataclass
+            agent_id = getattr(agent, "canonical_id", None) or agent.name
+            agent_type = getattr(agent, "agent_type", None)
+            tier = getattr(agent, "tier", None)
+            memory_files = getattr(agent, "memory_files", [])
+            has_memory = bool(memory_files)
+            agent_info = {
+                "name": agent.name,
+                "description": getattr(agent, "description", ""),
+                "category": agent_type.value
+                if hasattr(agent_type, "value")
+                else str(agent_type or "general"),
+                "version": getattr(agent, "version", "1.0.0"),
+                "model": "sonnet",
+                "resource_tier": "standard",
+                "tier": tier.value if hasattr(tier, "value") else str(tier or "system"),
+                "has_project_memory": has_memory,
+            }
+            if has_memory:
+                agent_info["memory_file"] = str(memory_files[0]) if memory_files else ""
+                agent_info["memory_size_kb"] = 0
+                agent_info["memory_lines"] = 0
+        else:
+            # Legacy dict format
+            agent_id = agent.get("id", agent.get("name", ""))
+            agent_info = {
+                "name": agent.get("name", ""),
+                "description": agent.get("description", ""),
+                "category": agent.get("category", "general"),
+                "version": agent.get("version", "1.0.0"),
+                "model": agent.get("model", "sonnet"),
+                "resource_tier": agent.get("resource_tier", "standard"),
+                "tier": agent.get("tier", "system"),
+                "has_project_memory": agent.get("has_project_memory", False),
+            }
+            if agent_info["has_project_memory"]:
+                agent_info["memory_size_kb"] = agent.get("memory_size_kb", 0)
+                agent_info["memory_file"] = agent.get("memory_file", "")
+                agent_info["memory_lines"] = agent.get("memory_lines", 0)
 
-        # Add memory details if present
-        if agent.get("has_project_memory", False):
-            agent_info["memory_size_kb"] = agent.get("memory_size_kb", 0)
-            agent_info["memory_file"] = agent.get("memory_file", "")
-            agent_info["memory_lines"] = agent.get("memory_lines", 0)
-
-        agents_dict[agent_id] = agent_info
+        if agent_id:
+            agents_dict[agent_id] = agent_info
 
     return agents_dict
 
@@ -575,11 +666,11 @@ def _get_model_config(
 
     if not agent_data:
         # Fallback for unknown agents - use Sonnet as safe default
-        return "claude-sonnet-4-20250514", {"selection_method": "default"}
+        return "sonnet", {"selection_method": "default"}
 
     # Get model from agent capabilities (agent's preferred model)
     default_model = agent_data.get("capabilities", {}).get(
-        "model", "claude-sonnet-4-20250514"
+        "model", "sonnet"
     )
 
     # Check if dynamic model selection is enabled globally
@@ -706,13 +797,19 @@ def get_agent_prompt(
     # Then check with _agent suffix
     elif loader.get_agent(f"{agent_name}_agent"):
         actual_agent_id = f"{agent_name}_agent"
-    # Check if this looks like it might already be an agent ID
+    # Check if name ends with _agent - try stripping the suffix too (e.g., "engineer_agent" -> "engineer")
     elif agent_name.endswith("_agent"):
-        actual_agent_id = agent_name
+        base_name = agent_name[:-6]  # Strip "_agent" suffix
+        if loader.get_agent(base_name):
+            actual_agent_id = base_name
+        else:
+            actual_agent_id = agent_name
     else:
         # Get the normalized key (e.g., "engineer", "research", "qa")
         # First check if the agent name is recognized by the normalizer
-        cleaned = agent_name.strip().lower().replace("-", "_")
+        # Note: replace spaces AND hyphens with underscores for multi-word names
+        # e.g., "Version Control" -> "version_control", "data-engineer" -> "data_engineer"
+        cleaned = agent_name.strip().lower().replace("-", "_").replace(" ", "_")
 
         # Check if this is a known alias or canonical name
         if cleaned in normalizer.ALIASES or cleaned in normalizer.CANONICAL_NAMES:
@@ -829,7 +926,7 @@ def get_agent_prompt_with_model_info(
     # This defensive code ensures we always return the expected tuple format
     loader = _get_loader()
     agent_data = loader.get_agent(agent_name)
-    default_model = "claude-sonnet-4-20250514"
+    default_model = "sonnet"
     if agent_data:
         default_model = agent_data.get("capabilities", {}).get("model", default_model)
 
@@ -880,7 +977,7 @@ def clear_agent_cache(agent_name: Optional[str] = None) -> None:
         else:
             # Clear all agent caches by iterating through registry
             loader = _get_loader()
-            for agent_id in loader._agent_registry:
+            for agent_id in loader.registry.registry:
                 cache_key = f"{AGENT_CACHE_PREFIX}{agent_id}"
                 cache.invalidate(cache_key)
             logger.debug("All agent caches cleared")

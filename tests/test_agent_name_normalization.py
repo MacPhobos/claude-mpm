@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.DEBUG)
 class TestAgentNameNormalizer(unittest.TestCase):
     """Test the AgentNameNormalizer class functionality."""
 
-    def test_normalize_basic_names():
+    def test_normalize_basic_names(self):
         """Test normalization of basic agent names."""
         test_cases = [
             # Input -> Expected output
@@ -53,7 +53,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
                     f"Failed to normalize '{input_name}' to '{expected}', got '{result}'",
                 )
 
-    def test_normalize_aliases():
+    def test_normalize_aliases(self):
         """Test normalization of agent aliases."""
         test_cases = [
             # Aliases -> Expected canonical name
@@ -90,7 +90,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
                     f"Failed to normalize alias '{alias}' to '{expected}', got '{result}'",
                 )
 
-    def test_normalize_edge_cases():
+    def test_normalize_edge_cases(self):
         """Test edge cases in normalization."""
         # Empty string
         self.assertEqual(AgentNameNormalizer.normalize(""), "Engineer")
@@ -109,7 +109,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
             AgentNameNormalizer.normalize("data-engineer"), "Data Engineer"
         )
 
-    def test_to_key_format():
+    def test_to_key_format(self):
         """Test conversion to key format."""
         test_cases = [
             ("Research", "research"),
@@ -124,7 +124,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
                 result = AgentNameNormalizer.to_key(input_name)
                 self.assertEqual(result, expected)
 
-    def test_to_todo_prefix():
+    def test_to_todo_prefix(self):
         """Test TODO prefix generation."""
         test_cases = [
             ("research", "[Research]"),
@@ -139,7 +139,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
                 result = AgentNameNormalizer.to_todo_prefix(input_name)
                 self.assertEqual(result, expected)
 
-    def test_extract_from_todo():
+    def test_extract_from_todo(self):
         """Test extracting agent names from TODO text."""
         test_cases = [
             ("[Research] Analyze patterns", "Research"),
@@ -160,7 +160,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
                 result = AgentNameNormalizer.extract_from_todo(todo_text)
                 self.assertEqual(result, expected)
 
-    def test_validate_todo_format():
+    def test_validate_todo_format(self):
         """Test TODO format validation."""
         # Valid formats
         valid_todos = [
@@ -199,7 +199,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
             is_valid, "Unknown agents should be normalized to Engineer and be valid"
         )
 
-    def test_to_task_format():
+    def test_to_task_format(self):
         """Test conversion to Task tool format."""
         test_cases = [
             # TodoWrite format -> Task format
@@ -227,7 +227,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
                     f"Failed to convert '{todo_format}' to task format '{expected_task_format}', got '{result}'",
                 )
 
-    def test_from_task_format():
+    def test_from_task_format(self):
         """Test conversion from Task tool format to TodoWrite format."""
         test_cases = [
             # Task format -> TodoWrite format
@@ -255,7 +255,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
                     f"Failed to convert '{task_format}' from task format to '{expected_todo_format}', got '{result}'",
                 )
 
-    def test_colorize():
+    def test_colorize(self):
         """Test agent name colorization."""
         # Just test that it adds color codes
         result = AgentNameNormalizer.colorize("research")
@@ -272,7 +272,7 @@ class TestAgentNameNormalizer(unittest.TestCase):
 class TestAgentLoaderNormalization(unittest.TestCase):
     """Test that agent_loader correctly uses AgentNameNormalizer."""
 
-    def test_capitalized_names_in_loader():
+    def test_capitalized_names_in_loader(self):
         """Test that agent loader handles capitalized names (as used by PM)."""
         test_names = [
             "Engineer",
@@ -300,7 +300,7 @@ class TestAgentLoaderNormalization(unittest.TestCase):
                     else:
                         raise
 
-    def test_lowercase_names_in_loader():
+    def test_lowercase_names_in_loader(self):
         """Test that agent loader handles lowercase names."""
         test_names = [
             "engineer",
@@ -317,7 +317,7 @@ class TestAgentLoaderNormalization(unittest.TestCase):
                 self.assertIsNotNone(prompt, f"Failed to load agent: {name}")
                 self.assertGreater(len(prompt), 100)
 
-    def test_aliases_in_loader():
+    def test_aliases_in_loader(self):
         """Test that agent loader handles aliases."""
         test_aliases = [
             ("dev", True),
@@ -337,7 +337,7 @@ class TestAgentLoaderNormalization(unittest.TestCase):
                     )
                     self.assertGreater(len(prompt), 100)
 
-    def test_direct_agent_ids_in_loader():
+    def test_direct_agent_ids_in_loader(self):
         """Test that direct agent IDs still work."""
         test_ids = [
             "engineer_agent",
@@ -352,7 +352,7 @@ class TestAgentLoaderNormalization(unittest.TestCase):
                 self.assertIsNotNone(prompt, f"Failed to load agent: {agent_id}")
                 self.assertGreater(len(prompt), 100)
 
-    def test_invalid_names_fail_in_loader():
+    def test_invalid_names_fail_in_loader(self):
         """Test that truly invalid agent names fail appropriately."""
         invalid_names = [
             "completely_invalid_agent",
@@ -366,7 +366,7 @@ class TestAgentLoaderNormalization(unittest.TestCase):
                     get_agent_prompt(name)
                 self.assertIn("No agent found", str(cm.exception))
 
-    def test_normalization_consistency_in_loader():
+    def test_normalization_consistency_in_loader(self):
         """Test that different formats load the same agent content."""
         # These should all load the engineer agent
         engineer_variants = ["Engineer", "engineer", "ENGINEER", "engineering", "dev"]
@@ -385,7 +385,7 @@ class TestAgentLoaderNormalization(unittest.TestCase):
                 f"Variant '{engineer_variants[i]}' loaded different content than '{engineer_variants[0]}'",
             )
 
-    def test_with_model_info_normalized():
+    def test_with_model_info_normalized(self):
         """Test that get_agent_prompt_with_model_info works with normalized names."""
         test_names = ["Engineer", "Research", "QA"]
 
@@ -401,7 +401,7 @@ class TestAgentLoaderNormalization(unittest.TestCase):
 class TestIntegrationScenarios(unittest.TestCase):
     """Test end-to-end integration scenarios."""
 
-    def test_todo_to_task_flow():
+    def test_todo_to_task_flow(self):
         """Test the flow from TodoWrite format to Task format."""
         # Simulate TodoWrite creating todos
         todos = [
@@ -428,7 +428,7 @@ class TestIntegrationScenarios(unittest.TestCase):
             back_to_todo = AgentNameNormalizer.from_task_format(task_format)
             self.assertEqual(back_to_todo, agent)
 
-    def test_all_agents_coverage():
+    def test_all_agents_coverage(self):
         """Ensure all agent types are properly handled."""
         all_agents = [
             "Research",

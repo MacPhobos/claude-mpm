@@ -15,15 +15,15 @@ def test_port_configuration():
     print("Testing Socket.IO port configuration...")
     print("=" * 50)
 
-    # Test DEFAULT_SOCKETIO_PORT
-    assert NetworkConfig.DEFAULT_SOCKETIO_PORT == 8765, (
-        f"DEFAULT_SOCKETIO_PORT should be 8765, got {NetworkConfig.DEFAULT_SOCKETIO_PORT}"
+    # Test DEFAULT_SOCKETIO_PORT (updated from 8765 to 8768)
+    assert NetworkConfig.DEFAULT_SOCKETIO_PORT == 8768, (
+        f"DEFAULT_SOCKETIO_PORT should be 8768, got {NetworkConfig.DEFAULT_SOCKETIO_PORT}"
     )
     print(f"✓ DEFAULT_SOCKETIO_PORT: {NetworkConfig.DEFAULT_SOCKETIO_PORT}")
 
-    # Test DEFAULT_DASHBOARD_PORT
-    assert NetworkConfig.DEFAULT_DASHBOARD_PORT == 8765, (
-        f"DEFAULT_DASHBOARD_PORT should be 8765, got {NetworkConfig.DEFAULT_DASHBOARD_PORT}"
+    # Test DEFAULT_DASHBOARD_PORT (updated to 8767)
+    assert NetworkConfig.DEFAULT_DASHBOARD_PORT == 8767, (
+        f"DEFAULT_DASHBOARD_PORT should be 8767, got {NetworkConfig.DEFAULT_DASHBOARD_PORT}"
     )
     print(f"✓ DEFAULT_DASHBOARD_PORT: {NetworkConfig.DEFAULT_DASHBOARD_PORT}")
 
@@ -43,8 +43,9 @@ def test_port_configuration():
     print(f"✓ Port range verified: {port_end - port_start + 1} ports available")
 
     print("=" * 50)
-    print("✅ All Socket.IO port configurations have been successfully updated!")
-    print(f"   Default port: {NetworkConfig.DEFAULT_SOCKETIO_PORT}")
+    print("✅ All Socket.IO port configurations verified!")
+    print(f"   Default SocketIO port: {NetworkConfig.DEFAULT_SOCKETIO_PORT}")
+    print(f"   Default Dashboard port: {NetworkConfig.DEFAULT_DASHBOARD_PORT}")
     print(
         f"   Port range: {NetworkConfig.SOCKETIO_PORT_RANGE[0]}-{NetworkConfig.SOCKETIO_PORT_RANGE[1]}"
     )

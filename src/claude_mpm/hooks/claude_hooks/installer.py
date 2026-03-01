@@ -15,6 +15,15 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
+class _PathEncoder(json.JSONEncoder):
+    """JSON encoder that converts Path objects to strings."""
+
+    def default(self, obj):
+        if isinstance(obj, Path):
+            return str(obj)
+        return super().default(obj)
+
+
 class HookInstaller:
     """Manages installation and configuration of Claude MPM hooks."""
 
@@ -644,20 +653,20 @@ main "$@"
 
                 # Write back the cleaned settings
                 with self.old_settings_file.open("w") as f:
-                    json.dump(old_settings, f, indent=2)
+                    json.dump(old_settings, f, indent=2, cls=_PathEncoder)
 
                 self.logger.info(f"Cleaned up hooks from {self.old_settings_file}")
         except Exception as e:
             self.logger.warning(f"Could not clean up old settings file: {e}")
 
     def _fix_status_line(self, settings: Dict) -> None:
-        """Fix statusLine command to handle both output style schema formats.
+        """Fix statusLine command to use the single native outputStyle key.
 
-        The statusLine command receives input in different formats:
-        - Newer format: {"activeOutputStyle": "Claude MPM", ...}
-        - Older format: {"output_style": {"name": "Claude MPM"}, ...}
+        The statusLine command now uses the unified format with outputStyle:
+        - Current format: {"outputStyle": "claude_mpm", ...}
+        - Legacy support: {"activeOutputStyle": "Claude MPM", ...} (for migration)
 
-        This method ensures the jq expression checks both locations.
+        This method ensures the jq expression checks the native key first.
 
         Args:
             settings: The settings dictionary to update
@@ -671,21 +680,30 @@ main "$@"
 
         command = status_line["command"]
 
-        # Pattern to match: '.output_style.name // "default"'
-        # We need to update it to: '.output_style.name // .activeOutputStyle // "default"'
-        old_pattern = r'\.output_style\.name\s*//\s*"default"'
-        new_pattern = '.output_style.name // .activeOutputStyle // "default"'
+        # Pattern to match old dual-key format: '.output_style.name // .activeOutputStyle // "default"'
+        # We need to update it to use native key: '.outputStyle // .activeOutputStyle // "default"'
+        old_dual_key_pattern = (
+            r'\.output_style\.name\s*//\s*\.activeOutputStyle\s*//\s*"default"'
+        )
+        # Pattern to match very old format: '.output_style.name // "default"'
+        old_single_pattern = r'\.output_style\.name\s*//\s*"default"'
+
+        new_pattern = '.outputStyle // .activeOutputStyle // "default"'
 
         # Check if the command needs updating
-        if re.search(old_pattern, command) and ".activeOutputStyle" not in command:
-            updated_command = re.sub(old_pattern, new_pattern, command)
+        if re.search(old_dual_key_pattern, command):
+            updated_command = re.sub(old_dual_key_pattern, new_pattern, command)
+            settings["statusLine"]["command"] = updated_command
+            self.logger.info("Updated statusLine command to use native outputStyle key")
+        elif re.search(old_single_pattern, command) and ".outputStyle" not in command:
+            updated_command = re.sub(old_single_pattern, new_pattern, command)
             settings["statusLine"]["command"] = updated_command
             self.logger.info(
-                "Fixed statusLine command to handle both output style schemas"
+                "Migrated statusLine command to use native outputStyle key"
             )
         else:
             self.logger.debug(
-                "StatusLine command already supports both schemas or not present"
+                "StatusLine command already uses native outputStyle key or not present"
             )
 
     def _update_claude_settings(self, hook_cmd: str) -> None:
@@ -821,7 +839,7 @@ main "$@"
 
         # Write settings to settings.json
         with self.settings_file.open("w") as f:
-            json.dump(settings, f, indent=2)
+            json.dump(settings, f, indent=2, cls=_PathEncoder)
 
         self.logger.info(f"Updated Claude settings at {self.settings_file}")
 
@@ -1006,7 +1024,7 @@ main "$@"
 
                         # Write back settings
                         with settings_path.open("w") as f:
-                            json.dump(settings, f, indent=2)
+                            json.dump(settings, f, indent=2, cls=_PathEncoder)
 
                         self.logger.info(f"Removed hooks from {settings_path}")
 

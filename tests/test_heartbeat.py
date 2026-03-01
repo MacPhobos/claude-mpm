@@ -7,7 +7,14 @@ import asyncio
 import time
 from datetime import datetime, timezone
 
+import pytest
 import socketio
+
+pytestmark = pytest.mark.skip(
+    reason="Integration test that connects to a live Socket.IO server on localhost:8765; "
+    "requires a running server and waits up to 200s for heartbeat. "
+    "Not suitable for automated test suite - run manually via 'python tests/test_heartbeat.py'."
+)
 
 
 async def test_heartbeat():

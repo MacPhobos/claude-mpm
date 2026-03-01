@@ -237,11 +237,11 @@ class TestHookInstaller(unittest.TestCase):
         self.assertFalse(self.installer.settings_file.exists())
 
     @patch.object(HookInstaller, "is_version_compatible")
-    @patch.object(HookInstaller, "get_hook_script_path")
-    def test_install_hooks_script_not_found(self, mock_get_script, mock_version_check):
-        """Test hook installation when script cannot be found."""
+    @patch.object(HookInstaller, "get_hook_command")
+    def test_install_hooks_script_not_found(self, mock_get_command, mock_version_check):
+        """Test hook installation when hook command cannot be found."""
         mock_version_check.return_value = (True, "Compatible")
-        mock_get_script.side_effect = FileNotFoundError("Script not found")
+        mock_get_command.side_effect = FileNotFoundError("Hook command not found")
 
         result = self.installer.install_hooks()
 
@@ -442,18 +442,14 @@ class TestHookInstaller(unittest.TestCase):
             # Should skip other checks
             self.assertEqual(len(issues), 1)
 
-    @patch.object(HookInstaller, "get_hook_script_path")
-    def test_verify_hooks_missing_events(self, mock_get_script):
+    def test_verify_hooks_missing_events(self):
         """Test verification when required events are missing."""
-        mock_script = Mock()
-        mock_script.exists.return_value = True
-        mock_get_script.return_value = mock_script
-
         # Create settings missing some events
         settings = {
             "hooks": {
                 "Stop": [],
-                # Missing SubagentStop, SubagentStart, PreToolUse, PostToolUse
+                # Missing SubagentStop, PreToolUse, PostToolUse
+                # Note: SubagentStart no longer required
             }
         }
 
@@ -462,28 +458,48 @@ class TestHookInstaller(unittest.TestCase):
 
         with patch.object(
             self.installer, "is_version_compatible", return_value=(True, "Compatible")
+        ), patch.object(
+            self.installer, "get_hook_command", return_value="/path/to/hook.sh"
         ), patch("os.access", return_value=True):
             is_valid, issues = self.installer.verify_hooks()
 
             self.assertFalse(is_valid)
-            # Check for missing events
-            missing_events = [
-                "SubagentStop",
-                "SubagentStart",
-                "PreToolUse",
-                "PostToolUse",
-            ]
+            # Check for missing events that are still required
+            missing_events = ["SubagentStop", "PreToolUse", "PostToolUse"]
             for event in missing_events:
-                self.assertTrue(any(event in issue for issue in issues))
+                self.assertTrue(
+                    any(event in issue for issue in issues),
+                    f"Expected '{event}' in issues: {issues}",
+                )
 
     @patch.object(HookInstaller, "get_claude_version")
     @patch.object(HookInstaller, "verify_hooks")
-    @patch.object(HookInstaller, "get_hook_script_path")
-    def test_get_status(self, mock_get_script, mock_verify, mock_get_version):
+    @patch.object(HookInstaller, "_get_hook_script_path")
+    @patch.object(HookInstaller, "_get_fast_hook_script_path")
+    @patch.object(HookInstaller, "get_hook_command")
+    @patch.object(HookInstaller, "supports_pretool_modify")
+    def test_get_status(
+        self,
+        mock_supports_pretool,
+        mock_get_cmd,
+        mock_get_fast,
+        mock_get_script,
+        mock_verify,
+        mock_get_version,
+    ):
         """Test getting hook installation status."""
         # Setup mocks
         mock_get_version.return_value = "1.0.95"
         mock_verify.return_value = (True, [])
+        mock_supports_pretool.return_value = False
+
+        # get_hook_command returns deployment-root style (no fast-hook, no entry-point)
+        mock_get_cmd.return_value = "/path/to/hook.sh"
+
+        # No fast hook available
+        mock_fast_path = Mock()
+        mock_fast_path.exists.return_value = False
+        mock_get_fast.return_value = mock_fast_path
 
         # Create a mock script path that returns True for exists()
         mock_script_path = Mock()

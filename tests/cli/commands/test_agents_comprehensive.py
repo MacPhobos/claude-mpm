@@ -416,6 +416,7 @@ def mock_args():
     args.verbose = False
     args.quiet = False
     args.preset = None  # Explicitly set to None to avoid MagicMock behavior
+    args.filter = None  # Explicitly set to None to avoid truthy MagicMock
     args.agent = None  # Explicitly set to None for dependency commands
     args.dry_run = False  # Explicitly set to False for dependency commands
     args.all = False  # Explicitly set to False for fix commands
@@ -1251,6 +1252,7 @@ class TestOutputFormats:
         mock_args.format = format_type
         mock_args.deployed = False
         mock_args.by_tier = False
+        mock_args.filter = None  # Prevent MagicMock from being truthy
 
         result = command_with_service.run(mock_args)
 
@@ -1476,6 +1478,7 @@ class TestIntegrationScenarios:
         list_args.format = "text"
         list_args.verbose = False
         list_args.quiet = False
+        list_args.filter = None  # Prevent MagicMock from being truthy
 
         list_result = cmd.run(list_args)
         assert list_result.success

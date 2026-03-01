@@ -161,10 +161,14 @@ class TestTrackDeployedSkill:
 
     def test_track_new_skill(self, tmp_path):
         """Test tracking a new skill deployment."""
+        from datetime import datetime as real_datetime, timezone
+
         with patch(
             "claude_mpm.services.skills.selective_skill_deployer.datetime"
         ) as mock_dt:
-            mock_dt.utcnow.return_value.isoformat.return_value = "2025-12-22T10:00:00"
+            mock_dt.now.return_value = real_datetime(
+                2025, 12, 22, 10, 0, 0, tzinfo=timezone.utc
+            )
 
             track_deployed_skill(tmp_path, "test-skill", "claude-mpm")
 
@@ -192,18 +196,24 @@ class TestTrackDeployedSkill:
 
     def test_track_overwrites_existing(self, tmp_path):
         """Test tracking same skill again updates metadata."""
+        from datetime import datetime as real_datetime, timezone
+
         # First deployment
         with patch(
             "claude_mpm.services.skills.selective_skill_deployer.datetime"
         ) as mock_dt:
-            mock_dt.utcnow.return_value.isoformat.return_value = "2025-12-22T10:00:00"
+            mock_dt.now.return_value = real_datetime(
+                2025, 12, 22, 10, 0, 0, tzinfo=timezone.utc
+            )
             track_deployed_skill(tmp_path, "test-skill", "old-collection")
 
         # Second deployment
         with patch(
             "claude_mpm.services.skills.selective_skill_deployer.datetime"
         ) as mock_dt:
-            mock_dt.utcnow.return_value.isoformat.return_value = "2025-12-22T11:00:00"
+            mock_dt.now.return_value = real_datetime(
+                2025, 12, 22, 11, 0, 0, tzinfo=timezone.utc
+            )
             track_deployed_skill(tmp_path, "test-skill", "new-collection")
 
         index = load_deployment_index(tmp_path)
@@ -245,12 +255,16 @@ class TestUntrackSkill:
 
     def test_untrack_updates_last_sync(self, tmp_path):
         """Test that untrack updates last_sync timestamp."""
+        from datetime import datetime as real_datetime, timezone
+
         track_deployed_skill(tmp_path, "skill-a", "collection")
 
         with patch(
             "claude_mpm.services.skills.selective_skill_deployer.datetime"
         ) as mock_dt:
-            mock_dt.utcnow.return_value.isoformat.return_value = "2025-12-22T12:00:00"
+            mock_dt.now.return_value = real_datetime(
+                2025, 12, 22, 12, 0, 0, tzinfo=timezone.utc
+            )
             untrack_skill(tmp_path, "skill-a")
 
         index = load_deployment_index(tmp_path)

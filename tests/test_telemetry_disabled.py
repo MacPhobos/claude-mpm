@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def test_python_module():
     """Test if DISABLE_TELEMETRY is set when running as Python module."""
@@ -33,6 +35,10 @@ def test_python_module():
         return False
 
 
+@pytest.mark.skip(
+    reason="Helper function called from main() with a script_path argument. "
+    "Not a standalone pytest test — 'script_path' is not a registered pytest fixture."
+)
 def test_bash_script(script_path):
     """Test if a bash script sets DISABLE_TELEMETRY."""
     try:
@@ -53,6 +59,10 @@ def test_bash_script(script_path):
         return False
 
 
+@pytest.mark.skip(
+    reason="Helper function called from main() with a script_path argument. "
+    "Not a standalone pytest test — 'script_path' is not a registered pytest fixture."
+)
 def test_python_script(script_path):
     """Test if a Python script sets DISABLE_TELEMETRY."""
     try:

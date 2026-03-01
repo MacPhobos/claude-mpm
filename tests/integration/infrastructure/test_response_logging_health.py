@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import contextlib
 
+from claude_mpm.core.config import Config
 from claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
 from claude_mpm.services.claude_session_logger import ClaudeSessionLogger
 from claude_mpm.services.response_tracker import ResponseTracker

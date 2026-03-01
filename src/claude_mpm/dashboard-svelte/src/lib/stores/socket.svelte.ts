@@ -61,7 +61,6 @@ function getStreamId(event: ClaudeEvent): string | null {
 		event.sessionId ||
 		(event.data as any)?.session_id ||
 		(event.data as any)?.sessionId ||
-		event.source ||
 		null
 	);
 }

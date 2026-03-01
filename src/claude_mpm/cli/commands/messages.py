@@ -10,6 +10,8 @@ DESIGN:
 - Integration with UnifiedPathManager for project detection
 """
 
+import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -30,12 +32,40 @@ class MessagesCommand(BaseCommand):
         self.path_manager = UnifiedPathManager()
         self.message_service = MessageService(self.path_manager.project_root)
 
+    @staticmethod
+    def _resolve_body(args) -> Optional[str]:
+        """Resolve message body from --body, --body-file, or stdin.
+
+        Priority: --body-file > --body
+        --body-file '-' reads from stdin.
+
+        Returns:
+            Resolved body text, or None if no body provided.
+        """
+        body_file = getattr(args, "body_file", None)
+        if body_file:
+            if body_file == "-":
+                return sys.stdin.read().strip()
+            path = Path(body_file)
+            if not path.exists():
+                return None
+            return path.read_text(encoding="utf-8").strip()
+        return getattr(args, "body", None)
+
     def validate_args(self, args) -> Optional[str]:
         """Validate command arguments."""
         if not hasattr(args, "message_command") or not args.message_command:
             return "No message subcommand specified"
 
-        valid_commands = ["send", "list", "read", "archive", "reply", "check"]
+        valid_commands = [
+            "send",
+            "list",
+            "read",
+            "archive",
+            "reply",
+            "check",
+            "sessions",
+        ]
         if args.message_command not in valid_commands:
             return f"Unknown message command: {args.message_command}. Valid: {', '.join(valid_commands)}"
 
@@ -43,8 +73,15 @@ class MessagesCommand(BaseCommand):
         if args.message_command == "send":
             if not hasattr(args, "to_project") or not args.to_project:
                 return "Missing required argument: --to-project"
-            if not hasattr(args, "body") or not args.body:
-                return "Missing required argument: --body"
+            body = self._resolve_body(args)
+            if not body:
+                return "Missing required argument: --body or --body-file"
+
+        # Validate reply command body
+        if args.message_command == "reply":
+            body = self._resolve_body(args)
+            if not body:
+                return "Missing required argument: --body or --body-file"
 
         # Validate read/archive/reply commands
         if args.message_command in ["read", "archive", "reply"]:
@@ -69,6 +106,8 @@ class MessagesCommand(BaseCommand):
             return self._reply_to_message(args)
         if args.message_command == "check":
             return self._check_messages(args)
+        if args.message_command == "sessions":
+            return self._list_sessions(args)
 
         return CommandResult.error_result(
             f"Unknown message command: {args.message_command}"
@@ -82,7 +121,21 @@ class MessagesCommand(BaseCommand):
 
             if not to_project.exists():
                 return CommandResult.error_result(
-                    f"Target project does not exist: {to_project}"
+                    f"Target project path does not exist: {to_project}"
+                )
+
+            # Verify it is an MPM project (has .claude-mpm directory)
+            mpm_dir = to_project / ".claude-mpm"
+            if not mpm_dir.is_dir():
+                return CommandResult.error_result(
+                    f"Target path is not an MPM project (no .claude-mpm directory): {to_project}"
+                )
+
+            # Resolve body from --body or --body-file
+            body = self._resolve_body(args)
+            if not body:
+                return CommandResult.error_result(
+                    "Missing message body: use --body or --body-file"
                 )
 
             # Send message
@@ -91,7 +144,7 @@ class MessagesCommand(BaseCommand):
                 to_agent=getattr(args, "to_agent", "pm"),
                 message_type=getattr(args, "type", "task"),
                 subject=getattr(args, "subject", "Message from Claude MPM"),
-                body=args.body,
+                body=body,
                 priority=getattr(args, "priority", "normal"),
                 from_agent=getattr(args, "from_agent", "pm"),
                 attachments=getattr(args, "attachments", None),
@@ -128,12 +181,16 @@ class MessagesCommand(BaseCommand):
                 return CommandResult.success_result("No messages")
 
             # Create table
-            table = Table(title="Inbox Messages", show_header=True, header_style="bold")
-            table.add_column("ID", style="cyan")
+            table = Table(
+                title="Inbox Messages",
+                show_header=True,
+                header_style="bold",
+                show_lines=False,
+            )
+            table.add_column("ID", style="cyan", no_wrap=True)
             table.add_column("From", style="blue")
-            table.add_column("Agent", style="magenta")
             table.add_column("Type", style="yellow")
-            table.add_column("Priority", style="red")
+            table.add_column("Pri", style="red")
             table.add_column("Status", style="green")
             table.add_column("Subject", style="white")
             table.add_column("Date", style="dim")
@@ -161,13 +218,12 @@ class MessagesCommand(BaseCommand):
                 }.get(msg.priority, "")
 
                 table.add_row(
-                    msg.id[:16] + "...",
+                    msg.id,
                     from_project,
-                    msg.to_agent,
                     msg.type,
                     f"{priority_style}{msg.priority}[/]",
                     status_display,
-                    msg.subject[:40] + ("..." if len(msg.subject) > 40 else ""),
+                    msg.subject[:50] + ("..." if len(msg.subject) > 50 else ""),
                     date_str,
                 )
 
@@ -242,13 +298,17 @@ class MessagesCommand(BaseCommand):
     def _reply_to_message(self, args) -> CommandResult:
         """Reply to a message."""
         try:
-            if not hasattr(args, "body") or not args.body:
-                return CommandResult.error_result("Missing required argument: --body")
+            # Resolve body from --body or --body-file
+            body = self._resolve_body(args)
+            if not body:
+                return CommandResult.error_result(
+                    "Missing reply body: use --body or --body-file"
+                )
 
             reply = self.message_service.reply_to_message(
                 original_message_id=args.message_id,
                 subject=getattr(args, "subject", "Re: Your message"),
-                body=args.body,
+                body=body,
                 from_agent=getattr(args, "from_agent", "pm"),
             )
 
@@ -284,9 +344,88 @@ class MessagesCommand(BaseCommand):
         except Exception as e:
             return CommandResult.error_result(f"Failed to check messages: {e}")
 
+    def _list_sessions(self, args) -> CommandResult:
+        """List registered messaging sessions from the global registry."""
+        try:
+            show_all = getattr(args, "all", False)
+
+            if show_all:
+                sessions = self.message_service.global_registry.list_all_sessions()
+            else:
+                sessions = self.message_service.global_registry.list_active_sessions()
+
+            if not sessions:
+                label = "registered" if show_all else "active"
+                console.print(f"[yellow]No {label} sessions found[/yellow]")
+                return CommandResult.success_result("No sessions")
+
+            # Create table
+            table = Table(
+                title="Registered Sessions",
+                show_header=True,
+                header_style="bold",
+            )
+            table.add_column("Session ID", style="cyan", no_wrap=True)
+            table.add_column("Project", style="blue")
+            table.add_column("Path", style="dim")
+            table.add_column("PID", style="yellow")
+            table.add_column("Status", style="green")
+            table.add_column("Registered", style="dim")
+            table.add_column("Last Seen", style="dim")
+
+            for session in sessions:
+                # Format timestamps for readability
+                started = session.get("started_at", "")
+                if started:
+                    try:
+                        dt = datetime.fromisoformat(started)
+                        started = dt.strftime("%m/%d %H:%M")
+                    except (ValueError, TypeError):
+                        pass
+
+                last_active = session.get("last_active", "")
+                if last_active:
+                    try:
+                        dt = datetime.fromisoformat(last_active)
+                        last_active = dt.strftime("%m/%d %H:%M")
+                    except (ValueError, TypeError):
+                        pass
+
+                # Color status
+                status = session.get("status", "unknown")
+                if status == "active":
+                    status_display = "[green]active[/green]"
+                elif status == "stale":
+                    status_display = "[yellow]stale[/yellow]"
+                else:
+                    status_display = f"[dim]{status}[/dim]"
+
+                table.add_row(
+                    session.get("session_id", ""),
+                    session.get("project_name", ""),
+                    session.get("project_path", ""),
+                    str(session.get("pid", "")),
+                    status_display,
+                    started,
+                    last_active,
+                )
+
+            console.print(table)
+            console.print(f"\n[dim]Total: {len(sessions)} session(s)[/dim]")
+
+            return CommandResult.success_result(f"Listed {len(sessions)} sessions")
+
+        except Exception as e:
+            return CommandResult.error_result(f"Failed to list sessions: {e}")
+
 
 def manage_messages(args) -> int:
     """Entry point for message management commands."""
     command = MessagesCommand()
     result = command.execute(args)
+
+    # Print error messages so failures are not silent
+    if not result.success and result.message:
+        console.print(f"[red]Error:[/red] {result.message}")
+
     return result.exit_code

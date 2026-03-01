@@ -11,6 +11,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="Test functions take 'logger' parameter (Python logger object from setup_logging()), not a pytest fixture; these are helper functions called by main(), not standalone pytest tests"
+)
+
 
 def setup_logging():
     """Setup logging for the test."""

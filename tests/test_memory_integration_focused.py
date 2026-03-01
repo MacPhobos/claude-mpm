@@ -6,6 +6,7 @@ Tests the actual functioning of memory extraction from agent responses.
 
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -20,7 +21,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment with temporary directory."""
-        self.temp_dir = tmp_path
+        self.temp_dir = tempfile.mkdtemp()
         self.working_dir = Path(self.temp_dir)
 
         # Mock configuration
@@ -65,7 +66,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_simple_remember_field_extraction():
+    def test_simple_remember_field_extraction(self):
         """Test extraction from simple remember field in JSON response."""
         response = """
         Task completed successfully.
@@ -83,7 +84,9 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertTrue(result, "Simple remember field extraction should succeed")
 
         # Check memory file was created
-        memory_file = self.working_dir / ".claude-mpm" / "memories" / "test_agent.md"
+        memory_file = (
+            self.working_dir / ".claude-mpm" / "memories" / "test_agent_memories.md"
+        )
         self.assertTrue(memory_file.exists(), "Memory file should be created")
 
         # Check content was extracted
@@ -91,7 +94,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertIn("Python 3.11", content)
         self.assertIn("PostgreSQL", content)
 
-    def test_capital_remember_field_extraction():
+    def test_capital_remember_field_extraction(self):
         """Test extraction from Remember field (capital R) in JSON response."""
         response = """
         Analysis complete.
@@ -109,7 +112,9 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertTrue(result, "Capital Remember field extraction should succeed")
 
         # Check memory file was created
-        memory_file = self.working_dir / ".claude-mpm" / "memories" / "test_agent2.md"
+        memory_file = (
+            self.working_dir / ".claude-mpm" / "memories" / "test_agent2_memories.md"
+        )
         self.assertTrue(memory_file.exists(), "Memory file should be created")
 
         # Check content was extracted
@@ -117,7 +122,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertIn("JWT authentication", content)
         self.assertIn("Rate limit", content)
 
-    def test_null_remember_field_handling():
+    def test_null_remember_field_handling(self):
         """Test handling of null remember field."""
         response = """
         Task completed.
@@ -135,12 +140,14 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertFalse(result, "Null remember field should return False")
 
         # Memory file should not be created
-        memory_file = self.working_dir / ".claude-mpm" / "memories" / "test_agent3.md"
+        memory_file = (
+            self.working_dir / ".claude-mpm" / "memories" / "test_agent3_memories.md"
+        )
         self.assertFalse(
             memory_file.exists(), "Memory file should not be created for null remember"
         )
 
-    def test_empty_list_remember_field_handling():
+    def test_empty_list_remember_field_handling(self):
         """Test handling of empty list remember field."""
         response = """
         Task completed.
@@ -157,7 +164,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         # Should return False for empty list
         self.assertFalse(result, "Empty remember list should return False")
 
-    def test_memory_update_structured_format_NOT_IMPLEMENTED():
+    def test_memory_update_structured_format_NOT_IMPLEMENTED(self):
         """Test extraction from memory-update structured format - EXPECTED TO FAIL."""
         response = """
         Task completed.
@@ -178,13 +185,15 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         self.assertFalse(result, "memory-update format should fail (not implemented)")
 
         # Memory file should not be created
-        memory_file = self.working_dir / ".claude-mpm" / "memories" / "engineer.md"
+        memory_file = (
+            self.working_dir / ".claude-mpm" / "memories" / "engineer_memories.md"
+        )
         self.assertFalse(
             memory_file.exists(),
             "Memory file should not be created for unimplemented format",
         )
 
-    def test_no_json_response_handling():
+    def test_no_json_response_handling(self):
         """Test handling of response with no JSON."""
         response = """
         Task completed successfully.
@@ -197,7 +206,7 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         # Should return False for no JSON
         self.assertFalse(result, "Response with no JSON should return False")
 
-    def test_invalid_json_handling():
+    def test_invalid_json_handling(self):
         """Test handling of invalid JSON in response."""
         response = """
         Task completed.
@@ -214,22 +223,16 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         # Should return False for invalid JSON
         self.assertFalse(result, "Response with invalid JSON should return False")
 
-    def test_multiple_json_blocks_processing():
-        """Test processing multiple JSON blocks in one response."""
+    def test_multiple_json_blocks_processing(self):
+        """Test processing multiple items in a JSON block in one response."""
+        # Note: implementation processes the FIRST successful JSON block only and returns.
+        # Both learnings must be in a single block to be captured.
         response = """
-        First task completed.
+        Tasks completed.
 
         ```json
         {
-          "remember": ["First learning"]
-        }
-        ```
-
-        Second task completed.
-
-        ```json
-        {
-          "remember": ["Second learning"]
+          "remember": ["First learning", "Second learning"]
         }
         ```
         """
@@ -237,17 +240,19 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         result = self.memory_manager.extract_and_update_memory("test_agent7", response)
 
         # Should return True if any valid memory found
-        self.assertTrue(result, "Multiple JSON blocks should be processed")
+        self.assertTrue(result, "Multiple JSON items should be processed")
 
-        # Check both learnings were captured
-        memory_file = self.working_dir / ".claude-mpm" / "memories" / "test_agent7.md"
+        # Check both learnings were captured (both are in the FIRST JSON block)
+        memory_file = (
+            self.working_dir / ".claude-mpm" / "memories" / "test_agent7_memories.md"
+        )
         self.assertTrue(memory_file.exists(), "Memory file should be created")
 
         content = memory_file.read_text()
         self.assertIn("First learning", content)
         self.assertIn("Second learning", content)
 
-    def test_memory_file_format_consistency():
+    def test_memory_file_format_consistency(self):
         """Test that memory files are created with consistent format."""
         response = """
         ```json
@@ -260,11 +265,13 @@ class TestMemoryIntegrationFocused(unittest.TestCase):
         result = self.memory_manager.extract_and_update_memory("format_test", response)
         self.assertTrue(result)
 
-        memory_file = self.working_dir / ".claude-mpm" / "memories" / "format_test.md"
+        memory_file = (
+            self.working_dir / ".claude-mpm" / "memories" / "format_test_memories.md"
+        )
         content = memory_file.read_text()
 
         # Basic format checks
-        self.assertIn("# format_test Agent Memory", content)
+        self.assertIn("# Format_Test Agent Memory", content)
         self.assertIn("Test learning for format check", content)
 
 

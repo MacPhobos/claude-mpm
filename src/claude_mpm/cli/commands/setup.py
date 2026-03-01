@@ -1306,28 +1306,47 @@ These static memory files were migrated to kuzu-memory on {datetime.now(timezone
                 else:
                     return CommandResult.error_result(message)
 
-            # Delegate to native mcp-vector-search setup command
-            # This handles indexing and MCP configuration
-            console.print(
-                "\n[cyan]Running mcp-vector-search setup (indexing + configuration)...[/cyan]"
-            )
+            # Run the two non-interactive mcp-vector-search sub-commands.
+            # WHY: `mcp-vector-search setup` calls setup_llm_api_keys(interactive=True)
+            # which issues a Rich console.input() prompt.  With capture_output=True the
+            # subprocess's stdin is /dev/null so the prompt blocks forever.
+            # `index` and `install mcp` do the same work without interactive prompts.
 
-            setup_args = ["mcp-vector-search", "setup"]
+            console.print("\n[cyan]Indexing codebase with mcp-vector-search...[/cyan]")
+            index_args = ["mcp-vector-search", "index"]
             if force:
-                setup_args.append("--force")
+                index_args.append("--force")
 
             result = subprocess.run(
-                setup_args,
+                index_args,
                 capture_output=True,
                 text=True,
                 check=False,
             )  # nosec B603 B607
 
             if result.returncode != 0:
-                console.print("[red]✗ mcp-vector-search setup failed:[/red]")
+                console.print("[red]✗ mcp-vector-search index failed:[/red]")
                 if result.stderr:
                     console.print(result.stderr)
-                return CommandResult.error_result("mcp-vector-search setup failed")
+                return CommandResult.error_result("mcp-vector-search index failed")
+
+            console.print("[green]✓ Codebase indexed[/green]")
+            console.print("\n[cyan]Configuring MCP integration...[/cyan]")
+
+            install_result = subprocess.run(
+                ["mcp-vector-search", "install", "mcp"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )  # nosec B603 B607
+
+            if install_result.returncode != 0:
+                console.print("[red]✗ mcp-vector-search install mcp failed:[/red]")
+                if install_result.stderr:
+                    console.print(install_result.stderr)
+                return CommandResult.error_result(
+                    "mcp-vector-search MCP install failed"
+                )
 
             console.print("\n[green]✓ MCP Vector Search setup complete![/green]")
             console.print(

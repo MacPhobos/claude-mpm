@@ -23,11 +23,11 @@ class TestGitSourceManagerInitialization:
         """Test creating manager with default cache root."""
         manager = GitSourceManager()
 
-        # Should use ~/.claude-mpm/cache/remote-agents/
+        # Should use ~/.claude-mpm/cache/agents/
         assert manager.cache_root.parts[-3:] == (
             ".claude-mpm",
             "cache",
-            "remote-agents",
+            "agents",
         )
 
 
@@ -239,9 +239,9 @@ class TestGitSourceManagerListCachedAgents:
         mock_discovery = Mock()
         mock_discovery.discover_remote_agents.return_value = [
             {
-                "name": "engineer",
-                "version": "2.5.0",
-                "path": "/cache/agents/engineer.md",
+                "agent_id": "engineer",
+                "metadata": {"name": "Engineer", "version": "2.5.0"},
+                "source_file": "/cache/agents/engineer.md",
             }
         ]
         mock_discovery_class.return_value = mock_discovery
@@ -251,11 +251,12 @@ class TestGitSourceManagerListCachedAgents:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_root = Path(tmpdir)
-            repo_cache = cache_root / "owner" / "repo" / "agents"
-            repo_cache.mkdir(parents=True, exist_ok=True)
+            # Implementation scans cache_root/owner/repo/ (not /agents/ subdir)
+            repo_dir = cache_root / "owner" / "repo"
+            repo_dir.mkdir(parents=True, exist_ok=True)
 
-            # Create dummy agent file
-            (repo_cache / "engineer.md").write_text("# Engineer")
+            # Create dummy agent file in repo dir
+            (repo_dir / "engineer.md").write_text("# Engineer")
 
             manager = GitSourceManager(cache_root)
             agents = manager.list_cached_agents()

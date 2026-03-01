@@ -739,9 +739,22 @@ class PostmortemService:
             ),
         }
 
+        by_category = {
+            "script": stats["script_errors"],
+            "skill": stats["skill_errors"],
+            "agent": stats["agent_errors"],
+            "user_code": stats["user_code_errors"],
+        }
+
         return {
             "total_errors": stats["total_errors"],
-            "by_category": stats["by_category"],
+            "by_category": by_category,
+            "script_errors": stats["script_errors"],
+            "skill_errors": stats["skill_errors"],
+            "agent_errors": stats["agent_errors"],
+            "user_code_errors": stats["user_code_errors"],
+            "auto_fixable": stats["auto_fixable"],
+            "critical_priority": stats["critical_priority"],
             "high_priority": stats["high_priority"],
             "total_actions": stats["total_actions"],
             "auto_fix_actions": stats["auto_fix_actions"],

@@ -369,9 +369,7 @@ class TestGitSourceSyncServiceInitialization:
 
             service = GitSourceSyncService(cache_dir=temp_cache_dir)
 
-            expected_url = (
-                "https://raw.githubusercontent.com/bobmatnyc/claude-mpm-agents/main"
-            )
+            expected_url = "https://raw.githubusercontent.com/bobmatnyc/claude-mpm-agents/main/agents"
             assert service.source_url == expected_url
             assert service.source_id == "github-remote"
             assert service.cache_dir == temp_cache_dir
@@ -430,19 +428,26 @@ class TestGitSourceSyncServiceAgentSync:
     """Test agent synchronization functionality."""
 
     def test_get_agent_list(self, git_sync_service):
-        """Test hardcoded agent list returns expected agents."""
+        """Test agent list returns expected agents (from Git Tree API or fallback)."""
         agent_list = git_sync_service._get_agent_list()
-
-        # Verify expected agents
-        assert "research.md" in agent_list
-        assert "engineer.md" in agent_list
-        assert "qa.md" in agent_list
-        assert "documentation.md" in agent_list
-        assert "security.md" in agent_list
-        assert "ops.md" in agent_list
 
         # Verify list is not empty
         assert len(agent_list) > 0
+
+        # Check that expected agents are present - could be at root or in paths
+        # The Git Tree API returns full paths; fallback returns just filenames
+        all_items = " ".join(agent_list)
+        for expected_agent in [
+            "research.md",
+            "engineer.md",
+            "qa.md",
+            "documentation.md",
+            "security.md",
+            "ops.md",
+        ]:
+            assert expected_agent in all_items, (
+                f"Expected agent '{expected_agent}' not found in agent list"
+            )
 
     @patch("requests.Session.get")
     def test_fetch_with_etag_new_content(
@@ -955,7 +960,7 @@ class TestHashMismatchHandling:
 
         Covers lines 298-317: ETag returns 304 but hash doesn't match
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         cache_file = git_sync_service.cache_dir / filename
 
         # Create cached file
@@ -1003,7 +1008,7 @@ class TestHashMismatchHandling:
 
         Covers lines 316-317: Re-download failure handling
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         cache_file = git_sync_service.cache_dir / filename
 
         # Create cached file with wrong hash
@@ -1040,7 +1045,7 @@ class TestCacheFileMissing:
 
         Covers lines 325-349: ETag 304 but cache file missing
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         url = f"{git_sync_service.source_url}/{filename}"
 
         # Set ETag as if file was cached
@@ -1079,7 +1084,7 @@ class TestCacheFileMissing:
 
         Covers lines 343-344: Re-download failure path
         """
-        filename = "research.md"
+        filename = "research-agent.md"
         url = f"{git_sync_service.source_url}/{filename}"
 
         # Set ETag but no cache file
@@ -1162,7 +1167,7 @@ class TestExtendedErrorHandling:
 
         Covers lines 346-349: Unexpected status handling
         """
-        filename = "research.md"
+        filename = "research-agent.md"
 
         # Mock 418 I'm a teapot (unexpected status)
         mock_response = Mock()

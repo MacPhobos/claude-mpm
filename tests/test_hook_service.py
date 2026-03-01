@@ -6,6 +6,7 @@ executes them in priority order, and handles errors gracefully.
 
 from datetime import datetime, timezone
 
+from claude_mpm.core.config import Config
 from claude_mpm.hooks.base_hook import (
     HookContext,
     HookResult,
@@ -195,6 +196,8 @@ def test_disabled_hooks():
 
 def test_config_based_disabling():
     """Test that hooks can be disabled via configuration."""
+    # Config is a singleton - reset before test to ensure fresh state
+    Config.reset_singleton()
     # Test with hooks disabled globally
     config = Config({"hooks": {"enabled": False}})
     service = HookService(config)
@@ -228,7 +231,12 @@ def test_config_based_disabling():
 
 def test_memory_hook_config_check():
     """Test that memory hooks respect memory.enabled config."""
-    config = Config({"memory": {"enabled": False}})
+    # Config is a singleton - reset before test and use .set() to override defaults
+    Config.reset_singleton()
+    config = Config()
+    config.set(
+        "memory.enabled", False
+    )  # Use set() since defaults override constructor args
     service = HookService(config)
 
     # Create a memory-related hook

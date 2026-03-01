@@ -119,14 +119,19 @@ class TestIntegration:
             "cwd": "/project",
         }
 
-        # Setup mocks
-        handler.response_tracking_manager = MagicMock()
-        handler.response_tracking_manager.response_tracking_enabled = True
+        # Setup mocks - must update both handler and subagent_processor
+        mock_rtm = MagicMock()
+        mock_rtm.response_tracking_enabled = True
         mock_tracker = MagicMock()
         mock_tracker.track_response.return_value = Path("/logs/response.json")
-        handler.response_tracking_manager.response_tracker = mock_tracker
+        mock_rtm.response_tracker = mock_tracker
+        handler.response_tracking_manager = mock_rtm
+        # subagent_processor holds its own reference - must update it too
+        handler.subagent_processor.response_tracking_manager = mock_rtm
 
-        with patch.object(handler, "_emit_socketio_event") as mock_emit:
+        with patch.object(
+            handler.subagent_processor.connection_manager, "emit_event"
+        ) as mock_emit:
             with patch.object(handler, "_get_git_branch", return_value="feature/async"):
                 handler.handle_subagent_stop(event)
 
@@ -137,7 +142,7 @@ class TestIntegration:
         assert "Research Python async patterns" in call_kwargs["request"]
         assert "Found 3 patterns" in call_kwargs["response"]
 
-        # Verify event was emitted
+        # Verify event was emitted via connection manager
         mock_emit.assert_called_once()
         emitted_data = mock_emit.call_args[0][2]
         assert emitted_data["agent_type"] == "research"
@@ -146,47 +151,11 @@ class TestIntegration:
         # Verify cleanup
         assert session_id not in handler.delegation_requests
 
+    @pytest.mark.skip(
+        reason="_cleanup_old_entries removed - cleanup now handled by state_manager periodically"
+    )
     def test_periodic_cleanup_trigger(self):
         """Test that periodic cleanup is triggered."""
-        from src.claude_mpm.hooks.claude_hooks import hook_handler
-        from src.claude_mpm.hooks.claude_hooks.hook_handler import ClaudeHookHandler
-
-        # Reset recent events to avoid duplicate detection
-        hook_handler._recent_events = deque(maxlen=10)
-
-        handler = ClaudeHookHandler()
-        handler.CLEANUP_INTERVAL_EVENTS = 2  # Low threshold for testing
-        handler.events_processed = 0  # Reset counter
-
-        # Create different events to avoid duplicate detection
-        events = [
-            {
-                "hook_event_name": "UserPromptSubmit",
-                "session_id": f"test-cleanup-{i}",
-                "prompt": f"test prompt {i}",
-            }
-            for i in range(3)
-        ]
-
-        cleanup_called = False
-        original_cleanup = handler._cleanup_old_entries
-
-        def mock_cleanup_tracking():
-            nonlocal cleanup_called
-            cleanup_called = True
-            original_cleanup()
-
-        with patch.object(
-            handler, "_cleanup_old_entries", side_effect=mock_cleanup_tracking
-        ), patch.object(handler.event_handlers, "handle_user_prompt_fast"):
-            with patch("sys.stdout", new_callable=StringIO):
-                # Process multiple events
-                for _i, event in enumerate(events):
-                    with patch.object(handler, "_read_hook_event", return_value=event):
-                        handler.handle()
-
-        # Cleanup should have been called at least once
-        assert cleanup_called, "Cleanup was not called"
 
 
 class TestMockValidation:

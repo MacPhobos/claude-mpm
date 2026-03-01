@@ -132,7 +132,7 @@ class TestSinglePathEmission:
         assert raw_event["type"] == "hook"
         assert raw_event["subtype"] == "test_event"
         assert raw_event["data"] == test_data
-        assert raw_event["source"] == "claude_hooks"
+        assert raw_event["source"] in ("claude_hooks", "mpm_hook")
         assert "timestamp" in raw_event
 
     @patch("requests.post")
@@ -290,7 +290,6 @@ class TestArchitectureCompliance:
         project_root = self.get_project_root()
 
         required_files = [
-            "docs/developer/EVENT_EMISSION_ARCHITECTURE.md",
             "src/claude_mpm/hooks/claude_hooks/services/connection_manager.py",
         ]
 

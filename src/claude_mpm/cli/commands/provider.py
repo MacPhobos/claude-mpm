@@ -115,7 +115,7 @@ class ProviderCommand(BaseCommand):
             console.print(f"         Model: {config.anthropic.model}")
             if "ANTHROPIC_API_KEY" not in os.environ:  # pragma: allowlist secret
                 console.print(
-                    "[red]Warning:[/red] ANTHROPIC_API_KEY not set in environment"  # pragma: allowlist secret
+                    "[dim]Note:[/dim] No API key set — using Claude.ai login or set ANTHROPIC_API_KEY"  # pragma: allowlist secret
                 )
 
         return CommandResult.success_result(
@@ -186,13 +186,17 @@ class ProviderCommand(BaseCommand):
         console.print(f"  Model: {config.anthropic.model}")
         console.print(f"\nConfiguration saved to: {config_path}")
 
-        # Check for API key
+        # Check for API key (optional - Claude Code also supports OAuth login)
         if "ANTHROPIC_API_KEY" not in os.environ:  # pragma: allowlist secret
             console.print(
-                "\n[red]Warning:[/red] ANTHROPIC_API_KEY not found in environment."  # pragma: allowlist secret
+                "\n[dim]Note:[/dim] ANTHROPIC_API_KEY not found in environment."  # pragma: allowlist secret
+            )
+            console.print("       Claude Code supports two authentication methods:")
+            console.print(
+                "       • [green]Claude.ai login[/green] (Pro/Max) — run [bold]claude[/bold] to log in via browser (no API key needed)"
             )
             console.print(
-                "         Please set this environment variable before starting a session."
+                "       • [yellow]API key[/yellow] — set ANTHROPIC_API_KEY environment variable"  # pragma: allowlist secret
             )
 
         console.print(

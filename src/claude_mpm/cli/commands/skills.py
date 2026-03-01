@@ -27,6 +27,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ...constants import SkillsCommands
+from ...core.deployment_context import DeploymentContext
 from ...services.skills_deployer import SkillsDeployerService
 from ...skills.skills_service import SkillsService
 from ..shared import BaseCommand, CommandResult
@@ -540,6 +541,17 @@ class SkillsManagementCommand(BaseCommand):
             categories = getattr(args, "categories", None)
             force = getattr(args, "force", False)
             deploy_all = getattr(args, "all", False)
+            scope = getattr(args, "scope", "user")
+
+            # Resolve skills_dir based on scope
+            from pathlib import Path
+
+            project_dir = Path(getattr(args, "project_dir", None) or Path.cwd())
+            if scope == "user":
+                ctx = DeploymentContext.from_user()
+            else:
+                ctx = DeploymentContext.from_project(project_dir)
+            skills_dir = ctx.skills_dir
 
             if collection:
                 console.print(
@@ -559,6 +571,7 @@ class SkillsManagementCommand(BaseCommand):
                 categories=categories,
                 force=force,
                 selective=not deploy_all,
+                skills_dir=skills_dir,
             )
 
             # Display results

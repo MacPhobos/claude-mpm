@@ -1,21 +1,18 @@
 ---
+name: mpm-message
 description: Send cross-project messages to other Claude MPM instances
-triggers:
-  - /mpm-message
-  - send message to
-  - notify other project
-  - cross-project communication
-version: 3.0.0
-author: Claude MPM Team
+user-invocable: true
+version: "3.0.0"
+category: mpm-command
+tags: [mpm-command, communication, pm-required]
 ---
 
 # Cross-Project Messaging
 
 Send asynchronous messages to other Claude MPM instances running in different projects.
 
-> **Version note**: The `claude-mpm message` CLI is available in **v5.9.21-beta.8+**.
-> On older versions, use the **Python API fallback** below.
-> Check your version: `claude-mpm --version`
+> **Important**: Always use `claude-mpm message` CLI commands or the `MessageService` Python API.
+> Never query `messaging.db` directly — the database location is an implementation detail.
 
 ## How It Works
 
@@ -33,8 +30,9 @@ All messages flow through a **single shared database** at `~/.claude-mpm/messagi
 /mpm-message <project-path> <message>
 ```
 
-### CLI (v5.9.21-beta.8+)
+### CLI
 ```bash
+# Send a message
 claude-mpm message send <project-path> \
   --body "message content" \
   --subject "message subject" \
@@ -42,10 +40,19 @@ claude-mpm message send <project-path> \
   --priority [low|normal|high|urgent] \
   --to-agent [pm|engineer|qa|ops|etc]
 
-claude-mpm message list
-claude-mpm message read <message-id>
+# For complex bodies with quotes, use --body-file
+claude-mpm message send <project-path> --body-file message.txt --subject "subject"
+echo "body text" | claude-mpm message send <project-path> --body-file - --subject "subject"
+
+# Inbox operations
+claude-mpm message check                          # Quick unread count
+claude-mpm message list                            # List all messages
+claude-mpm message list --status unread            # List unread only
+claude-mpm message read <message-id>               # Read a message
 claude-mpm message reply <message-id> --body "response"
+claude-mpm message reply <message-id> --body-file reply.txt  # From file
 claude-mpm message archive <message-id>
+claude-mpm message sessions                        # List active sessions
 ```
 
 ### Python API (PREFERRED fallback for all versions)
@@ -119,11 +126,17 @@ The DB column is `message_type`, not `type` — direct writes get this wrong and
 - Every 10 commands (configurable)
 - Every 30 minutes (configurable)
 
-### Reading Messages (from SQLite)
-If the hook hasn't fired, check directly:
+### Reading Messages (CLI)
+Always use the CLI to check messages — never query the database directly:
 ```bash
-sqlite3 ~/.claude-mpm/messaging.db \
-  "SELECT id, subject, priority, status FROM messages WHERE to_project='$(pwd)' AND status='unread'"
+# Quick unread count
+claude-mpm message check
+
+# List unread messages
+claude-mpm message list --status unread
+
+# Read a specific message
+claude-mpm message read <message-id>
 ```
 
 ## Message Storage
@@ -163,6 +176,6 @@ The current implementation uses SQLite directly. A Huey-based message bus migrat
 
 ---
 
-**Version**: 5.9.21-beta.9+
-**Status**: Beta
+**Version**: 5.9.27+
+**Status**: Stable
 **Issues**: #305, #310, #311, #312

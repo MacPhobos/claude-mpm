@@ -255,7 +255,7 @@ class ConnectionEventHandler(BaseEventHandler):
             # Force disconnect if still connected
             try:
                 await self.sio.disconnect(sid)
-            except Exception:
+            except Exception:  # nosec B110
                 pass  # Already disconnected
 
             self.logger.info(f"🔌 Cleaned up stale connection: {sid}")
@@ -562,8 +562,12 @@ class ConnectionEventHandler(BaseEventHandler):
             # Map common event names to proper type
             if event_name in ["TestStart", "TestEnd"]:
                 normalized["type"] = "test"
-            elif event_name in ["SubagentStart", "SubagentStop"]:
-                normalized["type"] = "subagent"
+            elif event_name == "SubagentStart":
+                normalized["type"] = "hook"
+                normalized["subtype"] = "subagent_start"
+            elif event_name == "SubagentStop":
+                normalized["type"] = "hook"
+                normalized["subtype"] = "subagent_stop"
             elif event_name == "ToolCall":
                 normalized["type"] = "tool"
             elif event_name == "UserPrompt":

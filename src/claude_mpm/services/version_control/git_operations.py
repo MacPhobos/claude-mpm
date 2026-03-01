@@ -395,9 +395,9 @@ class GitOperationsManager:
             result = self._run_git_command(["status", "--porcelain"])
             modified_files = []
 
-            for line in result.stdout.strip().split("\n"):
+            for line in result.stdout.splitlines():
                 if line.strip():
-                    # Extract filename from git status output
+                    # Extract filename from git status output (XY filename format)
                     filename = line[3:].strip()
                     modified_files.append(filename)
 

@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # Set up verbose logging to see all messages
 import logging
 
+from claude_mpm.core.config import Config
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

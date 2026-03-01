@@ -31,8 +31,7 @@
 				const preEventStreamId =
 					preEvent.session_id ||
 					preEvent.sessionId ||
-					(preEventData?.session_id as string) ||
-					preEvent.source;
+					(preEventData?.session_id as string);
 				return preEventStreamId === selectedStream;
 			});
 		console.log('[ToolsView] Filtered tools:', {

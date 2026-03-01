@@ -218,12 +218,12 @@ class TestTwoPhaseProgressBars:
 
         # Verify sync progress bar configuration
         sync_call = mock_progress_class.call_args_list[0]
-        assert sync_call[1]["prefix"] == "Syncing skills"
+        assert sync_call[1]["prefix"] == "Syncing skill files"
         assert sync_call[1]["total"] > 0
 
         # Verify deploy progress bar configuration
         deploy_call = mock_progress_class.call_args_list[1]
-        assert deploy_call[1]["prefix"] == "Deploying skills"
+        assert deploy_call[1]["prefix"] == "Deploying skill directories"
         assert deploy_call[1]["total"] == 2
 
         # Verify both progress bars finished
@@ -278,7 +278,11 @@ class TestTwoPhaseProgressBars:
     def test_progress_callback_invoked_during_deploy(
         self, mock_config_class, mock_manager_class, mock_progress_class
     ):
-        """Test that progress callback is passed to deploy_skills."""
+        """Test that deploy_skills is called with target_dir and skill_filter args.
+
+        NOTE: The implementation no longer passes progress_callback to deploy_skills.
+        deploy_skills is called with target_dir, force, and skill_filter parameters.
+        """
         from claude_mpm.cli.startup import sync_remote_skills_on_startup
 
         # Mock configuration
@@ -317,10 +321,14 @@ class TestTwoPhaseProgressBars:
         # Call function
         sync_remote_skills_on_startup()
 
-        # Verify deploy_skills was called with progress callback
+        # Verify deploy_skills was called
+        mock_manager.deploy_skills.assert_called_once()
         call_args = mock_manager.deploy_skills.call_args
-        assert "progress_callback" in call_args[1]
-        assert callable(call_args[1]["progress_callback"])
+        # Verify required parameters: target_dir and force
+        assert "target_dir" in call_args[1]
+        assert "force" in call_args[1]
+        # skill_filter is passed (may be a set or None)
+        assert "skill_filter" in call_args[1]
 
     @patch("claude_mpm.utils.progress.ProgressBar")
     @patch("claude_mpm.services.skills.git_skill_source_manager.GitSkillSourceManager")
@@ -328,7 +336,13 @@ class TestTwoPhaseProgressBars:
     def test_no_deploy_when_no_sync_results(
         self, mock_config_class, mock_manager_class, mock_progress_class
     ):
-        """Test that deployment is skipped when no sources were synced."""
+        """Test that deployment is always called (even with no sync updates).
+
+        NOTE: The implementation was updated to ALWAYS call deploy_skills after sync,
+        regardless of how many sources were synced. This ensures stale skills are
+        cleaned up and previously cached skills are deployed consistently.
+        deploy_skills IS called even when synced_count=0 and total_files_updated=0.
+        """
         from claude_mpm.cli.startup import sync_remote_skills_on_startup
 
         # Mock configuration
@@ -349,6 +363,13 @@ class TestTwoPhaseProgressBars:
             "total_files_updated": 0,
             "total_files_cached": 0,
         }
+        mock_manager.deploy_skills.return_value = {
+            "deployed_count": 0,
+            "skipped_count": 0,
+            "filtered_count": 0,
+            "removed_count": 0,
+            "errors": [],
+        }
         mock_manager_class.return_value = mock_manager
 
         # Mock progress bar
@@ -358,8 +379,8 @@ class TestTwoPhaseProgressBars:
         # Call function
         sync_remote_skills_on_startup()
 
-        # Verify deploy_skills was NOT called
-        mock_manager.deploy_skills.assert_not_called()
+        # Verify deploy_skills IS called (new behavior: always deploy after sync)
+        mock_manager.deploy_skills.assert_called_once()
 
-        # Verify only one progress bar created (sync only)
-        assert mock_progress_class.call_count == 1
+        # Verify sync was performed
+        mock_manager.sync_all_sources.assert_called_once()

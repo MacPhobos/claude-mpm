@@ -145,8 +145,8 @@ class MessageService:
             project_root: Root directory of the current project
             registry_path: Override for global session registry path (for testing)
         """
-        # Normalize project root to absolute, resolved path for consistent comparisons
-        self.project_root = Path(project_root).resolve()
+        # Normalize project root with FS-canonical case (see _canonical_path docstring)
+        self.project_root = Path(self._canonical_path(str(project_root)))
 
         # Use SHARED database for all projects (not per-project)
         # This is the key change for the Huey migration
@@ -169,6 +169,96 @@ class MessageService:
         from .message_bus import MessageBus
 
         self.message_bus = MessageBus()
+
+    @staticmethod
+    def _canonical_path(path: str) -> str:
+        """Return the filesystem-canonical absolute path, including correct case.
+
+        WHY: On macOS (case-insensitive, case-preserving HFS+/APFS), Path.resolve()
+        preserves the caller's casing (e.g. '/apex') rather than the real directory
+        name (e.g. '/APEX'), while os.getcwd() from inside that directory returns
+        the real name.  This causes exact-match SQL queries to miss messages because
+        the stored path and the queried path differ only in case.
+
+        FIX: Walk each component through os.scandir() so we always get the name the
+        filesystem actually uses, regardless of what the caller typed.
+
+        Falls back gracefully to Path.resolve() if any component can't be read
+        (e.g. symlink target doesn't exist, permission error) or if canonicalization
+        produces unexpected results.
+        """
+        original_path = path
+        resolved = Path(path).expanduser().resolve()
+        parts = resolved.parts  # e.g. ('/', 'Users', 'masa', 'Duetto', 'repos', 'apex')
+
+        if not parts:
+            logger.debug(
+                f"_canonical_path: Empty parts for path '{original_path}', using resolved: {resolved}"
+            )
+            return str(resolved)
+
+        # Extract expected project name from original path for validation
+        original_basename = Path(original_path).name
+        logger.debug(
+            f"_canonical_path: Processing '{original_path}' -> expected basename: '{original_basename}'"
+        )
+
+        canonical = Path(parts[0])  # start at root '/'
+        for part in parts[1:]:
+            try:
+                # Find the real-cased entry in the parent directory
+                found = False
+                for entry in os.scandir(canonical):
+                    if entry.name.lower() == part.lower():
+                        canonical = canonical / entry.name
+                        found = True
+                        logger.debug(
+                            f"_canonical_path: Found real-cased '{entry.name}' for '{part}'"
+                        )
+                        break
+
+                if not found:
+                    # Component not found on disk — append as-is
+                    canonical = canonical / part
+                    logger.debug(
+                        f"_canonical_path: Component '{part}' not found on disk, appending as-is"
+                    )
+
+            except OSError as e:
+                # Can't read directory — fall back to user-supplied component
+                canonical = canonical / part
+                logger.debug(
+                    f"_canonical_path: OSError reading directory for '{part}': {e}, falling back to original component"
+                )
+
+        canonical_str = str(canonical)
+        canonical_basename = Path(canonical_str).name
+
+        # Validate that canonical path points to expected project
+        if (
+            original_basename
+            and canonical_basename.lower() != original_basename.lower()
+        ):
+            logger.warning(
+                f"_canonical_path: Canonical path basename '{canonical_basename}' doesn't match "
+                f"expected '{original_basename}' for path '{original_path}'. "
+                f"This may indicate path resolution issues."
+            )
+
+            # Fallback to original resolved path if canonicalization produces unexpected results
+            if resolved.exists():
+                logger.info(
+                    f"_canonical_path: Using fallback resolved path: {resolved}"
+                )
+                return str(resolved)
+            logger.warning(
+                "_canonical_path: Fallback path doesn't exist, using canonical result anyway"
+            )
+
+        logger.debug(
+            f"_canonical_path: Final result: '{original_path}' -> '{canonical_str}'"
+        )
+        return canonical_str
 
     def send_message(
         self,
@@ -199,8 +289,10 @@ class MessageService:
         Returns:
             Created message object
         """
-        # Normalize to_project path for consistent database queries
-        to_project_normalized = str(Path(to_project).resolve())
+        # Normalize to_project path using FS-canonical case resolution.
+        # Path.resolve() preserves the caller's casing on macOS (case-insensitive FS),
+        # but os.getcwd() returns the real FS name.  _canonical_path() reconciles both.
+        to_project_normalized = self._canonical_path(to_project)
 
         # Generate message ID
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -405,13 +497,24 @@ class MessageService:
         # Send reply to original sender
         # Update original message with reply reference
         # This is optional but helpful for tracking conversation threads
+        # Determine reply subject
+        if subject and subject.startswith("Re:"):
+            # Use provided subject if it already has "Re:" prefix
+            reply_subject = subject
+        elif subject:
+            # Use provided subject with "Re:" prefix
+            reply_subject = f"Re: {subject}"
+        # Use original subject with "Re:" prefix if it doesn't already have it
+        elif original.subject and original.subject.startswith("Re:"):
+            reply_subject = original.subject
+        else:
+            reply_subject = f"Re: {original.subject or 'Your message'}"
+
         return self.send_message(
             to_project=original.from_project,
             to_agent=original.from_agent,
             message_type="reply",
-            subject=f"Re: {original.subject}"
-            if not subject.startswith("Re:")
-            else subject,
+            subject=reply_subject,
             body=body,
             from_agent=from_agent,
             metadata={"reply_to": original_message_id},

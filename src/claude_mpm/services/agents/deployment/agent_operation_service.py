@@ -87,7 +87,7 @@ class AgentOperationService(BaseService):
         self._operation_lock = asyncio.Lock()
 
         # Performance metrics
-        self.metrics = {
+        self._operation_metrics = {
             "total_operations": 0,
             "successful_operations": 0,
             "failed_operations": 0,
@@ -476,7 +476,7 @@ class AgentOperationService(BaseService):
             if not path_ops.validate_exists(source_path):
                 return None
 
-            backup_dir = get_path_manager().get_tracking_dir() / "backups"
+            backup_dir = get_path_manager().get_cache_dir() / "tracking" / "backups"
             path_ops.ensure_dir(backup_dir)
 
             from datetime import datetime, timezone
@@ -520,17 +520,17 @@ class AgentOperationService(BaseService):
 
     def _update_metrics(self, result: LifecycleOperationResult):
         """Update performance metrics."""
-        self.metrics["total_operations"] += 1
+        self._operation_metrics["total_operations"] += 1
 
         if result.success:
-            self.metrics["successful_operations"] += 1
+            self._operation_metrics["successful_operations"] += 1
         else:
-            self.metrics["failed_operations"] += 1
+            self._operation_metrics["failed_operations"] += 1
 
         # Update average duration
-        current_avg = self.metrics["average_duration_ms"]
-        total_ops = self.metrics["total_operations"]
-        self.metrics["average_duration_ms"] = (
+        current_avg = self._operation_metrics["average_duration_ms"]
+        total_ops = self._operation_metrics["total_operations"]
+        self._operation_metrics["average_duration_ms"] = (
             current_avg * (total_ops - 1) + result.duration_ms
         ) / total_ops
 
@@ -551,7 +551,7 @@ class AgentOperationService(BaseService):
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get performance metrics."""
-        return self.metrics.copy()
+        return self._operation_metrics.copy()
 
     async def _initialize(self) -> None:
         """Initialize the operation service."""

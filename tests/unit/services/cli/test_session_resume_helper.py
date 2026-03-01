@@ -11,6 +11,7 @@ Coverage targets:
 """
 
 import json
+import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -30,8 +31,8 @@ def temp_project_dir(tmp_path):
     """Create a temporary project directory with session structure."""
     project_dir = tmp_path / "test_project"
     project_dir.mkdir()
-    pause_dir = project_dir / ".claude-mpm" / "sessions" / "pause"
-    pause_dir.mkdir(parents=True)
+    sessions_dir = project_dir / ".claude-mpm" / "sessions"
+    sessions_dir.mkdir(parents=True)
     return project_dir
 
 
@@ -90,9 +91,7 @@ class TestInitialization:
         """Test initialization with explicit project path."""
         helper = SessionResumeHelper(project_path=temp_project_dir)
         assert helper.project_path == temp_project_dir
-        assert (
-            helper.pause_dir == temp_project_dir / ".claude-mpm" / "sessions" / "pause"
-        )
+        assert helper.pause_dir == temp_project_dir / ".claude-mpm" / "sessions"
 
     def test_init_with_default_path(self):
         """Test initialization with default (current) path."""
@@ -100,11 +99,11 @@ class TestInitialization:
             mock_cwd.return_value = Path("/mock/path")
             helper = SessionResumeHelper()
             assert helper.project_path == Path("/mock/path")
-            assert helper.pause_dir == Path("/mock/path/.claude-mpm/sessions/pause")
+            assert helper.pause_dir == Path("/mock/path/.claude-mpm/sessions")
 
     def test_pause_dir_structure(self, helper, temp_project_dir):
         """Test pause directory path structure is correct."""
-        expected = temp_project_dir / ".claude-mpm" / "sessions" / "pause"
+        expected = temp_project_dir / ".claude-mpm" / "sessions"
         assert helper.pause_dir == expected
 
 
@@ -129,7 +128,7 @@ class TestHasPausedSessions:
         # Create helper but don't create the pause directory
         pause_dir = temp_project_dir / ".claude-mpm" / "sessions" / "pause"
         if pause_dir.exists():
-            pause_dir.rmdir()
+            shutil.rmtree(pause_dir)
 
         helper = SessionResumeHelper(project_path=temp_project_dir)
         assert helper.has_paused_sessions() is False
@@ -193,13 +192,12 @@ class TestGetMostRecentSession:
     def test_returns_none_when_directory_missing(self, temp_project_dir):
         """Test returns None when pause directory doesn't exist."""
         helper = SessionResumeHelper(project_path=temp_project_dir)
-        # Remove pause directory
+        # Remove pause directory and its parent
         pause_dir = helper.pause_dir
         if pause_dir.exists():
-            for file in pause_dir.iterdir():
-                file.unlink()
-            pause_dir.rmdir()
-            pause_dir.parent.rmdir()
+            shutil.rmtree(pause_dir)
+        if pause_dir.parent.exists():
+            shutil.rmtree(pause_dir.parent)
 
         assert helper.get_most_recent_session() is None
 
@@ -895,8 +893,9 @@ class TestGetSessionCount:
     def test_returns_zero_when_directory_missing(self, temp_project_dir):
         """Test returns 0 when pause directory doesn't exist."""
         helper = SessionResumeHelper(project_path=temp_project_dir)
-        # Don't create pause directory
-        helper.pause_dir.rmdir()
+        # Remove pause directory
+        if helper.pause_dir.exists():
+            shutil.rmtree(helper.pause_dir)
 
         assert helper.get_session_count() == 0
 
@@ -932,7 +931,8 @@ class TestListAllSessions:
     def test_returns_empty_when_directory_missing(self, temp_project_dir):
         """Test returns empty list when pause directory doesn't exist."""
         helper = SessionResumeHelper(project_path=temp_project_dir)
-        helper.pause_dir.rmdir()
+        if helper.pause_dir.exists():
+            shutil.rmtree(helper.pause_dir)
 
         assert helper.list_all_sessions() == []
 
@@ -1177,7 +1177,8 @@ class TestEdgeCases:
 
         # Create symlink (if supported)
         try:
-            helper.pause_dir.rmdir()
+            if helper.pause_dir.exists():
+                shutil.rmtree(helper.pause_dir)
             helper.pause_dir.symlink_to(actual_dir)
 
             # Create session in actual directory

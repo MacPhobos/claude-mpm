@@ -126,7 +126,10 @@ async def test_mcp_server():
     finally:
         # Terminate the server
         print("\nStopping server...")
-        proc.terminate()
+        try:
+            proc.terminate()
+        except ProcessLookupError:
+            pass  # Process already exited before we could terminate it
         await proc.wait()
 
     return 0

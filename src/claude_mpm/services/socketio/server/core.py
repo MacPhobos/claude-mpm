@@ -390,8 +390,8 @@ class SocketIOServerCore:
                         "UserPromptSubmit": "user_prompt_submit",
                         "UserPromptCancel": "user_prompt_cancel",
                         # Tool execution events
-                        "PreToolUse": "pre_tool_use",
-                        "PostToolUse": "post_tool_use",
+                        "PreToolUse": "pre_tool",
+                        "PostToolUse": "post_tool",
                         "ToolStart": "tool_start",
                         "ToolUse": "tool_use",
                         # Assistant events

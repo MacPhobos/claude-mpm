@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from claude_mpm.core.config import Config
 from claude_mpm.core.interfaces import AgentDeploymentInterface
 from claude_mpm.services.agents.deployment.config import (
     DeploymentConfig,
@@ -56,7 +57,7 @@ from claude_mpm.services.agents.deployment.validation import (
 class TestDeploymentStrategies:
     """Test deployment strategy pattern."""
 
-    def test_system_strategy_can_handle_default_context():
+    def test_system_strategy_can_handle_default_context(self):
         """Test that system strategy handles default context."""
         strategy = SystemAgentDeploymentStrategy()
         context = DeploymentContext()
@@ -64,7 +65,7 @@ class TestDeploymentStrategies:
         assert strategy.can_handle(context)
         assert strategy.get_deployment_priority() == 100
 
-    def test_project_strategy_can_handle_project_context():
+    def test_project_strategy_can_handle_project_context(self):
         """Test that project strategy handles project context."""
         strategy = ProjectAgentDeploymentStrategy()
         context = DeploymentContext(
@@ -74,7 +75,7 @@ class TestDeploymentStrategies:
         assert strategy.can_handle(context)
         assert strategy.get_deployment_priority() == 50
 
-    def test_user_strategy_can_handle_user_context():
+    def test_user_strategy_can_handle_user_context(self):
         """Test that user strategy handles user context."""
         strategy = UserAgentDeploymentStrategy()
 
@@ -84,27 +85,32 @@ class TestDeploymentStrategies:
 
         assert strategy.get_deployment_priority() == 10
 
-    def test_strategy_selector_selects_correct_strategy():
+    def test_strategy_selector_selects_correct_strategy(self):
         """Test that strategy selector chooses the right strategy."""
+        import os
+
         selector = DeploymentStrategySelector()
 
-        # Test system strategy selection
-        context = DeploymentContext()
-        strategy = selector.select_strategy(context)
-        assert isinstance(strategy, SystemAgentDeploymentStrategy)
+        # Test system strategy selection (clear CLAUDE_MPM_USER_PWD to avoid user strategy winning)
+        # The env var CLAUDE_MPM_USER_PWD is set in some dev environments, so we clear it
+        clean_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_MPM_USER_PWD"}
+        with patch.dict("os.environ", clean_env, clear=True):
+            context = DeploymentContext()
+            strategy = selector.select_strategy(context)
+            assert isinstance(strategy, SystemAgentDeploymentStrategy)
 
-        # Test project strategy selection
-        context = DeploymentContext(
-            deployment_mode="project", working_directory=Path("/test/project")
-        )
-        strategy = selector.select_strategy(context)
-        assert isinstance(strategy, ProjectAgentDeploymentStrategy)
+            # Test project strategy selection
+            context = DeploymentContext(
+                deployment_mode="project", working_directory=Path("/test/project")
+            )
+            strategy = selector.select_strategy(context)
+            assert isinstance(strategy, ProjectAgentDeploymentStrategy)
 
 
 class TestDeploymentPipeline:
     """Test deployment pipeline components."""
 
-    def test_pipeline_context_initialization():
+    def test_pipeline_context_initialization(self):
         """Test pipeline context initialization."""
         context = PipelineContext(
             target_dir=Path("/test"), force_rebuild=True, deployment_mode="project"
@@ -116,7 +122,7 @@ class TestDeploymentPipeline:
         assert context.errors == []
         assert context.warnings == []
 
-    def test_pipeline_context_error_handling():
+    def test_pipeline_context_error_handling(self):
         """Test pipeline context error handling."""
         context = PipelineContext()
 
@@ -129,7 +135,7 @@ class TestDeploymentPipeline:
         assert "Test error" in context.errors
         assert "Test warning" in context.warnings
 
-    def test_configuration_load_step():
+    def test_configuration_load_step(self):
         """Test configuration loading step."""
         step = ConfigurationLoadStep()
         context = PipelineContext()
@@ -140,20 +146,20 @@ class TestDeploymentPipeline:
         assert context.config is not None
         assert isinstance(context.excluded_agents, list)
 
-    def test_target_directory_setup_step():
+    def test_target_directory_setup_step(self, tmp_path):
         """Test target directory setup step."""
         step = TargetDirectorySetupStep()
 
-        with tmp_path as temp_dir:
-            context = PipelineContext(target_dir=Path(temp_dir) / "test_agents")
+        temp_dir = tmp_path
+        context = PipelineContext(target_dir=Path(temp_dir) / "test_agents")
 
-            result = step.execute(context)
+        result = step.execute(context)
 
-            assert result.is_success
-            assert context.actual_target_dir is not None
-            assert context.actual_target_dir.exists()
+        assert result.is_success
+        assert context.actual_target_dir is not None
+        assert context.actual_target_dir.exists()
 
-    def test_pipeline_builder_creates_standard_pipeline():
+    def test_pipeline_builder_creates_standard_pipeline(self):
         """Test pipeline builder creates standard pipeline."""
         builder = DeploymentPipelineBuilder()
         steps = builder.create_standard_pipeline()
@@ -162,7 +168,7 @@ class TestDeploymentPipeline:
         assert any(isinstance(step, ConfigurationLoadStep) for step in steps)
         assert any(isinstance(step, TargetDirectorySetupStep) for step in steps)
 
-    def test_pipeline_executor_runs_steps():
+    def test_pipeline_executor_runs_steps(self):
         """Test pipeline executor runs steps successfully."""
         executor = DeploymentPipelineExecutor()
         builder = DeploymentPipelineBuilder()
@@ -180,7 +186,7 @@ class TestDeploymentPipeline:
 class TestDeploymentConfig:
     """Test deployment configuration management."""
 
-    def test_deployment_config_defaults():
+    def test_deployment_config_defaults(self):
         """Test deployment config default values."""
         config = DeploymentConfig()
 
@@ -190,7 +196,7 @@ class TestDeploymentConfig:
         assert config.force_rebuild is False
         assert config.use_async is False
 
-    def test_deployment_config_exclusion_logic():
+    def test_deployment_config_exclusion_logic(self):
         """Test agent exclusion logic."""
         config = DeploymentConfig(
             excluded_agents=["test-agent", "qa-agent"], case_sensitive_exclusion=True
@@ -202,7 +208,7 @@ class TestDeploymentConfig:
         config.case_sensitive_exclusion = False
         assert config.should_exclude_agent("Test-Agent")
 
-    def test_deployment_config_manager_loads_config():
+    def test_deployment_config_manager_loads_config(self):
         """Test deployment config manager loads configuration."""
         manager = DeploymentConfigManager()
 
@@ -211,7 +217,7 @@ class TestDeploymentConfig:
         assert isinstance(config, DeploymentConfig)
         assert config.environment in ["development", "testing", "production"]
 
-    def test_deployment_config_validation():
+    def test_deployment_config_validation(self):
         """Test deployment config validation."""
         manager = DeploymentConfigManager()
 
@@ -227,7 +233,7 @@ class TestDeploymentConfig:
 class TestDeploymentResults:
     """Test deployment results management."""
 
-    def test_deployment_metrics_initialization():
+    def test_deployment_metrics_initialization(self):
         """Test deployment metrics initialization."""
         metrics = DeploymentMetrics()
 
@@ -236,7 +242,7 @@ class TestDeploymentResults:
         assert metrics.errors == []
         assert metrics.warnings == []
 
-    def test_deployment_metrics_agent_tracking():
+    def test_deployment_metrics_agent_tracking(self):
         """Test deployment metrics agent tracking."""
         metrics = DeploymentMetrics()
 
@@ -251,7 +257,7 @@ class TestDeploymentResults:
         assert "qa-agent" in metrics.updated_agent_names
         assert "security-agent" in metrics.skipped_agent_names
 
-    def test_deployment_result_builder():
+    def test_deployment_result_builder(self):
         """Test deployment result builder."""
         builder = DeploymentResultBuilder()
 
@@ -273,7 +279,7 @@ class TestDeploymentResults:
         assert "metrics" in results
         assert "detailed_metrics" in results
 
-    def test_deployment_metrics_success_rate():
+    def test_deployment_metrics_success_rate(self):
         """Test deployment metrics success rate calculation."""
         metrics = DeploymentMetrics()
         metrics.total_agents = 4
@@ -290,7 +296,7 @@ class TestDeploymentResults:
 class TestAgentProcessor:
     """Test agent processor components."""
 
-    def test_agent_deployment_context_creation():
+    def test_agent_deployment_context_creation(self):
         """Test agent deployment context creation."""
         template_file = Path("/test/templates/test-agent.json")
         agents_dir = Path("/test/agents")
@@ -315,7 +321,7 @@ class TestAgentProcessor:
         assert context.base_agent_version == base_agent_version
         assert context.is_project_deployment() is True
 
-    def test_agent_deployment_result_creation():
+    def test_agent_deployment_result_creation(self):
         """Test agent deployment result creation."""
         agent_name = "test-agent"
         template_file = Path("/test/templates/test-agent.json")
@@ -364,7 +370,7 @@ class TestAgentProcessor:
         assert result.error_message == "build error"
         assert result.is_successful() is False
 
-    def test_agent_deployment_result_to_dict():
+    def test_agent_deployment_result_to_dict(self):
         """Test agent deployment result dictionary conversion."""
         agent_name = "test-agent"
         template_file = Path("/test/templates/test-agent.json")
@@ -385,7 +391,7 @@ class TestAgentProcessor:
         assert result_dict["reason"] == "version update"
         assert result_dict["metadata"] == {"custom": "data"}
 
-    def test_agent_processor_validation():
+    def test_agent_processor_validation(self, tmp_path):
         """Test agent processor validation."""
         # Mock dependencies
         template_builder = Mock()
@@ -393,31 +399,31 @@ class TestAgentProcessor:
 
         processor = AgentProcessor(template_builder, version_manager)
 
-        with tmp_path as temp_dir:
-            # Create a valid template file
-            template_file = Path(temp_dir) / "test-agent.json"
-            template_file.write_text('{"name": "test-agent"}')
+        temp_dir = tmp_path
+        # Create a valid template file
+        template_file = Path(temp_dir) / "test-agent.json"
+        template_file.write_text('{"name": "test-agent"}')
 
-            target_file = Path(temp_dir) / "agents" / "test-agent.md"
+        target_file = Path(temp_dir) / "agents" / "test-agent.md"
 
-            context = AgentDeploymentContext(
-                agent_name="test-agent",
-                template_file=template_file,
-                target_file=target_file,
-            )
+        context = AgentDeploymentContext(
+            agent_name="test-agent",
+            template_file=template_file,
+            target_file=target_file,
+        )
 
-            # Test validation passes for valid template
-            assert processor.validate_agent(context) is True
+        # Test validation passes for valid template
+        assert processor.validate_agent(context) is True
 
-            # Test validation fails for non-existent template
-            context.template_file = Path(temp_dir) / "nonexistent.json"
-            assert processor.validate_agent(context) is False
+        # Test validation fails for non-existent template
+        context.template_file = Path(temp_dir) / "nonexistent.json"
+        assert processor.validate_agent(context) is False
 
 
 class TestDeploymentValidation:
     """Test deployment validation components."""
 
-    def test_validation_result_creation():
+    def test_validation_result_creation(self):
         """Test validation result creation and manipulation."""
         result = ValidationResult(is_valid=True)
 
@@ -443,7 +449,7 @@ class TestDeploymentValidation:
         assert "1 errors" in str_repr
         assert "1 warnings" in str_repr
 
-    def test_validation_result_merge():
+    def test_validation_result_merge(self):
         """Test merging validation results."""
         result1 = ValidationResult(is_valid=True)
         result1.add_warning("Warning 1")
@@ -458,50 +464,52 @@ class TestDeploymentValidation:
         assert merged.warning_count == 1
         assert len(merged.issues) == 2
 
-    def test_template_validator():
+    def test_template_validator(self, tmp_path):
         """Test template validator."""
         validator = TemplateValidator()
 
-        with tmp_path as temp_dir:
-            # Create a valid template file
-            template_file = Path(temp_dir) / "test-agent.json"
-            template_data = {
-                "schema_version": "1.2.0",
-                "agent_id": "test-agent",
-                "agent_version": "1.0.0",
-                "agent_type": "qa",
-                "metadata": {
-                    "name": "Test Agent",
-                    "description": "A test agent for validation",
-                    "category": "testing",
-                    "tags": ["test", "validation"],
-                },
-                "capabilities": {"model": "sonnet", "tools": ["Read", "Write"]},
-                "instructions": {
-                    "system_prompt": "You are a test agent for validation purposes."
-                },
-            }
-            template_file.write_text(json.dumps(template_data, indent=2))
+        temp_dir = tmp_path
+        # Create a valid template file
+        template_file = Path(temp_dir) / "test-agent.json"
+        template_data = {
+            "schema_version": "1.2.0",
+            "agent_id": "test-agent",
+            "agent_version": "1.0.0",
+            "agent_type": "qa",
+            "metadata": {
+                "name": "Test Agent",
+                "description": "A test agent for validation",
+                "category": "testing",
+                "tags": ["test", "validation"],
+            },
+            "capabilities": {
+                "model": "sonnet",
+                "tools": ["Read", "Write"],
+                "resource_tier": "standard",
+            },
+            "instructions": "You are a test agent for validation purposes.",
+        }
+        template_file.write_text(json.dumps(template_data, indent=2))
 
-            # Test validation passes for valid template
-            result = validator.validate_template_file(template_file)
-            assert result.is_valid is True
-            assert result.error_count == 0
+        # Test validation passes for valid template
+        result = validator.validate_template_file(template_file)
+        assert result.is_valid is True
+        assert result.error_count == 0
 
-            # Test validation fails for non-existent file
-            nonexistent_file = Path(temp_dir) / "nonexistent.json"
-            result = validator.validate_template_file(nonexistent_file)
-            assert result.is_valid is False
-            assert result.error_count > 0
+        # Test validation fails for non-existent file
+        nonexistent_file = Path(temp_dir) / "nonexistent.json"
+        result = validator.validate_template_file(nonexistent_file)
+        assert result.is_valid is False
+        assert result.error_count > 0
 
-    def test_agent_validator():
+    def test_agent_validator(self, tmp_path):
         """Test agent validator."""
         validator = AgentValidator()
 
-        with tmp_path as temp_dir:
-            # Create a valid agent file
-            agent_file = Path(temp_dir) / "test-agent.md"
-            agent_content = """---
+        temp_dir = tmp_path
+        # Create a valid agent file
+        agent_file = Path(temp_dir) / "test-agent.md"
+        agent_content = """---
 name: "Test Agent"
 description: "A test agent for validation"
 author: "claude-mpm"
@@ -514,70 +522,72 @@ tools: ["Read", "Write"]
 
 This is a test agent for validation purposes.
 """
-            agent_file.write_text(agent_content)
+        agent_file.write_text(agent_content)
 
-            # Test validation passes for valid agent
-            result = validator.validate_agent_file(agent_file)
-            assert result.is_valid is True
-            assert result.error_count == 0
+        # Test validation passes for valid agent
+        result = validator.validate_agent_file(agent_file)
+        assert result.is_valid is True
+        assert result.error_count == 0
 
-            # Test validation fails for non-existent file
-            nonexistent_file = Path(temp_dir) / "nonexistent.md"
-            result = validator.validate_agent_file(nonexistent_file)
-            assert result.is_valid is False
-            assert result.error_count > 0
+        # Test validation fails for non-existent file
+        nonexistent_file = Path(temp_dir) / "nonexistent.md"
+        result = validator.validate_agent_file(nonexistent_file)
+        assert result.is_valid is False
+        assert result.error_count > 0
 
-    def test_deployment_validator():
+    def test_deployment_validator(self, tmp_path):
         """Test deployment validator."""
         validator = DeploymentValidator()
 
-        with tmp_path as temp_dir:
-            target_dir = Path(temp_dir) / "agents"
-            templates_dir = Path(temp_dir) / "templates"
-            templates_dir.mkdir()
+        temp_dir = tmp_path
+        target_dir = Path(temp_dir) / "agents"
+        templates_dir = Path(temp_dir) / "templates"
+        templates_dir.mkdir()
 
-            # Create a template file
-            template_file = templates_dir / "test-agent.json"
-            template_data = {
-                "schema_version": "1.2.0",
-                "agent_id": "test-agent",
-                "agent_version": "1.0.0",
-                "agent_type": "qa",
-                "metadata": {
-                    "name": "Test Agent",
-                    "description": "A test agent",
-                    "category": "testing",
-                    "tags": ["test"],
-                },
-                "capabilities": {"model": "sonnet", "tools": ["Read"]},
-                "instructions": {"system_prompt": "Test prompt"},
-            }
-            template_file.write_text(json.dumps(template_data, indent=2))
+        # Create a template file
+        template_file = templates_dir / "test-agent.json"
+        template_data = {
+            "schema_version": "1.2.0",
+            "agent_id": "test-agent",
+            "agent_version": "1.0.0",
+            "agent_type": "qa",
+            "metadata": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "category": "testing",
+                "tags": ["test"],
+            },
+            "capabilities": {
+                "model": "sonnet",
+                "tools": ["Read"],
+                "resource_tier": "standard",
+            },
+            "instructions": "Test prompt for the agent.",
+        }
+        template_file.write_text(json.dumps(template_data, indent=2))
 
-            # Test environment validation
-            result = validator.validate_deployment_environment(
-                target_dir, templates_dir
-            )
-            assert result.is_valid is True
-            assert target_dir.exists()  # Should be created
+        # Test environment validation
+        result = validator.validate_deployment_environment(target_dir, templates_dir)
+        assert result.is_valid is True
+        assert target_dir.exists()  # Should be created
 
-            # Test template validation
-            template_results = validator.validate_template_files([template_file])
-            assert len(template_results) == 1
-            assert template_results[str(template_file)].is_valid is True
+        # Test template validation
+        template_results = validator.validate_template_files([template_file])
+        assert len(template_results) == 1
+        assert template_results[str(template_file)].is_valid is True
 
-            # Test validation summary
-            summary = validator.get_validation_summary(template_results)
-            assert summary["total_files"] == 1
-            assert summary["valid_files"] == 1
-            assert summary["invalid_files"] == 0
-            assert summary["success_rate"] == 100.0
+        # Test validation summary
+        summary = validator.get_validation_summary(template_results)
+        assert summary["total_files"] == 1
+        assert summary["valid_files"] == 1
+        assert summary["invalid_files"] == 0
+        assert summary["success_rate"] == 100.0
 
 
 class TestDeploymentFacade:
     """Test deployment facade components."""
 
-    def test_sync_deployment_executor():
+    def test_sync_deployment_executor(self):
         """Test sync deployment executor."""
         # Mock dependencies
         pipeline_builder = Mock()
@@ -605,7 +615,7 @@ class TestDeploymentFacade:
         assert perf["available"] is True
         assert perf["estimated_speedup"] == 1.0
 
-    def test_async_deployment_executor():
+    def test_async_deployment_executor(self):
         """Test async deployment executor."""
         executor = AsyncDeploymentExecutor()
 
@@ -618,7 +628,7 @@ class TestDeploymentFacade:
         assert perf["estimated_speedup"] == 1.6
         assert perf["memory_usage"] == "higher"
 
-    def test_deployment_facade_executor_selection():
+    def test_deployment_facade_executor_selection(self):
         """Test deployment facade executor selection."""
         # Mock dependencies
         pipeline_builder = Mock()
@@ -645,7 +655,7 @@ class TestDeploymentFacade:
             )
             assert async_executor.get_executor_name() == "async"
 
-    def test_deployment_facade_available_executors():
+    def test_deployment_facade_available_executors(self):
         """Test getting available executors."""
         # Mock dependencies
         pipeline_builder = Mock()
@@ -660,7 +670,7 @@ class TestDeploymentFacade:
         sync_available = any(exec_info["name"] == "sync" for exec_info in available)
         assert sync_available is True
 
-    def test_deployment_facade_recommendations():
+    def test_deployment_facade_recommendations(self):
         """Test executor recommendations."""
         # Mock dependencies
         pipeline_builder = Mock()
@@ -683,7 +693,7 @@ class TestDeploymentFacade:
 class TestInterfaceCompliance:
     """Test interface compliance components."""
 
-    def test_interface_adapter():
+    def test_interface_adapter(self):
         """Test interface adapter functionality."""
         # Mock deployment service
         mock_service = Mock()
@@ -727,49 +737,49 @@ class TestInterfaceCompliance:
         assert "interface_version" in status
         assert status["adapter_used"] is True
 
-    def test_refactored_service_interface_compliance():
+    def test_refactored_service_interface_compliance(self, tmp_path):
         """Test that refactored service implements the interface correctly."""
-        with tmp_path as temp_dir:
-            working_dir = Path(temp_dir)
-            templates_dir = working_dir / "agents"
-            templates_dir.mkdir()
-            base_agent_path = working_dir / "base_agent.md"
-            base_agent_path.write_text("# Base Agent")
+        temp_dir = tmp_path
+        working_dir = Path(temp_dir)
+        templates_dir = working_dir / "agents"
+        templates_dir.mkdir()
+        base_agent_path = working_dir / "base_agent.md"
+        base_agent_path.write_text("# Base Agent")
 
-            # Create refactored service
-            service = RefactoredAgentDeploymentService(
-                templates_dir=templates_dir,
-                base_agent_path=base_agent_path,
-                working_directory=working_dir,
-            )
+        # Create refactored service
+        service = RefactoredAgentDeploymentService(
+            templates_dir=templates_dir,
+            base_agent_path=base_agent_path,
+            working_directory=working_dir,
+        )
 
-            # Test interface compliance
-            assert isinstance(service, AgentDeploymentInterface)
+        # Test interface compliance
+        assert isinstance(service, AgentDeploymentInterface)
 
-            # Test deploy_agents method
-            result = service.deploy_agents(force=False, include_all=False)
-            assert isinstance(result, dict)
-            assert "success" in result
-            assert "deployed" in result
-            assert "updated" in result
-            assert "errors" in result
+        # Test deploy_agents method
+        result = service.deploy_agents(force=False, include_all=False)
+        assert isinstance(result, dict)
+        assert "success" in result
+        assert "deployed" in result
+        assert "updated" in result
+        assert "errors" in result
 
-            # Test validate_agent method (with non-existent file)
-            is_valid, errors = service.validate_agent(Path("/nonexistent/agent.md"))
-            assert is_valid is False
-            assert len(errors) > 0
+        # Test validate_agent method (with non-existent file)
+        is_valid, errors = service.validate_agent(Path("/nonexistent/agent.md"))
+        assert is_valid is False
+        assert len(errors) > 0
 
-            # Test clean_deployment method
-            cleanup_result = service.clean_deployment(preserve_user_agents=True)
-            assert isinstance(cleanup_result, bool)
+        # Test clean_deployment method
+        cleanup_result = service.clean_deployment(preserve_user_agents=True)
+        assert isinstance(cleanup_result, bool)
 
-            # Test get_deployment_status method
-            status = service.get_deployment_status()
-            assert isinstance(status, dict)
-            assert "service_version" in status
-            assert status["service_version"] == "refactored-1.0.0"
+        # Test get_deployment_status method
+        status = service.get_deployment_status()
+        assert isinstance(status, dict)
+        assert "service_version" in status
+        assert status["service_version"] == "refactored-1.0.0"
 
-    def test_interface_method_signatures():
+    def test_interface_method_signatures(self, tmp_path):
         """Test that interface method signatures are correct."""
         # This test ensures the interface methods have the expected signatures
 
@@ -787,10 +797,10 @@ class TestInterfaceCompliance:
             assert callable(method)
 
         # Test that our implementations have the same methods
-        with tmp_path as temp_dir:
-            service = RefactoredAgentDeploymentService(working_directory=Path(temp_dir))
+        temp_dir = tmp_path
+        service = RefactoredAgentDeploymentService(working_directory=Path(temp_dir))
 
-            for method_name in interface_methods:
-                assert hasattr(service, method_name)
-                method = getattr(service, method_name)
-                assert callable(method)
+        for method_name in interface_methods:
+            assert hasattr(service, method_name)
+            method = getattr(service, method_name)
+            assert callable(method)

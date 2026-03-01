@@ -44,7 +44,11 @@ def add_messages_subparser(subparsers) -> argparse.ArgumentParser:
         "to_project",
         help="Absolute path to target project (e.g., /Users/name/Projects/web-app)",
     )
-    send_parser.add_argument("--body", "-b", required=True, help="Message body content")
+    send_parser.add_argument("--body", "-b", help="Message body content")
+    send_parser.add_argument(
+        "--body-file",
+        help="Read body from file (use '-' for stdin)",
+    )
     send_parser.add_argument(
         "--subject", "-s", default="Message from Claude MPM", help="Message subject"
     )
@@ -96,7 +100,11 @@ def add_messages_subparser(subparsers) -> argparse.ArgumentParser:
     # Reply command
     reply_parser = messages_subparsers.add_parser("reply", help="Reply to a message")
     reply_parser.add_argument("message_id", help="Message ID to reply to")
-    reply_parser.add_argument("--body", "-b", required=True, help="Reply body content")
+    reply_parser.add_argument("--body", "-b", help="Reply body content")
+    reply_parser.add_argument(
+        "--body-file",
+        help="Read body from file (use '-' for stdin)",
+    )
     reply_parser.add_argument(
         "--subject", "-s", help="Reply subject (default: Re: <original subject>)"
     )
@@ -107,6 +115,17 @@ def add_messages_subparser(subparsers) -> argparse.ArgumentParser:
     # Check command (quick status)
     messages_subparsers.add_parser(
         "check", help="Check for new messages (quick status)"
+    )
+
+    # Sessions command
+    sessions_parser = messages_subparsers.add_parser(
+        "sessions", help="List registered messaging sessions"
+    )
+    sessions_parser.add_argument(
+        "--all",
+        action="store_true",
+        default=False,
+        help="Show all sessions (including inactive/stale)",
     )
 
     return messages_parser

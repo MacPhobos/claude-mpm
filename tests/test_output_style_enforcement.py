@@ -13,12 +13,19 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from claude_mpm.core.output_style_manager import OutputStyleManager
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.log_enforcement_status() removed - "
+    "enforcement status logging was removed from the API. "
+    "Style enforcement is now handled differently without periodic re-enforcement."
+)
 def test_initial_deployment():
     """Test initial deployment and activation."""
     print("=" * 60)
@@ -53,6 +60,10 @@ def test_initial_deployment():
     print()
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.enforce_style_periodically() removed - "
+    "periodic style enforcement was removed from the API"
+)
 def test_style_change_detection():
     """Test detection when user changes the style."""
     print("=" * 60)
@@ -96,6 +107,10 @@ def test_style_change_detection():
     print()
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.enforce_style_periodically() removed - "
+    "periodic style enforcement was removed from the API"
+)
 def test_multiple_enforcements():
     """Test multiple enforcement cycles."""
     print("=" * 60)
@@ -144,46 +159,54 @@ def test_multiple_enforcements():
     print()
 
 
-def test_enforcement_with_missing_settings():
+@pytest.mark.skip(
+    reason="OutputStyleManager.log_enforcement_status() removed - "
+    "enforcement status API was removed from OutputStyleManager"
+)
+def test_enforcement_with_missing_settings(tmp_path):
     """Test enforcement when settings.json doesn't exist."""
     print("=" * 60)
     print("TEST 4: Enforcement with Missing Settings")
     print("=" * 60)
 
     # Create a temporary directory for testing
-    with tmp_path as tmpdir:
-        test_dir = Path(tmpdir) / ".claude"
-        test_dir.mkdir(parents=True)
+    tmpdir = tmp_path
+    test_dir = Path(tmpdir) / ".claude"
+    test_dir.mkdir(parents=True)
 
-        # Create manager with mocked paths
-        manager = OutputStyleManager()
-        manager.settings_file = test_dir / "settings.json"
-        manager.output_style_dir = test_dir / "output-styles"
+    # Create manager with mocked paths
+    manager = OutputStyleManager()
+    manager.settings_file = test_dir / "settings.json"
+    manager.output_style_dir = test_dir / "output-styles"
 
-        if not manager.supports_output_styles():
-            print("Skipping - Claude version does not support output styles")
-            return
+    if not manager.supports_output_styles():
+        print("Skipping - Claude version does not support output styles")
+        return
 
-        print(f"Settings file exists: {manager.settings_file.exists()}")
+    print(f"Settings file exists: {manager.settings_file.exists()}")
 
-        # Deploy style (should create settings)
-        content = manager.extract_output_style_content()
-        deployed = manager.deploy_output_style(content)
-        print(f"Deployment successful: {deployed}")
+    # Deploy style (should create settings)
+    content = manager.extract_output_style_content()
+    deployed = manager.deploy_output_style(content)
+    print(f"Deployment successful: {deployed}")
 
-        # Check if settings was created
-        print(f"Settings file created: {manager.settings_file.exists()}")
+    # Check if settings was created
+    print(f"Settings file created: {manager.settings_file.exists()}")
 
-        if manager.settings_file.exists():
-            settings = json.loads(manager.settings_file.read_text())
-            print(f"Active style: {settings.get('activeOutputStyle')}")
+    if manager.settings_file.exists():
+        settings = json.loads(manager.settings_file.read_text())
+        print(f"Active style: {settings.get('activeOutputStyle')}")
 
-        # Log status
-        manager.log_enforcement_status()
+    # Log status
+    manager.log_enforcement_status()
 
     print()
 
 
+@pytest.mark.skip(
+    reason="OutputStyleManager.log_enforcement_status() removed - "
+    "enforcement status logging was removed from the API"
+)
 def test_enforcement_status_display():
     """Test the enforcement status display in different scenarios."""
     print("=" * 60)

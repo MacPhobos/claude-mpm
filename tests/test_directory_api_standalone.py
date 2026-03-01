@@ -6,12 +6,16 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
 from aiohttp import web
 
 # Add the src directory to the Python path so we can import our module
 sys.path.insert(0, "/Users/masa/Projects/claude-mpm/src")
 
 
+@pytest.mark.skip(
+    reason="Standalone test that starts a real server on port 8767 - requires no port conflicts and is intended for manual testing only"
+)
 async def test_directory_api():
     """Test the directory API in a minimal server"""
 

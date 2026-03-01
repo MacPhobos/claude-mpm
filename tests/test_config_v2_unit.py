@@ -73,62 +73,60 @@ def test_yaml_form_widget():
     print("YAML Form Widget tests passed!\n")
 
 
-def test_enhanced_config_editor():
+def test_enhanced_config_editor(tmp_path):
     """Test enhanced config editor."""
     print("Testing Enhanced Config Editor...")
 
     # Create temporary installation for testing
-    with tmp_path as temp_dir:
-        temp_path = Path(temp_dir)
-        config_path = temp_path / ".claude-mpm" / "config.yaml"
-        config_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_dir = tmp_path
+    temp_path = Path(temp_dir)
+    config_path = temp_path / ".claude-mpm" / "config.yaml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Create test config
-        test_config = {
-            "project": {"name": "test-installation", "type": "test"},
-            "monitoring": {"enabled": True},
-        }
+    # Create test config
+    test_config = {
+        "project": {"name": "test-installation", "type": "test"},
+        "monitoring": {"enabled": True},
+    }
 
-        # Create test installation with proper config
-        installation = Installation(
-            path=temp_path, config=test_config, name=temp_path.name
-        )
+    # Create test installation with proper config
+    installation = Installation(path=temp_path, config=test_config, name=temp_path.name)
 
-        with config_path.open("w") as f:
-            yaml.dump(test_config, f)
+    with config_path.open("w") as f:
+        yaml.dump(test_config, f)
 
-        print(f"Created test installation at: {temp_path}")
+    print(f"Created test installation at: {temp_path}")
 
-        # Test editor
-        editor = EnhancedConfigEditor()
+    # Test editor
+    editor = EnhancedConfigEditor()
 
-        # Load installation
-        print("Loading installation...")
-        editor.load_installation(installation)
+    # Load installation
+    print("Loading installation...")
+    editor.load_installation(installation)
 
-        # Check that data was loaded
-        if editor.edit_mode == "form":
-            loaded_data = editor.form_editor.data
-        else:
-            loaded_data = yaml.safe_load(editor.yaml_editor.get_edit_text())
+    # Check that data was loaded
+    if editor.edit_mode == "form":
+        loaded_data = editor.form_editor.data
+    else:
+        loaded_data = yaml.safe_load(editor.yaml_editor.get_edit_text())
 
-        assert loaded_data == test_config, "Config should be loaded correctly"
-        print("✓ Installation loading successful")
+    assert loaded_data == test_config, "Config should be loaded correctly"
+    print("✓ Installation loading successful")
 
-        # Test save functionality
-        print("Testing save functionality...")
-        success, error = editor.save()
-        assert success, f"Save should succeed: {error}"
-        print("✓ Save functionality working")
+    # Test save functionality
+    print("Testing save functionality...")
+    success, error = editor.save()
+    assert success, f"Save should succeed: {error}"
+    print("✓ Save functionality working")
 
-        # Test mode toggle
-        print("Testing form/YAML mode toggle...")
-        original_mode = editor.edit_mode
-        editor._toggle_mode(editor.mode_button)
-        assert editor.edit_mode != original_mode, "Mode should toggle"
-        print(f"✓ Mode toggled from {original_mode} to {editor.edit_mode}")
+    # Test mode toggle
+    print("Testing form/YAML mode toggle...")
+    original_mode = editor.edit_mode
+    editor._toggle_mode(editor.mode_button)
+    assert editor.edit_mode != original_mode, "Mode should toggle"
+    print(f"✓ Mode toggled from {original_mode} to {editor.edit_mode}")
 
-        print("Enhanced Config Editor tests passed!\n")
+    print("Enhanced Config Editor tests passed!\n")
 
 
 def test_error_handling():

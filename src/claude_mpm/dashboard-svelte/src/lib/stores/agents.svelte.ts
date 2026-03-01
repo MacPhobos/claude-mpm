@@ -91,7 +91,7 @@ function getSessionId(event: ClaudeEvent): string | null {
 		event.sessionId ||
 		(event.data as any)?.session_id ||
 		(event.data as any)?.sessionId ||
-		event.source ||
+		// DO NOT fall back to event.source — "hook" is not a valid session ID
 		null
 	);
 }

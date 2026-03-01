@@ -517,11 +517,13 @@ class SocketIOConnectionPool:
 
             # Emit events
             for event in events:
+                data = event.data
                 enhanced_data = {
-                    **event.data,
-                    "timestamp": event.timestamp.isoformat(),
+                    **data,
                     "batch_id": f"batch_{int(time.time() * 1000)}",
                 }
+                if not (isinstance(data, dict) and "timestamp" in data):
+                    enhanced_data["timestamp"] = event.timestamp.isoformat()
 
                 await client.emit(event.event, enhanced_data, namespace=namespace)
 
@@ -566,11 +568,13 @@ class SocketIOConnectionPool:
 
                 # Emit events
                 for event in events:
+                    data = event.data
                     enhanced_data = {
-                        **event.data,
-                        "timestamp": event.timestamp.isoformat(),
+                        **data,
                         "batch_id": f"batch_{int(time.time() * 1000)}",
                     }
+                    if not (isinstance(data, dict) and "timestamp" in data):
+                        enhanced_data["timestamp"] = event.timestamp.isoformat()
 
                     loop.run_until_complete(
                         client.emit(event.event, enhanced_data, namespace=namespace)

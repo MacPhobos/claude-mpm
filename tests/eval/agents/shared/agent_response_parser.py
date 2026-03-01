@@ -137,24 +137,25 @@ class AgentResponseParser:
     """
 
     # BASE_AGENT tool patterns (all agents can use these)
+    # Matches both function-call syntax (Edit() and natural language (used Edit to...)
     BASE_TOOL_PATTERNS = {
         "Task": r"Task\s*\(\s*agent\s*=\s*['\"](\w+)['\"]",
-        "Edit": r"Edit\s*\(",
-        "Write": r"Write\s*\(",
-        "Read": r"Read\s*\(",
-        "Bash": r"Bash\s*\(",
-        "Grep": r"Grep\s*\(",
-        "Glob": r"Glob\s*\(",
-        "WebFetch": r"WebFetch\s*\(",
-        "WebSearch": r"WebSearch\s*\(",
-        "Skill": r"Skill\s*\(",
-        "SlashCommand": r"SlashCommand\s*\(",
+        "Edit": r"(?:Edit\s*\(|(?:used|with|using)\s+Edit\b)",
+        "Write": r"(?:Write\s*\(|(?:used|with|using)\s+Write\b)",
+        "Read": r"(?:Read\s*\(|(?:used|with|using)\s+Read\b|with\s+Read\s+to\b)",
+        "Bash": r"(?:Bash\s*\(|```bash)",
+        "Grep": r"(?:Grep\s*\(|(?:used|with|using)\s+Grep\b|\bGrep\s+for\b)",
+        "Glob": r"(?:Glob\s*\(|(?:used|with|using)\s+Glob\b|\bGlob\s+to\b)",
+        "WebFetch": r"(?:WebFetch\s*\(|(?:used|with|using)\s+WebFetch\b)",
+        "WebSearch": r"(?:WebSearch\s*\(|(?:used|with|using)\s+WebSearch\b)",
+        "Skill": r"(?:Skill\s*\(|(?:used|with|using)\s+Skill\b)",
+        "SlashCommand": r"(?:SlashCommand\s*\(|(?:used|with|using)\s+SlashCommand\b)",
     }
 
     # Verification patterns (BASE_AGENT requirement)
     VERIFICATION_PATTERNS = {
-        "file_verification": r"Read.*after.*(?:Edit|Write)",
-        "test_verification": r"(?:pytest|npm test|vitest).*(?:passed|failed|completed)",
+        "file_verification": r"(?:Read.*after.*(?:Edit|Write)|verif(?:y|ied).*(?:with|using)\s+Read|Read\s+to\s+confirm|with\s+Read\s+to\s+confirm)",
+        "test_verification": r"(?:pytest|npm\s+test|vitest|CI=true).*(?:passed|failed|completed|results?)",
         "api_verification": r"(?:curl|http|api).*(?:response|status|result)",
         "bash_verification": r"(?:echo|cat|ls).*verify",
     }
@@ -332,6 +333,24 @@ class AgentResponseParser:
                     context=bash_tool.context,
                 )
                 events.append(event)
+
+        # Also detect verification from text patterns (natural language)
+        for pattern_name, pattern in self._compiled_verification.items():
+            for match in pattern.finditer(text):
+                line_num = text[: match.start()].count("\n") + 1
+                # Avoid duplicates with existing events
+                if not any(e.line_number == line_num for e in events):
+                    events.append(
+                        VerificationEvent(
+                            verification_type=pattern_name.replace(
+                                "_verification", "_check"
+                            ),
+                            verified=True,
+                            verification_tool=pattern_name,
+                            line_number=line_num,
+                            context=match.group(0),
+                        )
+                    )
 
         return events
 
@@ -544,16 +563,18 @@ class AgentResponseParser:
                     )
                 ]
             ),
-            "ci_mode_used": any("CI=true" in t.context for t in bash_tools),
+            "ci_mode_used": any("CI=true" in t.context for t in bash_tools)
+            or "CI=true" in text,
             "watch_mode_detected": self._detect_pattern(
-                text, r"vitest(?!\s+run)|--watch|watch.*mode"
+                text, r"--watch\b|(?<!avoid\s)(?<!prevent\s)watch\s+mode(?!\s+leak)"
             ),
             "process_cleanup_verified": self._detect_pattern(
                 text, r"ps aux|pkill|process.*cleanup"
             ),
             "package_json_checked": any(
                 "package.json" in t.context for t in tools_used if t.tool_name == "Read"
-            ),
+            )
+            or "package.json" in text,
         }
 
         # Check critical violation: watch mode

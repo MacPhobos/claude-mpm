@@ -49,10 +49,10 @@ class AgentRecordService(BaseService):
 
         # Storage paths
         self.records_file = (
-            get_path_manager().get_tracking_dir() / "lifecycle_records.json"
+            get_path_manager().get_cache_dir() / "lifecycle_records.json"
         )
         self.history_file = (
-            get_path_manager().get_tracking_dir() / "operation_history.json"
+            get_path_manager().get_cache_dir() / "operation_history.json"
         )
 
         # Ensure tracking directory exists

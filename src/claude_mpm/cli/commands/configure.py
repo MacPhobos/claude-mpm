@@ -26,6 +26,7 @@ from rich.prompt import Confirm, Prompt
 from rich.text import Text
 
 from ...core.config import Config
+from ...core.deployment_context import DeploymentContext
 from ...core.unified_config import UnifiedConfig
 from ...services.agents.agent_recommendation_service import AgentRecommendationService
 from ...services.version_service import VersionService
@@ -71,6 +72,7 @@ class ConfigureCommand(BaseCommand):
         self.version_service = VersionService()
         self.current_scope = "project"
         self.project_dir = Path.cwd()
+        self._ctx = DeploymentContext.from_project(self.project_dir)
         self.agent_manager = None
         self.hook_manager = HookManager(self.console)
         self.behavior_manager = None  # Initialized when scope is set
@@ -184,10 +186,11 @@ class ConfigureCommand(BaseCommand):
             self.project_dir = Path(args.project_dir)
 
         # Initialize agent manager and behavior manager with appropriate config directory
-        if self.current_scope == "project":
-            config_dir = self.project_dir / ".claude-mpm"
+        if self.current_scope == "user":
+            self._ctx = DeploymentContext.from_user()
         else:
-            config_dir = Path.home() / ".claude-mpm"
+            self._ctx = DeploymentContext.from_project(self.project_dir)
+        config_dir = self._ctx.config_dir
         self.agent_manager = SimpleAgentManager(config_dir)
         self.behavior_manager = BehaviorManager(
             config_dir, self.current_scope, self.console
@@ -1269,14 +1272,12 @@ class ConfigureCommand(BaseCommand):
         )
 
     def _get_deployed_skill_ids(self) -> set:
-        """Get set of deployed skill IDs from .claude/skills/ directory.
+        """Get set of deployed skill IDs from scope-aware skills directory.
 
         Returns:
             Set of skill directory names and common variations for matching.
         """
-        from pathlib import Path
-
-        skills_dir = Path.cwd() / ".claude" / "skills"
+        skills_dir = self._ctx.skills_dir
         if not skills_dir.exists():
             return set()
 
@@ -1293,12 +1294,11 @@ class ConfigureCommand(BaseCommand):
         return deployed_ids
 
     def _install_skill(self, skill) -> None:
-        """Install a skill to .claude/skills/ directory."""
+        """Install a skill to scope-aware skills directory."""
         import shutil
-        from pathlib import Path
 
         # Target directory
-        target_dir = Path.cwd() / ".claude" / "skills" / skill.skill_id
+        target_dir = self._ctx.skills_dir / skill.skill_id
         target_dir.mkdir(parents=True, exist_ok=True)
 
         # Copy skill file(s)
@@ -1314,22 +1314,19 @@ class ConfigureCommand(BaseCommand):
                     shutil.copytree(item, target_dir / item.name, dirs_exist_ok=True)
 
     def _uninstall_skill(self, skill) -> None:
-        """Uninstall a skill from .claude/skills/ directory."""
+        """Uninstall a skill from scope-aware skills directory."""
         import shutil
-        from pathlib import Path
 
-        target_dir = Path.cwd() / ".claude" / "skills" / skill.skill_id
+        target_dir = self._ctx.skills_dir / skill.skill_id
         if target_dir.exists():
             shutil.rmtree(target_dir)
 
     def _install_skill_from_dict(self, skill_dict: dict) -> None:
-        """Install a skill from Git skill dict to .claude/skills/ directory.
+        """Install a skill from Git skill dict to scope-aware skills directory.
 
         Args:
             skill_dict: Skill metadata dict from GitSkillSourceManager.get_all_skills()
         """
-        from pathlib import Path
-
         skill_id = skill_dict.get("name", skill_dict.get("skill_id", "unknown"))
         content = skill_dict.get("content", "")
 
@@ -1341,7 +1338,7 @@ class ConfigureCommand(BaseCommand):
 
         # Target directory using deployment_name if available
         deploy_name = skill_dict.get("deployment_name", skill_id)
-        target_dir = Path.cwd() / ".claude" / "skills" / deploy_name
+        target_dir = self._ctx.skills_dir / deploy_name
         target_dir.mkdir(parents=True, exist_ok=True)
 
         # Write skill content to skill.md
@@ -1349,15 +1346,14 @@ class ConfigureCommand(BaseCommand):
         skill_file.write_text(content, encoding="utf-8")
 
     def _uninstall_skill_by_name(self, skill_name: str) -> None:
-        """Uninstall a skill by name from .claude/skills/ directory.
+        """Uninstall a skill by name from scope-aware skills directory.
 
         Args:
             skill_name: Name of skill directory to remove
         """
         import shutil
-        from pathlib import Path
 
-        target_dir = Path.cwd() / ".claude" / "skills" / skill_name
+        target_dir = self._ctx.skills_dir / skill_name
         if target_dir.exists():
             shutil.rmtree(target_dir)
 
@@ -1434,10 +1430,34 @@ class ConfigureCommand(BaseCommand):
         self.navigation.launch_claude_mpm()
 
     def _switch_scope(self) -> None:
-        """Switch between project and user scope."""
+        """Switch between project and user scope.
+
+        After switching, ALL dependent managers must be reinitialized so they
+        pick up the new scope's config_dir and deployment paths.  Lazy-init
+        objects are reset to None so they get recreated on next access.
+        """
         self.navigation.switch_scope()
         # Sync scope back from navigation
         self.current_scope = self.navigation.current_scope
+        # Recreate deployment context for new scope
+        if self.current_scope == "user":
+            self._ctx = DeploymentContext.from_user()
+        else:
+            self._ctx = DeploymentContext.from_project(self.project_dir)
+
+        # Reinitialize managers that depend on config_dir / scope
+        config_dir = self._ctx.config_dir
+        self.agent_manager = SimpleAgentManager(config_dir)
+        self.behavior_manager = BehaviorManager(
+            config_dir, self.current_scope, self.console
+        )
+
+        # Reset lazy-initialized objects so they pick up new scope on next access
+        self._agent_display = None
+        self._persistence = None
+        self._template_editor = None
+        self._startup_manager = None
+        self._navigation = None
 
     def _show_version_info_interactive(self) -> None:
         """Show version information in interactive mode."""
@@ -2274,12 +2294,8 @@ class ConfigureCommand(BaseCommand):
                 # Extract leaf name to match deployed filename
                 leaf_name = agent_id.split("/")[-1] if "/" in agent_id else agent_id
 
-                # Remove from all possible locations
-                paths_to_check = [
-                    Path.cwd() / ".claude-mpm" / "agents" / f"{leaf_name}.md",
-                    Path.cwd() / ".claude" / "agents" / f"{leaf_name}.md",
-                    Path.home() / ".claude" / "agents" / f"{leaf_name}.md",
-                ]
+                # Remove from scope-aware path (primary) + legacy locations
+                paths_to_check = self._agent_file_paths(leaf_name)
 
                 removed = False
                 for path in paths_to_check:
@@ -2288,12 +2304,7 @@ class ConfigureCommand(BaseCommand):
                         removed = True
 
                 # Also remove from virtual deployment state
-                deployment_state_paths = [
-                    Path.cwd() / ".claude" / "agents" / ".mpm_deployment_state",
-                    Path.home() / ".claude" / "agents" / ".mpm_deployment_state",
-                ]
-
-                for state_path in deployment_state_paths:
+                for state_path in self._deployment_state_paths():
                     if state_path.exists():
                         try:
                             with state_path.open() as f:
@@ -2623,21 +2634,12 @@ class ConfigureCommand(BaseCommand):
                 # Extract leaf name to check file existence
                 leaf_name = agent_id.split("/")[-1] if "/" in agent_id else agent_id
 
-                # Check all possible locations
-                paths_to_check = [
-                    Path.cwd() / ".claude-mpm" / "agents" / f"{leaf_name}.md",
-                    Path.cwd() / ".claude" / "agents" / f"{leaf_name}.md",
-                    Path.home() / ".claude" / "agents" / f"{leaf_name}.md",
-                ]
+                # Check scope-aware path + legacy locations
+                paths_to_check = self._agent_file_paths(leaf_name)
 
                 # Also check virtual deployment state
                 state_exists = False
-                deployment_state_paths = [
-                    Path.cwd() / ".claude" / "agents" / ".mpm_deployment_state",
-                    Path.home() / ".claude" / "agents" / ".mpm_deployment_state",
-                ]
-
-                for state_path in deployment_state_paths:
+                for state_path in self._deployment_state_paths():
                     if state_path.exists():
                         try:
                             import json
@@ -2725,26 +2727,15 @@ class ConfigureCommand(BaseCommand):
                     else:
                         leaf_name = agent_id
 
-                    # Remove from project, legacy, and user locations
-                    project_path = (
-                        Path.cwd() / ".claude-mpm" / "agents" / f"{leaf_name}.md"
-                    )
-                    legacy_path = Path.cwd() / ".claude" / "agents" / f"{leaf_name}.md"
-                    user_path = Path.home() / ".claude" / "agents" / f"{leaf_name}.md"
-
+                    # Remove from scope-aware path (primary) + legacy locations
                     removed = False
-                    for path in [project_path, legacy_path, user_path]:
+                    for path in self._agent_file_paths(leaf_name):
                         if path.exists():
                             path.unlink()
                             removed = True
 
                     # Also remove from virtual deployment state
-                    deployment_state_paths = [
-                        Path.cwd() / ".claude" / "agents" / ".mpm_deployment_state",
-                        Path.home() / ".claude" / "agents" / ".mpm_deployment_state",
-                    ]
-
-                    for state_path in deployment_state_paths:
+                    for state_path in self._deployment_state_paths():
                         if state_path.exists():
                             try:
                                 with state_path.open() as f:
@@ -3044,6 +3035,49 @@ class ConfigureCommand(BaseCommand):
 
         Prompt.ask("\nPress Enter to continue")
 
+    def _agent_file_paths(self, agent_name: str) -> List[Path]:
+        """Return the list of paths to check for an agent file.
+
+        The primary path is the active scope's agents_dir. Legacy locations
+        (project .claude-mpm/agents/, project .claude/agents/, user
+        ~/.claude/agents/) are included as secondary cleanup targets so that
+        agents deployed to the wrong location by older code are still found
+        and removed.
+        """
+        primary = self._ctx.agents_dir / f"{agent_name}.md"
+        # Legacy locations that older code may have written to
+        legacy_paths = [
+            Path.cwd() / ".claude-mpm" / "agents" / f"{agent_name}.md",
+            Path.cwd() / ".claude" / "agents" / f"{agent_name}.md",
+            Path.home() / ".claude" / "agents" / f"{agent_name}.md",
+        ]
+        # Deduplicate while keeping primary first
+        seen = {primary}
+        paths = [primary]
+        for p in legacy_paths:
+            if p not in seen:
+                seen.add(p)
+                paths.append(p)
+        return paths
+
+    def _deployment_state_paths(self) -> List[Path]:
+        """Return the list of deployment state file paths to check.
+
+        Includes the active scope path plus legacy locations for cleanup.
+        """
+        primary = self._ctx.agents_dir / ".mpm_deployment_state"
+        legacy_paths = [
+            Path.cwd() / ".claude" / "agents" / ".mpm_deployment_state",
+            Path.home() / ".claude" / "agents" / ".mpm_deployment_state",
+        ]
+        seen = {primary}
+        paths = [primary]
+        for p in legacy_paths:
+            if p not in seen:
+                seen.add(p)
+                paths.append(p)
+        return paths
+
     def _deploy_single_agent(
         self, agent: AgentConfig, show_feedback: bool = True
     ) -> bool:
@@ -3069,8 +3103,8 @@ class ConfigureCommand(BaseCommand):
                 else:
                     target_name = full_agent_id + ".md"
 
-                # Deploy to project-level agents directory
-                target_dir = self.project_dir / ".claude" / "agents"
+                # Deploy to scope-aware agents directory
+                target_dir = self._ctx.agents_dir
                 target_dir.mkdir(parents=True, exist_ok=True)
                 target_file = target_dir / target_name
 
@@ -3138,24 +3172,17 @@ class ConfigureCommand(BaseCommand):
                     leaf_name = full_agent_id.split("/")[-1]
                     file_names.append(f"{leaf_name}.md")
 
-                # Remove from both project and user directories
+                # Remove from active scope's agents directory
                 removed = False
-                project_agent_dir = Path.cwd() / ".claude-mpm" / "agents"
-                user_agent_dir = Path.home() / ".claude" / "agents"
+                scope_agent_dir = self._ctx.agents_dir
 
                 for file_name in file_names:
-                    project_file = project_agent_dir / file_name
-                    user_file = user_agent_dir / file_name
+                    scope_file = scope_agent_dir / file_name
 
-                    if project_file.exists():
-                        project_file.unlink()
+                    if scope_file.exists():
+                        scope_file.unlink()
                         removed = True
-                        self.console.print(f"[green]✓ Removed {project_file}[/green]")
-
-                    if user_file.exists():
-                        user_file.unlink()
-                        removed = True
-                        self.console.print(f"[green]✓ Removed {user_file}[/green]")
+                        self.console.print(f"[green]✓ Removed {scope_file}[/green]")
 
                 if removed:
                     self.console.print(

@@ -295,7 +295,7 @@ class TestAgentListingService:
         """Test getting agent details from registry when deployment service returns None."""
         service.deployment_service.get_agent_details.return_value = None
 
-        with patch("builtins.open", mock_open(read_data="Agent content")):
+        with patch("pathlib.Path.open", mock_open(read_data="Agent content")):
             with patch("pathlib.Path.exists", return_value=True):
                 with patch("pathlib.Path.stat") as mock_stat:
                     mock_stat.return_value = Mock(st_size=100, st_mtime=1234567890)

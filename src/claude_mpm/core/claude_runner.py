@@ -882,7 +882,12 @@ Use these agents to delegate specialized work via the Task tool.
                     import json
 
                     settings = json.loads(settings_file.read_text())
-                    if settings.get("activeOutputStyle") == "Claude MPM":
+                    current_style = settings.get("outputStyle")
+                    # Check both current native key and legacy key for backward compatibility
+                    if current_style == "claude_mpm" or (
+                        current_style is None
+                        and settings.get("activeOutputStyle") == "Claude MPM"
+                    ):
                         # Already active, check if file exists
                         output_style_file = (
                             Path.home() / ".claude" / "output-styles" / "claude-mpm.md"

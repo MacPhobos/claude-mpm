@@ -28,7 +28,7 @@ content_agent:
 
   claude:
     enabled: true
-    model: claude-3-5-sonnet-20241022
+    model: sonnet
     max_tokens: 4096
     temperature: 0.7
 ```
@@ -92,7 +92,7 @@ class ClaudeConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Enable Claude provider")
     model: str = Field(
-        default="claude-3-5-sonnet-20241022",
+        default="sonnet",
         description="Default Claude model",
     )
     max_tokens: int = Field(
@@ -400,7 +400,7 @@ content_agent:
   # Claude Configuration (cloud models)
   claude:
     enabled: true
-    model: claude-3-5-sonnet-20241022
+    model: sonnet
     max_tokens: 4096
     temperature: 0.7
     # api_key: sk-ant-...  # Or use ANTHROPIC_API_KEY env var
