@@ -371,6 +371,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "requires_network: mark test as requiring network access"
     )
+    config.addinivalue_line(
+        "markers", "regression: mark test as a regression/characterization test"
+    )
 
 
 # ===== Helper Functions =====
@@ -394,3 +397,59 @@ def create_mock_agent_file(agent_dir: Path, name: str, **kwargs) -> Path:
     agent_path = agent_dir / f"{name}.yml"
     agent_path.write_text(yaml.dump(agent_data))
     return agent_path
+
+
+# ===== Scope-Aware Deployment Fixtures =====
+
+
+@pytest.fixture
+def project_scope_dirs(tmp_path):
+    """Standard PROJECT scope directory structure.
+
+    Mimics: {project}/.claude/agents/, {project}/.claude/skills/,
+            {project}/.claude-mpm/
+    """
+    project = tmp_path / "my_project"
+    dirs = {
+        "root": project,
+        "agents": project / ".claude" / "agents",
+        "skills": project / ".claude" / "skills",
+        "archive": project / ".claude" / "agents" / "unused",
+        "config": project / ".claude-mpm",
+    }
+    for d in dirs.values():
+        d.mkdir(parents=True, exist_ok=True)
+    return dirs
+
+
+@pytest.fixture
+def user_scope_dirs(tmp_path):
+    """Standard USER scope directory structure (mocked home).
+
+    Patches Path.home() to tmp_path/home so tests don't touch the real
+    ~/.claude directory.
+
+    Returns: (dirs_dict, fake_home_path)
+    """
+    fake_home = tmp_path / "home"
+    dirs = {
+        "home": fake_home,
+        "agents": fake_home / ".claude" / "agents",
+        "skills": fake_home / ".claude" / "skills",
+        "archive": fake_home / ".claude" / "agents" / "unused",
+        "config": fake_home / ".claude-mpm",
+    }
+    for d in dirs.values():
+        d.mkdir(parents=True, exist_ok=True)
+    return dirs, fake_home
+
+
+@pytest.fixture
+def both_scopes(project_scope_dirs, user_scope_dirs):
+    """Provides both scope directory structures for cross-scope isolation tests."""
+    user_dirs, fake_home = user_scope_dirs
+    return {
+        "project": project_scope_dirs,
+        "user": user_dirs,
+        "fake_home": fake_home,
+    }

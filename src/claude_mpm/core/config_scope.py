@@ -22,6 +22,27 @@ class ConfigScope(str, Enum):
 
     The str base class ensures backward compatibility with existing
     CLI string comparisons (e.g., scope == "project" still works).
+
+    Scope Semantics:
+        PROJECT: All paths are rooted under the project directory.
+            - agents:  {project}/.claude/agents/
+            - skills:  {project}/.claude/skills/
+            - archive: {project}/.claude/agents/unused/
+            - config:  {project}/.claude-mpm/
+
+        USER: All paths are rooted under the user home directory.
+            - agents:  ~/.claude/agents/
+            - skills:  ~/.claude/skills/
+            - archive: ~/.claude/agents/unused/
+            - config:  ~/.claude-mpm/
+
+    Note:
+        The CLI currently defaults to PROJECT scope. Several CLI methods
+        (e.g., _deploy_single_agent, _install_skill_from_dict) do NOT
+        yet respect the scope setting — they hardcode project_dir or
+        Path.cwd() as the deployment target. The resolve_* functions in
+        this module provide the CORRECT scope-aware path resolution, but
+        callers must be updated to use them.
     """
 
     PROJECT = "project"
