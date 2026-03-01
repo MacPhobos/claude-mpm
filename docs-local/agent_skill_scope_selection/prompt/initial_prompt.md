@@ -46,8 +46,7 @@ Extend BackupManager to accept scope
 
 ----
 
-Implement the scope-aware agent & skill deployment abstraction as specified in
-docs-local/agent_skill_scope_selection/plans/master-plan-v2.md
+Implement the scope-aware agent & skill deployment abstraction as specified in docs-local/agent_skill_scope_selection/plans/master-plan-v2.md
 
 This plan has 7 phases (plus Phase 4A/4B parallel):
 Phase 1: Test Foundation (characterization tests + fixtures)
