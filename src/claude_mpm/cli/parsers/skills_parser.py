@@ -70,6 +70,13 @@ def add_skills_subparser(subparsers) -> argparse.ArgumentParser:
         dest="skills",
         help="Deploy specific skill(s) only (can be used multiple times)",
     )
+    deploy_parser.add_argument(
+        "--scope",
+        choices=["project", "user"],
+        default="project",
+        help="Deployment scope: 'project' deploys to {project}/.claude/skills/, "
+        "'user' deploys to ~/.claude/skills/ (default: project)",
+    )
 
     # Validate command
     validate_parser = skills_subparsers.add_parser(
@@ -210,6 +217,13 @@ def add_skills_subparser(subparsers) -> argparse.ArgumentParser:
         "--all",
         action="store_true",
         help="Deploy all available skills, not just agent-referenced ones",
+    )
+    deploy_github_parser.add_argument(
+        "--scope",
+        choices=["project", "user"],
+        default="user",
+        help="Deployment scope: 'project' deploys to {project}/.claude/skills/, "
+        "'user' deploys to ~/.claude/skills/ (default: user)",
     )
 
     # List available GitHub skills

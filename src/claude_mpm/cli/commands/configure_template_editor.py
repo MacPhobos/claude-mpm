@@ -25,7 +25,6 @@ from rich.syntax import Syntax
 from rich.text import Text
 
 from .configure_models import AgentConfig
-from .configure_paths import get_agent_template_path
 
 
 class TemplateEditor:
@@ -72,12 +71,30 @@ class TemplateEditor:
         Returns:
             Path to agent template file
         """
-        return get_agent_template_path(
-            agent_name,
-            self.current_scope,
-            self.project_dir,
-            self.agent_manager.templates_dir,
-        )
+        if self.current_scope == "project":
+            config_dir = self.project_dir / ".claude-mpm" / "agents"
+        else:
+            config_dir = Path.home() / ".claude-mpm" / "agents"
+
+        config_dir.mkdir(parents=True, exist_ok=True)
+        custom_template = config_dir / f"{agent_name}.json"
+
+        if custom_template.exists():
+            return custom_template
+
+        # Look for system template with various naming conventions
+        templates_dir = self.agent_manager.templates_dir
+        for name in [
+            f"{agent_name}.json",
+            f"{agent_name.replace('-', '_')}.json",
+            f"{agent_name}-agent.json",
+            f"{agent_name.replace('-', '_')}_agent.json",
+        ]:
+            system_template = templates_dir / name
+            if system_template.exists():
+                return system_template
+
+        return custom_template
 
     def customize_agent_template(self, agents: List[AgentConfig]) -> None:
         """Customize agent JSON template (entry point).

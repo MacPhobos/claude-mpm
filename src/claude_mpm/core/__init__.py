@@ -16,6 +16,10 @@ def __getattr__(name):
         # Core components
         "ClaudeRunner": ("claude_mpm.core.claude_runner", "ClaudeRunner"),
         "Config": ("claude_mpm.core.config", "Config"),
+        "DeploymentContext": (
+            "claude_mpm.core.deployment_context",
+            "DeploymentContext",
+        ),
         # Dependency injection
         "DIContainer": ("claude_mpm.core.container", "DIContainer"),
         "ServiceLifetime": ("claude_mpm.core.container", "ServiceLifetime"),
@@ -58,6 +62,7 @@ __all__ = [
     "Config",
     "ConfigurationFactory",
     "DIContainer",
+    "DeploymentContext",
     "InjectableService",
     "LoggerMixin",
     "ServiceFactory",

@@ -21,6 +21,7 @@ from claude_mpm.core.config_scope import (
     resolve_agents_dir,
     resolve_skills_dir,
 )
+from claude_mpm.core.deployment_context import DeploymentContext
 from claude_mpm.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -237,6 +238,13 @@ def register_autoconfig_routes(app, config_event_handler, config_file_watcher):
             except Exception:  # nosec B110
                 pass  # Body is optional for detect
 
+            # Scope validation — autoconfig is project-only
+            scope_str = body.get("scope", "project") or "project"
+            try:
+                DeploymentContext.from_request_scope(scope_str)
+            except ValueError as e:
+                return _error_response(400, str(e), "SCOPE_NOT_SUPPORTED")
+
             project_path = Path(body.get("project_path", str(Path.cwd())))
 
             if not project_path.exists():
@@ -275,6 +283,13 @@ def register_autoconfig_routes(app, config_event_handler, config_file_watcher):
                 body = await request.json()
             except Exception:  # nosec B110
                 pass
+
+            # Scope validation — autoconfig is project-only
+            scope_str = body.get("scope", "project") or "project"
+            try:
+                DeploymentContext.from_request_scope(scope_str)
+            except ValueError as e:
+                return _error_response(400, str(e), "SCOPE_NOT_SUPPORTED")
 
             project_path = Path(body.get("project_path", str(Path.cwd())))
             min_confidence = body.get("min_confidence", 0.5)
@@ -335,6 +350,13 @@ def register_autoconfig_routes(app, config_event_handler, config_file_watcher):
                 body = await request.json()
             except Exception:  # nosec B110
                 pass
+
+            # Scope validation — autoconfig is project-only
+            scope_str = body.get("scope", "project") or "project"
+            try:
+                DeploymentContext.from_request_scope(scope_str)
+            except ValueError as e:
+                return _error_response(400, str(e), "SCOPE_NOT_SUPPORTED")
 
             project_path = Path(body.get("project_path", str(Path.cwd())))
             dry_run = body.get("dry_run", False)
