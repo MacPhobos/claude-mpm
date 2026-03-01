@@ -9,12 +9,11 @@ All blocking service calls are wrapped in asyncio.to_thread().
 
 import asyncio
 import time
-from pathlib import Path
 from typing import Any, Dict
 
 from aiohttp import web
 
-from claude_mpm.core.config_scope import ConfigScope, resolve_agents_dir
+from claude_mpm.core.deployment_context import DeploymentContext
 from claude_mpm.core.logging_config import get_logger
 from claude_mpm.services.config_api.validation import (
     validate_path_containment,
@@ -44,7 +43,6 @@ _agent_deployment_service = None
 def _get_backup_manager():
     global _backup_manager
     if _backup_manager is None:
-        from claude_mpm.core.deployment_context import DeploymentContext
         from claude_mpm.services.config_api.backup_manager import BackupManager
 
         ctx = DeploymentContext.from_project()
@@ -131,6 +129,13 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
         _source_id = body.get("source_id")
         force = body.get("force", False)
 
+        # Scope validation (R-3: null-safe)
+        scope_str = body.get("scope", "project") or "project"
+        try:
+            ctx = DeploymentContext.from_request_scope(scope_str)
+        except ValueError as e:
+            return _error_response(400, str(e), "VALIDATION_ERROR")
+
         if not agent_name:
             return _error_response(400, "agent_name is required", "VALIDATION_ERROR")
 
@@ -139,7 +144,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
         if not valid:
             return _error_response(400, err_msg, "VALIDATION_ERROR")
 
-        agents_dir = resolve_agents_dir(ConfigScope.PROJECT, Path.cwd())
+        agents_dir = ctx.agents_dir
         agent_path = agents_dir / f"{agent_name}.md"
 
         # Path containment check (defence in depth)
@@ -218,7 +223,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                 entity_type="agent",
                 entity_id=agent_name,
                 status="completed",
-                data={"agent_name": agent_name, "action": "deploy"},
+                data={"agent_name": agent_name, "action": "deploy", "scope": scope_str},
             )
 
             return web.json_response(
@@ -226,6 +231,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                     "success": True,
                     "message": f"Agent '{agent_name}' deployed successfully",
                     "agent_name": agent_name,
+                    "scope": scope_str,
                     "backup_id": result["backup_id"],
                     "verification": result["verification"],
                     "active_sessions_warning": len(sessions) > 0,
@@ -245,6 +251,13 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
         """Remove a deployed agent."""
         agent_name = request.match_info["agent_name"]
 
+        # Scope validation (query param for DELETE)
+        scope_str = request.rel_url.query.get("scope", "project") or "project"
+        try:
+            ctx = DeploymentContext.from_request_scope(scope_str)
+        except ValueError as e:
+            return _error_response(400, str(e), "VALIDATION_ERROR")
+
         # C-01: Validate agent name to prevent path traversal
         valid, err_msg = validate_safe_name(agent_name, "agent")
         if not valid:
@@ -259,7 +272,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                 "CORE_AGENT_PROTECTED",
             )
 
-        agents_dir = resolve_agents_dir(ConfigScope.PROJECT, Path.cwd())
+        agents_dir = ctx.agents_dir
         agent_path = agents_dir / f"{agent_name}.md"
 
         # Path containment check (defence in depth)
@@ -318,7 +331,11 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                 entity_type="agent",
                 entity_id=agent_name,
                 status="completed",
-                data={"agent_name": agent_name, "action": "undeploy"},
+                data={
+                    "agent_name": agent_name,
+                    "action": "undeploy",
+                    "scope": scope_str,
+                },
             )
 
             return web.json_response(
@@ -326,6 +343,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                     "success": True,
                     "message": f"Agent '{agent_name}' undeployed",
                     "agent_name": agent_name,
+                    "scope": scope_str,
                     "backup_id": result["backup_id"],
                     "verification": result["verification"],
                 }
@@ -349,10 +367,20 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
         _source_id = body.get("source_id")
         force = body.get("force", False)
 
+        # Scope validation (R-3: null-safe)
+        scope_str = body.get("scope", "project") or "project"
+        try:
+            ctx = DeploymentContext.from_request_scope(scope_str)
+        except ValueError as e:
+            return _error_response(400, str(e), "VALIDATION_ERROR")
+
         if not agent_names or not isinstance(agent_names, list):
             return _error_response(
                 400, "agent_names must be a non-empty list", "VALIDATION_ERROR"
             )
+
+        # Compute agents_dir once before the loop (captured by closure)
+        batch_agents_dir = ctx.agents_dir
 
         results = []
         deployed = []
@@ -375,7 +403,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
             try:
 
                 def _deploy_one(name=agent_name):
-                    agents_dir = resolve_agents_dir(ConfigScope.PROJECT, Path.cwd())
+                    agents_dir = batch_agents_dir
                     agents_dir.mkdir(parents=True, exist_ok=True)
 
                     backup_mgr = _get_backup_manager()
@@ -422,6 +450,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
                     data={
                         "agent_name": agent_name,
                         "action": "deploy",
+                        "scope": scope_str,
                         "batch_progress": f"{idx + 1}/{len(agent_names)}",
                     },
                 )
@@ -438,6 +467,7 @@ def register_agent_deployment_routes(app, config_event_handler, config_file_watc
         return web.json_response(
             {
                 "success": len(failed) == 0,
+                "scope": scope_str,
                 "results": results,
                 "summary": {
                     "total": len(agent_names),

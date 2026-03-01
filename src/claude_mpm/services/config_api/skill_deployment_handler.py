@@ -19,6 +19,7 @@ from claude_mpm.core.config_file_lock import (
     ConfigFileLockTimeout,
     config_file_lock,
 )
+from claude_mpm.core.deployment_context import DeploymentContext
 from claude_mpm.core.logging_config import get_logger
 from claude_mpm.services.config_api.validation import validate_safe_name
 
@@ -34,7 +35,6 @@ _skills_deployer = None
 def _get_backup_manager():
     global _backup_manager
     if _backup_manager is None:
-        from claude_mpm.core.deployment_context import DeploymentContext
         from claude_mpm.services.config_api.backup_manager import BackupManager
 
         ctx = DeploymentContext.from_project()
@@ -142,6 +142,13 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
         mark_user_requested = body.get("mark_user_requested", False)
         force = body.get("force", False)
 
+        # Scope validation (R-3: null-safe)
+        scope_str = body.get("scope", "project") or "project"
+        try:
+            ctx = DeploymentContext.from_request_scope(scope_str)
+        except ValueError as e:
+            return _error_response(400, str(e), "VALIDATION_ERROR")
+
         if not skill_name:
             return _error_response(400, "skill_name is required", "VALIDATION_ERROR")
 
@@ -153,9 +160,6 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
         try:
 
             def _deploy_sync():
-                from claude_mpm.core.deployment_context import DeploymentContext
-
-                ctx = DeploymentContext.from_project()
                 skills_dir = ctx.skills_dir
 
                 backup_mgr = _get_backup_manager()
@@ -187,7 +191,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
 
                     # 3b. Mark user-requested in config
                     if mark_user_requested:
-                        config_path = _get_config_path()
+                        config_path = ctx.configuration_yaml
                         with config_file_lock(config_path):
                             cfg = _load_config(config_path)
                             skills_cfg = cfg.setdefault("skills", {})
@@ -225,14 +229,14 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
             result = await asyncio.to_thread(_deploy_sync)
 
             if mark_user_requested:
-                _watcher.update_mtime(_get_config_path())
+                _watcher.update_mtime(ctx.configuration_yaml)
 
             await _handler.emit_config_event(
                 operation="skill_deployed",
                 entity_type="skill",
                 entity_id=skill_name,
                 status="completed",
-                data={"skill_name": skill_name, "action": "deploy"},
+                data={"skill_name": skill_name, "action": "deploy", "scope": scope_str},
             )
 
             return web.json_response(
@@ -240,6 +244,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                     "success": True,
                     "message": f"Skill '{skill_name}' deployed successfully",
                     "skill_name": skill_name,
+                    "scope": scope_str,
                     **result,
                 },
                 status=201,
@@ -257,6 +262,13 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
     async def undeploy_skill(request: web.Request) -> web.Response:
         """Remove a deployed skill."""
         skill_name = request.match_info["skill_name"]
+
+        # Scope validation (query param for DELETE)
+        scope_str = request.rel_url.query.get("scope", "project") or "project"
+        try:
+            ctx = DeploymentContext.from_request_scope(scope_str)
+        except ValueError as e:
+            return _error_response(400, str(e), "VALIDATION_ERROR")
 
         # C-02: Validate skill name to prevent path traversal
         valid, err_msg = validate_safe_name(skill_name, "skill")
@@ -276,9 +288,6 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
         try:
 
             def _undeploy_sync():
-                from claude_mpm.core.deployment_context import DeploymentContext
-
-                ctx = DeploymentContext.from_project()
                 skills_dir = ctx.skills_dir
 
                 backup_mgr = _get_backup_manager()
@@ -325,7 +334,11 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                 entity_type="skill",
                 entity_id=skill_name,
                 status="completed",
-                data={"skill_name": skill_name, "action": "undeploy"},
+                data={
+                    "skill_name": skill_name,
+                    "action": "undeploy",
+                    "scope": scope_str,
+                },
             )
 
             return web.json_response(
@@ -333,6 +346,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                     "success": True,
                     "message": f"Skill '{skill_name}' undeployed",
                     "skill_name": skill_name,
+                    "scope": scope_str,
                     **result,
                 }
             )
@@ -346,10 +360,17 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
     # ------------------------------------------------------------------
     async def get_deployment_mode(request: web.Request) -> web.Response:
         """Return current skill deployment mode with counts."""
+        # Scope validation (query param for GET)
+        scope_str = request.rel_url.query.get("scope", "project") or "project"
+        try:
+            ctx = DeploymentContext.from_request_scope(scope_str)
+        except ValueError as e:
+            return _error_response(400, str(e), "VALIDATION_ERROR")
+
         try:
 
             def _get_mode():
-                config_path = _get_config_path()
+                config_path = ctx.configuration_yaml
                 cfg = _load_config(config_path)
                 skills_cfg = cfg.get("skills", {})
 
@@ -385,7 +406,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                 }
 
             data = await asyncio.to_thread(_get_mode)
-            return web.json_response({"success": True, **data})
+            return web.json_response({"success": True, "scope": scope_str, **data})
 
         except Exception as e:
             logger.error("Error getting deployment mode: %s", e)
@@ -406,6 +427,13 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
         confirm = body.get("confirm", False)
         _skill_list = body.get("skill_list")  # For selective mode
 
+        # Scope validation (R-3: null-safe)
+        scope_str = body.get("scope", "project") or "project"
+        try:
+            ctx = DeploymentContext.from_request_scope(scope_str)
+        except ValueError as e:
+            return _error_response(400, str(e), "VALIDATION_ERROR")
+
         if target_mode not in ("selective", "full"):
             return _error_response(
                 400,
@@ -423,7 +451,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
         try:
 
             def _check_current():
-                config_path = _get_config_path()
+                config_path = ctx.configuration_yaml
                 cfg = _load_config(config_path)
                 return cfg.get("skills", {}).get("deployment_mode", "selective")
 
@@ -447,7 +475,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                     }
 
                     if target_mode == "selective":
-                        config_path = _get_config_path()
+                        config_path = ctx.configuration_yaml
                         cfg = _load_config(config_path)
                         skills_cfg = cfg.get("skills", {})
                         allowed = set(skills_cfg.get("agent_referenced", []))
@@ -505,7 +533,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
             if confirm:
 
                 def _apply():
-                    config_path = _get_config_path()
+                    config_path = ctx.configuration_yaml
                     backup_mgr = _get_backup_manager()
                     journal = _get_operation_journal()
                     verifier = _get_deployment_verifier()
@@ -563,14 +591,14 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
 
                 result = await asyncio.to_thread(_apply)
 
-                _watcher.update_mtime(_get_config_path())
+                _watcher.update_mtime(ctx.configuration_yaml)
 
                 await _handler.emit_config_event(
                     operation="mode_switched",
                     entity_type="config",
                     entity_id=f"mode:{target_mode}",
                     status="completed",
-                    data={"new_mode": target_mode},
+                    data={"new_mode": target_mode, "scope": scope_str},
                 )
 
                 return web.json_response(
@@ -578,6 +606,7 @@ def register_skill_deployment_routes(app, config_event_handler, config_file_watc
                         "success": True,
                         "message": f"Deployment mode switched to '{target_mode}'",
                         "mode": target_mode,
+                        "scope": scope_str,
                         **result,
                     }
                 )
