@@ -26,6 +26,7 @@ from rich.prompt import Confirm, Prompt
 from rich.text import Text
 
 from ...core.config import Config
+from ...core.deployment_context import DeploymentContext
 from ...core.unified_config import UnifiedConfig
 from ...services.agents.agent_recommendation_service import AgentRecommendationService
 from ...services.version_service import VersionService
@@ -71,6 +72,7 @@ class ConfigureCommand(BaseCommand):
         self.version_service = VersionService()
         self.current_scope = "project"
         self.project_dir = Path.cwd()
+        self._ctx = DeploymentContext.from_project(self.project_dir)
         self.agent_manager = None
         self.hook_manager = HookManager(self.console)
         self.behavior_manager = None  # Initialized when scope is set
@@ -184,10 +186,11 @@ class ConfigureCommand(BaseCommand):
             self.project_dir = Path(args.project_dir)
 
         # Initialize agent manager and behavior manager with appropriate config directory
-        if self.current_scope == "project":
-            config_dir = self.project_dir / ".claude-mpm"
+        if self.current_scope == "user":
+            self._ctx = DeploymentContext.from_user()
         else:
-            config_dir = Path.home() / ".claude-mpm"
+            self._ctx = DeploymentContext.from_project(self.project_dir)
+        config_dir = self._ctx.config_dir
         self.agent_manager = SimpleAgentManager(config_dir)
         self.behavior_manager = BehaviorManager(
             config_dir, self.current_scope, self.console
@@ -1438,6 +1441,11 @@ class ConfigureCommand(BaseCommand):
         self.navigation.switch_scope()
         # Sync scope back from navigation
         self.current_scope = self.navigation.current_scope
+        # Recreate deployment context for new scope
+        if self.current_scope == "user":
+            self._ctx = DeploymentContext.from_user()
+        else:
+            self._ctx = DeploymentContext.from_project(self.project_dir)
 
     def _show_version_info_interactive(self) -> None:
         """Show version information in interactive mode."""
