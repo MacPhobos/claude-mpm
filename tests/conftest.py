@@ -135,6 +135,53 @@ def project_root(tmp_path):
     return tmp_path
 
 
+# ===== Agent Safety Fixtures =====
+
+
+@pytest.fixture(autouse=True)
+def verify_agents_untouched():
+    """Detect any test that modifies the real .claude/agents/ directory.
+
+    Guards against regressions where production code resolves paths via
+    Path.cwd() instead of an explicit project_path argument, causing tests
+    to operate on live deployed agent files.
+
+    Checks both agents/ (for removals) and agents/unused/ (for archives),
+    since the damage path is shutil.move() from agents/ to agents/unused/.
+    """
+    agents_dir = Path.cwd() / ".claude" / "agents"
+    unused_dir = agents_dir / "unused"
+
+    def _snapshot(directory: Path) -> set:
+        if not directory.exists():
+            return set()
+        return {f.name for f in directory.glob("*.md")}
+
+    before_agents = _snapshot(agents_dir)
+    before_unused = _snapshot(unused_dir)
+
+    yield
+
+    after_agents = _snapshot(agents_dir)
+    after_unused = _snapshot(unused_dir)
+
+    removed = before_agents - after_agents
+    added_to_unused = after_unused - before_unused
+
+    problems = []
+    if removed:
+        problems.append(f"agents removed from .claude/agents/: {sorted(removed)}")
+    if added_to_unused:
+        problems.append(
+            f"agents archived to .claude/agents/unused/: {sorted(added_to_unused)}"
+        )
+
+    assert not problems, (
+        "TEST BUG: Real deployed agents were modified during test.\n"
+        + "\n".join(f"  - {p}" for p in problems)
+    )
+
+
 # ===== Mock Objects Fixtures =====
 
 
