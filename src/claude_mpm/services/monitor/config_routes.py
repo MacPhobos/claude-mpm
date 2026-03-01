@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional
 import yaml
 from aiohttp import web
 
+from claude_mpm.core.deployment_context import DeploymentContext
 from claude_mpm.services.config_api.validation import validate_safe_name
 from claude_mpm.services.monitor.pagination import (
     extract_pagination_params,
@@ -241,6 +242,27 @@ def _enrich_skill_from_manifest(skill_item: dict, manifest_lookup: dict) -> None
             skill_item["description"] = manifest_entry.get("description", "")
 
 
+def _validate_get_scope(request: web.Request) -> tuple:
+    """Validate ?scope= query param for GET endpoints.
+
+    Returns (scope_str, ctx, error_response). If error_response is not None,
+    return it immediately. Otherwise use scope_str and ctx.
+    """
+    scope_str = request.rel_url.query.get("scope", "project") or "project"
+    try:
+        ctx = DeploymentContext.from_request_scope(scope_str)
+        return scope_str, ctx, None
+    except ValueError as e:
+        return (
+            scope_str,
+            None,
+            web.json_response(
+                {"success": False, "error": str(e), "code": "VALIDATION_ERROR"},
+                status=400,
+            ),
+        )
+
+
 # --- Endpoint Handlers ---
 # Each follows the same async safety pattern:
 #   1. Wrap blocking service calls in asyncio.to_thread()
@@ -250,6 +272,10 @@ def _enrich_skill_from_manifest(skill_item: dict, manifest_lookup: dict) -> None
 
 async def handle_project_summary(request: web.Request) -> web.Response:
     """GET /api/config/project/summary - High-level configuration overview."""
+    scope_str, ctx, err = _validate_get_scope(request)
+    if err:
+        return err
+
     try:
 
         def _get_summary():
@@ -262,11 +288,10 @@ async def handle_project_summary(request: web.Request) -> web.Response:
             git_mgr = _get_git_source_manager()
             available_agents = git_mgr.list_cached_agents()
 
-            # Count deployed skills (use project-level directory to match CLI)
+            # Count deployed skills
             skills_svc = _get_skills_deployer()
-            project_skills_dir = Path.cwd() / ".claude" / "skills"
             deployed_skills = skills_svc.check_deployed_skills(
-                skills_dir=project_skills_dir
+                skills_dir=ctx.skills_dir
             )
 
             # Count sources
@@ -278,7 +303,7 @@ async def handle_project_summary(request: web.Request) -> web.Response:
             skill_sources = skill_config.load()
 
             # Read deployment mode from project configuration
-            config_path = Path.cwd() / ".claude-mpm" / "configuration.yaml"
+            config_path = ctx.configuration_yaml
             if config_path.exists():
                 project_cfg = yaml.safe_load(config_path.read_text()) or {}
             else:
@@ -302,7 +327,7 @@ async def handle_project_summary(request: web.Request) -> web.Response:
             }
 
         data = await asyncio.to_thread(_get_summary)
-        return web.json_response({"success": True, "data": data})
+        return web.json_response({"success": True, "scope": scope_str, "data": data})
     except Exception as e:
         logger.error(f"Error fetching project summary: {e}")
         return web.json_response(
@@ -313,6 +338,10 @@ async def handle_project_summary(request: web.Request) -> web.Response:
 
 async def handle_agents_deployed(request: web.Request) -> web.Response:
     """GET /api/config/agents/deployed - List deployed agents."""
+    scope_str, _ctx, err = _validate_get_scope(request)
+    if err:
+        return err
+
     try:
 
         def _list_deployed():
@@ -355,6 +384,7 @@ async def handle_agents_deployed(request: web.Request) -> web.Response:
         return web.json_response(
             {
                 "success": True,
+                "scope": scope_str,
                 "agents": agents,
                 "total": len(agents),
             }
@@ -441,14 +471,16 @@ async def handle_agents_available(request: web.Request) -> web.Response:
 
 async def handle_skills_deployed(request: web.Request) -> web.Response:
     """GET /api/config/skills/deployed - List deployed skills."""
+    scope_str, ctx, err = _validate_get_scope(request)
+    if err:
+        return err
+
     try:
 
         def _list_deployed_skills():
             skills_svc = _get_skills_deployer()
-            # Use project-level skills directory instead of user-level
-            # This matches the CLI behavior which reads from $CWD/.claude/skills/
-            project_skills_dir = Path.cwd() / ".claude" / "skills"
-            deployed = skills_svc.check_deployed_skills(skills_dir=project_skills_dir)
+            skills_dir = ctx.skills_dir
+            deployed = skills_svc.check_deployed_skills(skills_dir=skills_dir)
 
             # Enrich with deployment index metadata if available
             try:
@@ -456,7 +488,7 @@ async def handle_skills_deployed(request: web.Request) -> web.Response:
                     load_deployment_index,
                 )
 
-                skills_dir = project_skills_dir
+                skills_dir = ctx.skills_dir
                 index = load_deployment_index(skills_dir)
 
                 deployed_meta = index.get("deployed_skills", {})
@@ -505,7 +537,7 @@ async def handle_skills_deployed(request: web.Request) -> web.Response:
                 return deployed
 
         data = await asyncio.to_thread(_list_deployed_skills)
-        return web.json_response({"success": True, **data})
+        return web.json_response({"success": True, "scope": scope_str, **data})
     except Exception as e:
         logger.error(f"Error listing deployed skills: {e}")
         return web.json_response(
@@ -707,6 +739,10 @@ async def handle_agent_detail(request: web.Request) -> web.Response:
     knowledge, skills list, dependencies, handoff agents, and constraints.
     Path traversal protection via validate_safe_name() (VP-1-SEC).
     """
+    scope_str, _ctx, err = _validate_get_scope(request)
+    if err:
+        return err
+
     try:
         agent_name = request.match_info["name"]
 
@@ -806,7 +842,7 @@ async def handle_agent_detail(request: web.Request) -> web.Response:
                 status=404,
             )
 
-        return web.json_response({"success": True, "data": data})
+        return web.json_response({"success": True, "scope": scope_str, "data": data})
     except Exception as e:
         logger.error(
             f"Error fetching agent detail for {request.match_info.get('name', '?')}: {e}"
@@ -969,6 +1005,10 @@ async def handle_skill_links(request: web.Request) -> web.Response:
     Supports pagination on by_agent: ?limit=50&cursor=<opaque>&sort=asc|desc
     Backward compatible: no params returns all.
     """
+    scope_str, _ctx, err = _validate_get_scope(request)
+    if err:
+        return err
+
     try:
         pagination_params = extract_pagination_params(request)
 
@@ -996,6 +1036,7 @@ async def handle_skill_links(request: web.Request) -> web.Response:
 
         response_data = {
             "success": True,
+            "scope": scope_str,
             "by_agent": result.items,
             "by_skill": links.get("by_skill", {}),
             "stats": stats,
@@ -1061,6 +1102,10 @@ async def handle_validate(request: web.Request) -> web.Response:
     Returns categorized issues with severity, path, message, and suggestion.
     Results are cached for 60 seconds.
     """
+    scope_str, _ctx, err = _validate_get_scope(request)
+    if err:
+        return err
+
     try:
 
         def _validate():
@@ -1068,6 +1113,8 @@ async def handle_validate(request: web.Request) -> web.Response:
             return svc.validate_cached()
 
         data = await asyncio.to_thread(_validate)
+        if isinstance(data, dict):
+            data["scope"] = scope_str
         return web.json_response(data)
     except Exception as e:
         logger.error(f"Error running config validation: {e}")
