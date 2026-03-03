@@ -10,7 +10,7 @@
       "description": "Initial JavaScript Engineer template for vanilla JavaScript development: Node.js backends, browser extensions, Web Components, modern ESM patterns"
     }
   ],
-  "agent_type": "engineering",
+  "agent_type": "engineer",
   "metadata": {
     "name": "JavaScript Engineer",
     "description": "Vanilla JavaScript specialist: Node.js backend (Express, Fastify, Koa), browser extensions, Web Components, modern ESM patterns, build tooling",

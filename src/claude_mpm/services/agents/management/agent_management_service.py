@@ -150,7 +150,13 @@ class AgentManager:
         for key, value in updates.items():
             if hasattr(agent_def, key):
                 setattr(agent_def, key, value)
-            elif key in ["type", "model_preference", "tags", "specializations"]:
+            elif key in [
+                "type",
+                "agent_type",
+                "model_preference",
+                "tags",
+                "specializations",
+            ]:
                 setattr(agent_def.metadata, key, value)
 
         # Increment version if requested
@@ -432,6 +438,27 @@ class AgentManager:
 
         return None
 
+    @staticmethod
+    def _safe_parse_agent_type(value: str) -> AgentType:
+        """Safely parse agent type, falling back to CUSTOM for unknown values.
+
+        The AgentType enum only has 5 members (core, project, custom, system,
+        specialized), but deployed agent frontmatter uses domain-specific values
+        like 'engineer', 'ops', 'qa', 'security', 'documentation', 'research'.
+        These are NOT valid enum members, so we fall back to CUSTOM rather than
+        crashing with ValueError.
+
+        Args:
+            value: The agent type string from frontmatter.
+
+        Returns:
+            The matching AgentType enum member, or AgentType.CUSTOM if not found.
+        """
+        try:
+            return AgentType(value)
+        except ValueError:
+            return AgentType.CUSTOM
+
     def _parse_agent_markdown(
         self, content: str, name: str, file_path: str
     ) -> AgentDefinition:
@@ -441,7 +468,9 @@ class AgentManager:
 
         # Extract metadata
         metadata = AgentMetadata(
-            type=AgentType(post.metadata.get("type", "core")),
+            type=self._safe_parse_agent_type(
+                post.metadata.get("agent_type", post.metadata.get("type", "core"))
+            ),
             model_preference=post.metadata.get("model_preference", "claude-3-sonnet"),
             version=post.metadata.get("version", "1.0.0"),
             last_updated=post.metadata.get("last_updated"),
