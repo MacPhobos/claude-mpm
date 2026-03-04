@@ -15,9 +15,6 @@ Usage:
     # Convert all agents
     python scripts/migrate_json_to_markdown.py --all
 
-    # Convert with archive (keeps JSON as backup)
-    python scripts/migrate_json_to_markdown.py --all --archive
-
     # Validate migrated files
     python scripts/migrate_json_to_markdown.py --validate-only
 """
@@ -79,7 +76,6 @@ class MigrationReport:
     errors: int
     warnings: int
     results: List[ConversionResult]
-    archive_path: Optional[Path] = None
 
 
 def extract_frontmatter_fields(template_data: dict) -> dict:
@@ -249,7 +245,6 @@ def convert_json_to_markdown(
 def safe_convert(
     json_path: Path,
     output_dir: Optional[Path] = None,
-    archive_mode: bool = False,
     dry_run: bool = False,
 ) -> ConversionResult:
     """
@@ -261,7 +256,6 @@ def safe_convert(
     Args:
         json_path: Path to JSON template
         output_dir: Optional output directory (default: same as input)
-        archive_mode: Archive JSON instead of deleting
         dry_run: Preview only, don't write files
 
     Returns:
@@ -293,16 +287,6 @@ def safe_convert(
             output_path.write_text(markdown, encoding="utf-8")
         except Exception as e:
             raise FileWriteError(f"Failed to write markdown: {e}")
-
-        # Archive or delete JSON
-        if archive_mode:
-            archive_path = json_path.parent / "archive" / json_path.name
-            archive_path.parent.mkdir(exist_ok=True, parents=True)
-            json_path.rename(archive_path)
-        else:
-            # For now, don't delete JSON - just leave it alongside markdown
-            # This provides a safety net during migration
-            pass
 
         return ConversionResult(
             json_path=str(json_path),
@@ -351,7 +335,6 @@ def migrate_templates(
     templates_dir: Path,
     dry_run: bool = False,
     agent_name: Optional[str] = None,
-    archive: bool = False,
     output_dir: Optional[Path] = None,
     verbose: bool = False,
 ) -> MigrationReport:
@@ -365,7 +348,6 @@ def migrate_templates(
         templates_dir: Directory containing JSON templates
         dry_run: Preview mode without writing files
         agent_name: Specific agent ID to convert (None = all)
-        archive: Archive JSON files instead of deleting
         output_dir: Optional output directory
         verbose: Verbose logging
 
@@ -397,9 +379,7 @@ def migrate_templates(
         if verbose:
             print(f"Converting: {json_path.name}...")
 
-        result = safe_convert(
-            json_path, output_dir=output_dir, archive_mode=archive, dry_run=dry_run
-        )
+        result = safe_convert(json_path, output_dir=output_dir, dry_run=dry_run)
         results.append(result)
 
         if verbose and result.status == "success":
@@ -419,18 +399,12 @@ def migrate_templates(
         if r.validation and r.validation.warnings
     )
 
-    # Determine archive path
-    archive_path = None
-    if archive and not dry_run:
-        archive_path = templates_dir / "archive"
-
     return MigrationReport(
         total_templates=len(json_files),
         converted=converted,
         errors=errors,
         warnings=warnings,
         results=results,
-        archive_path=archive_path,
     )
 
 
@@ -457,9 +431,6 @@ def print_migration_report(report: MigrationReport, dry_run: bool = False) -> No
     print(f"Successfully converted:     {report.converted}")
     print(f"Validation errors:          {report.errors}")
     print(f"Validation warnings:        {report.warnings}")
-    if report.archive_path:
-        print(f"Archived JSON files:        {report.total_templates}")
-        print(f"Archive location:           {report.archive_path}")
     print()
 
     # Conversions
@@ -508,7 +479,7 @@ def print_migration_report(report: MigrationReport, dry_run: bool = False) -> No
     elif dry_run:
         print("To execute migration:")
         print("-" * 70)
-        print("  python scripts/migrate_json_to_markdown.py --all --archive")
+        print("  python scripts/migrate_json_to_markdown.py --all")
 
     print()
 
@@ -567,9 +538,6 @@ Examples:
   # Convert specific agent
   python scripts/migrate_json_to_markdown.py --agent research-agent
 
-  # Convert all with archive
-  python scripts/migrate_json_to_markdown.py --all --archive
-
   # Validate existing markdown files
   python scripts/migrate_json_to_markdown.py --validate-only
         """,
@@ -586,12 +554,6 @@ Examples:
     )
 
     parser.add_argument("--all", action="store_true", help="Convert all JSON templates")
-
-    parser.add_argument(
-        "--archive",
-        action="store_true",
-        help="Archive JSON files to templates/archive/ instead of deleting",
-    )
 
     parser.add_argument(
         "--validate-only",
@@ -644,7 +606,6 @@ Examples:
         templates_dir=args.templates_dir,
         dry_run=args.dry_run,
         agent_name=args.agent,
-        archive=args.archive,
         output_dir=args.output_dir,
         verbose=args.verbose,
     )

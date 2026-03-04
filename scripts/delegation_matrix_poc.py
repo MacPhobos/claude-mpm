@@ -9,61 +9,101 @@ import sys
 import tempfile
 from pathlib import Path
 
+import yaml
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+# Files to skip when scanning agent .md files
+SKIP_FILES = {"BASE-AGENT.md", "README.md", "CHANGELOG.md"}
+
+
+def _parse_yaml_frontmatter(md_path: Path) -> dict | None:
+    """Parse YAML frontmatter from a markdown file.
+
+    Returns the frontmatter dict or None if parsing fails.
+    """
+    try:
+        text = md_path.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Warning: Could not read {md_path}: {e}")
+        return None
+
+    if not text.startswith("---"):
+        return None
+
+    # Find the closing --- delimiter
+    end_idx = text.find("---", 3)
+    if end_idx == -1:
+        return None
+
+    yaml_block = text[3:end_idx]
+    try:
+        return yaml.safe_load(yaml_block)
+    except yaml.YAMLError as e:
+        print(f"Warning: Could not parse YAML in {md_path}: {e}")
+        return None
+
 
 def load_agent_descriptions() -> list[dict]:
-    """Load all agent JSON templates and extract relevant info."""
-    # Look in the archive directory where agent templates are stored
-    templates_dir = (
-        Path(__file__).parent.parent / "src/claude_mpm/agents/templates/archive"
+    """Load agent descriptions from git-cached markdown files with YAML frontmatter."""
+    # Primary: git-cached agents directory
+    agents_dir = (
+        Path.home()
+        / ".claude-mpm"
+        / "cache"
+        / "agents"
+        / "bobmatnyc"
+        / "claude-mpm-agents"
+        / "agents"
     )
     agents = []
 
-    if not templates_dir.exists():
-        print(f"Warning: Templates directory not found at {templates_dir}")
+    if not agents_dir.exists():
+        print(f"Warning: Git-cached agents directory not found at {agents_dir}")
         # Fallback to examples directory
-        templates_dir = (
+        agents_dir = (
             Path(__file__).parent.parent
             / "examples/project_agents/.claude-mpm/agents/templates"
         )
 
-    if not templates_dir.exists():
-        print("Error: No templates directory found")
+    if not agents_dir.exists():
+        print("Error: No agents directory found")
         return agents
 
-    for json_file in templates_dir.glob("*.json"):
-        try:
-            with open(json_file) as f:
-                data = json.load(f)
+    for md_file in sorted(agents_dir.rglob("*.md")):
+        # Skip non-agent files
+        if md_file.name in SKIP_FILES:
+            continue
 
-            # Extract routing-relevant fields
+        data = _parse_yaml_frontmatter(md_file)
+        if data is None:
+            continue
+
+        try:
+            # Extract routing-relevant fields from YAML frontmatter
+            skills = data.get("skills", [])
+            memory_routing = data.get("memory_routing", {})
+            capabilities = data.get("capabilities", {})
+
             agent_info = {
-                "id": data.get("agent_id", json_file.stem),
-                "name": data.get("metadata", {}).get("name", data.get("name", "")),
-                "description": data.get("metadata", {}).get(
-                    "description", data.get("description", "")
-                ),
+                "id": data.get("agent_id", md_file.stem),
+                "name": data.get("name", ""),
+                "description": data.get("description", ""),
                 "type": data.get("agent_type", ""),
-                "model": data.get("capabilities", {}).get("model", "sonnet"),
-                "triggers": data.get("interactions", {}).get("triggers", []),
-                "handoff_agents": data.get("interactions", {}).get(
-                    "handoff_agents", []
+                "model": data.get("model", "sonnet"),
+                "skills": skills[:10] if isinstance(skills, list) else [],
+                "routing_keywords": (
+                    memory_routing.get("keywords", [])[:10]
+                    if isinstance(memory_routing, dict)
+                    else []
                 ),
-                "routing_keywords": data.get("memory_routing", {}).get("keywords", [])[
-                    :10
-                ],  # First 10 keywords
-                "tools": data.get("capabilities", {}).get("tools", [])[
-                    :5
-                ],  # First 5 tools
-                "domain_expertise": data.get("knowledge", {}).get(
-                    "domain_expertise", []
-                )[:5],  # First 5
+                "memory_routing": memory_routing,
+                "capabilities": capabilities,
             }
             agents.append(agent_info)
         except Exception as e:
-            print(f"Warning: Could not load {json_file}: {e}")
+            print(f"Warning: Could not process {md_file}: {e}")
 
     return agents
 
