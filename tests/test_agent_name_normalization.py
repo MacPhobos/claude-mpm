@@ -7,6 +7,7 @@ lowercase names, aliases, and space-separated names.
 
 import logging
 import unittest
+from unittest.mock import MagicMock, patch
 
 from claude_mpm.agents.agent_loader import (
     get_agent_prompt,
@@ -16,6 +17,60 @@ from claude_mpm.core.agent_name_normalizer import AgentNameNormalizer
 
 # Configure logging for tests
 logging.basicConfig(level=logging.DEBUG)
+
+# ---------------------------------------------------------------------------
+# Shared mock agent data used by TestAgentLoaderNormalization.
+# These fake agents allow normalization tests to verify routing logic without
+# requiring real agent files to be deployed.
+# ---------------------------------------------------------------------------
+_MOCK_AGENT_INSTRUCTIONS: dict[str, str] = {
+    "engineer": "You are the Engineer agent. " + "x" * 200,
+    "research": "You are the Research agent. " + "x" * 200,
+    "qa": "You are the QA agent. " + "x" * 200,
+    "security": "You are the Security agent. " + "x" * 200,
+    "documentation": "You are the Documentation agent. " + "x" * 200,
+    "ops": "You are the Ops agent. " + "x" * 200,
+    "version_control": "You are the Version Control agent. " + "x" * 200,
+    "data_engineer": "You are the Data Engineer agent. " + "x" * 200,
+    "architect": "You are the Architect agent. " + "x" * 200,
+    "pm": "You are the PM agent. " + "x" * 200,
+}
+
+
+def _make_mock_loader() -> MagicMock:
+    """Build a MagicMock AgentLoader whose registry responds to known agent keys."""
+    loader = MagicMock()
+
+    def _get_agent(agent_id: str):
+        """Return a mock agent dict for any known key; None otherwise."""
+        key = agent_id.lower().replace("-", "_").replace(" ", "_")
+        if key in _MOCK_AGENT_INSTRUCTIONS:
+            return {
+                "id": key,
+                "instructions": _MOCK_AGENT_INSTRUCTIONS[key],
+                "capabilities": {"model": "sonnet"},
+                "metadata": {
+                    "name": key,
+                    "description": f"Mock {key} agent",
+                    "category": "general",
+                },
+                "version": "1.0.0",
+            }
+        return None
+
+    loader.get_agent.side_effect = _get_agent
+    # get_agent_prompt delegates to registry, so wire that up too
+    loader.get_agent_prompt.side_effect = lambda agent_id, *args, **kwargs: (
+        _MOCK_AGENT_INSTRUCTIONS.get(
+            agent_id.lower().replace("-", "_").replace(" ", "_")
+        )
+    )
+    # Provide a stub registry with a registry dict so iteration works
+    loader.registry = MagicMock()
+    loader.registry.registry = {k: MagicMock() for k in _MOCK_AGENT_INSTRUCTIONS}
+    loader.registry.get_agent.side_effect = _get_agent
+    loader.registry.get_agent_tier.return_value = None
+    return loader
 
 
 class TestAgentNameNormalizer(unittest.TestCase):
@@ -270,7 +325,32 @@ class TestAgentNameNormalizer(unittest.TestCase):
 
 
 class TestAgentLoaderNormalization(unittest.TestCase):
-    """Test that agent_loader correctly uses AgentNameNormalizer."""
+    """Test that agent_loader correctly uses AgentNameNormalizer.
+
+    All tests in this class run against a mock loader so they verify the
+    name-normalization routing logic without depending on real agent files
+    being deployed to disk (e.g. archive JSON files or .claude/agents/).
+    """
+
+    # ------------------------------------------------------------------
+    # Class-level patch: replace _get_loader so all module-level helpers
+    # (get_agent_prompt, etc.) use our deterministic mock.
+    # ------------------------------------------------------------------
+    _loader_patcher = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        mock_loader = _make_mock_loader()
+        cls._loader_patcher = patch(
+            "claude_mpm.agents.agent_loader._get_loader",
+            return_value=mock_loader,
+        )
+        cls._loader_patcher.start()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if cls._loader_patcher is not None:
+            cls._loader_patcher.stop()
 
     def test_capitalized_names_in_loader(self):
         """Test that agent loader handles capitalized names (as used by PM)."""
