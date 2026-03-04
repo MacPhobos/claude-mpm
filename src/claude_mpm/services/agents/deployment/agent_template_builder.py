@@ -541,7 +541,7 @@ class AgentTemplateBuilder:
         # - name: kebab-case agent name (required)
         # - description: when/why to use this agent with examples (required, multiline)
         # - model: mapped model name (required)
-        # - type: agent type for categorization and functionality (optional but important)
+        # - agent_type: agent type for categorization and functionality (optional but important)
         # - category: organizational category (optional)
         # - color: visual identifier (optional)
         # - version: agent version for update tracking (optional)
@@ -563,9 +563,9 @@ class AgentTemplateBuilder:
         if model is not None:
             frontmatter_lines.append(f"model: {model}")
 
-        # Add type field (important for agent categorization)
+        # Add agent_type field (important for agent categorization)
         if agent_type and agent_type != "general":
-            frontmatter_lines.append(f"type: {agent_type}")
+            frontmatter_lines.append(f"agent_type: {agent_type}")
 
         # Add optional metadata fields
         if metadata.get("color"):

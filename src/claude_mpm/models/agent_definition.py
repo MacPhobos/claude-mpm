@@ -174,7 +174,7 @@ class AgentDefinition:
             "title": self.title,
             "file_path": self.file_path,
             "metadata": {
-                "type": self.metadata.type.value,
+                "agent_type": self.metadata.type.value,
                 "model_preference": self.metadata.model_preference,
                 "version": self.metadata.version,
                 "last_updated": (

@@ -8,6 +8,7 @@ from claude_mpm.services.agent_capabilities_service import (
     AgentCapabilitiesService,
 )
 from claude_mpm.services.setup_registry import SetupRegistry
+from claude_mpm.utils.frontmatter_utils import read_agent_type
 
 
 class DynamicSkillsGenerator:
@@ -107,7 +108,7 @@ class DynamicSkillsGenerator:
         for agent_id, agent_info in sorted(agents.items()):
             name = agent_info.get("name", agent_id)
             description = agent_info.get("description", "")
-            agent_type = agent_info.get("type", "general-purpose")
+            agent_type = read_agent_type(agent_info, "general-purpose")
             location = agent_info.get("location", "system")
 
             lines.append(f"### {name}")

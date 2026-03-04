@@ -321,7 +321,7 @@ class AgentManager:
                 "location": loc,
                 "path": str(agent_file),
                 "version": agent_def.metadata.version,
-                "type": agent_def.metadata.type.value,
+                "agent_type": agent_def.metadata.type.value,
                 "specializations": agent_def.metadata.specializations,
                 **enrichment,
             }
@@ -651,7 +651,7 @@ class AgentManager:
         """Convert AgentDefinition back to markdown."""
         # Start with frontmatter
         frontmatter_data = {
-            "type": definition.metadata.type.value,
+            "agent_type": definition.metadata.type.value,
             "model_preference": definition.metadata.model_preference,
             "version": definition.metadata.version,
             "last_updated": definition.metadata.last_updated,

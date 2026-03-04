@@ -368,7 +368,7 @@ agents = registry.list_agents()
 # Access agent metadata
 for agent_id, metadata in agents.items():
     print(f"Agent: {agent_id}")
-    print(f"  Type: {metadata['type']}")
+    print(f"  Type: {metadata['agent_type']}")
     print(f"  Path: {metadata['path']}")
     print(f"  Last Modified: {metadata['last_modified']}")
     print(f"  Specializations: {metadata.get('specializations', [])}")

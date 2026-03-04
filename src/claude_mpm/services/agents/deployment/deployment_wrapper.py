@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from claude_mpm.services.agents.deployment import AgentDeploymentService
+from claude_mpm.utils.frontmatter_utils import read_agent_type
 
 
 class DeploymentServiceWrapper:
@@ -108,7 +109,7 @@ class DeploymentServiceWrapper:
                         return {
                             "name": agent_name,
                             "path": str(agent_path),
-                            "type": agent.get("type", "agent"),
+                            "agent_type": read_agent_type(agent, "agent"),
                             "version": metadata.get("version", "1.0.0"),
                             "description": metadata.get("description", ""),
                             "specializations": metadata.get("specializations", []),

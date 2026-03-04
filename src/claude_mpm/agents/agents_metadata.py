@@ -11,7 +11,7 @@ This metadata is used for agent registration, capability tracking, and performan
 DOCUMENTATION_CONFIG = {
     "name": "documentation_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "documentation_analysis",
         "changelog_generation",
@@ -33,7 +33,7 @@ DOCUMENTATION_CONFIG = {
 VERSION_CONTROL_CONFIG = {
     "name": "version_control_agent",
     "version": "2.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "git_operations",
         "branch_management",
@@ -56,7 +56,7 @@ VERSION_CONTROL_CONFIG = {
 QA_CONFIG = {
     "name": "qa_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "test_execution",
         "quality_validation",
@@ -79,7 +79,7 @@ QA_CONFIG = {
 API_QA_CONFIG = {
     "name": "api_qa_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "rest_api_testing",
         "graphql_testing",
@@ -104,7 +104,7 @@ API_QA_CONFIG = {
 WEB_QA_CONFIG = {
     "name": "web_qa_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "browser_automation",
         "e2e_testing",
@@ -129,7 +129,7 @@ WEB_QA_CONFIG = {
 RESEARCH_CONFIG = {
     "name": "research_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "technology_research",
         "library_analysis",
@@ -151,7 +151,7 @@ RESEARCH_CONFIG = {
 OPS_CONFIG = {
     "name": "ops_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "deployment_automation",
         "infrastructure_management",
@@ -174,7 +174,7 @@ OPS_CONFIG = {
 SECURITY_CONFIG = {
     "name": "security_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "vulnerability_assessment",
         "security_audit",
@@ -197,7 +197,7 @@ SECURITY_CONFIG = {
 ENGINEER_CONFIG = {
     "name": "engineer_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "code_implementation",
         "feature_development",
@@ -220,7 +220,7 @@ ENGINEER_CONFIG = {
 DATA_ENGINEER_CONFIG = {
     "name": "data_engineer_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "data_store_management",
         "ai_api_integration",
@@ -244,7 +244,7 @@ DATA_ENGINEER_CONFIG = {
 PROJECT_ORGANIZER_CONFIG = {
     "name": "project_organizer_agent",
     "version": "1.0.0",
-    "type": "core_agent",
+    "agent_type": "core_agent",
     "capabilities": [
         "pattern_detection",
         "file_organization",
@@ -267,7 +267,7 @@ PROJECT_ORGANIZER_CONFIG = {
 IMAGEMAGICK_CONFIG = {
     "name": "imagemagick_agent",
     "version": "1.0.0",
-    "type": "optimization_agent",
+    "agent_type": "optimization_agent",
     "capabilities": [
         "image_optimization",
         "format_conversion",
@@ -293,7 +293,7 @@ IMAGEMAGICK_CONFIG = {
 AGENTIC_CODER_OPTIMIZER_CONFIG = {
     "name": "agentic_coder_optimizer_agent",
     "version": "1.0.0",
-    "type": "optimization_agent",
+    "agent_type": "optimization_agent",
     "capabilities": [
         "project_optimization",
         "documentation_standardization",
@@ -319,7 +319,7 @@ AGENTIC_CODER_OPTIMIZER_CONFIG = {
 AGENT_MANAGER_CONFIG = {
     "name": "agent_manager",
     "version": "2.0.0",
-    "type": "system_agent",
+    "agent_type": "system_agent",
     "capabilities": [
         "agent_creation",
         "variant_management",

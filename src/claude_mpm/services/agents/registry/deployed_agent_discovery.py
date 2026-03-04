@@ -12,6 +12,7 @@ from claude_mpm.core.agent_registry import AgentRegistryAdapter
 from claude_mpm.core.logging_utils import get_logger
 from claude_mpm.core.unified_paths import get_path_manager
 from claude_mpm.services.shared import ConfigServiceBase
+from claude_mpm.utils.frontmatter_utils import read_agent_type
 
 logger = get_logger(__name__)
 
@@ -106,7 +107,7 @@ class DeployedAgentDiscovery(ConfigServiceBase):
 
                 # Otherwise use basic info from registry
                 return {
-                    "id": agent.get("type", agent.get("name", "unknown")),
+                    "id": read_agent_type(agent, agent.get("name", "unknown")),
                     "name": agent.get("name", "Unknown"),
                     "description": agent.get("description", "No description available"),
                     "specializations": agent.get("specializations", []),
@@ -130,7 +131,7 @@ class DeployedAgentDiscovery(ConfigServiceBase):
                     ),
                 }
             # Legacy object format fallback
-            agent_type = getattr(agent, "type", None)
+            agent_type = getattr(agent, "agent_type", getattr(agent, "type", None))
             agent_name = getattr(agent, "name", None)
 
             # Generate name from type if name not present
@@ -190,7 +191,9 @@ class DeployedAgentDiscovery(ConfigServiceBase):
         configuration = json_data.get("configuration", {})
 
         return {
-            "id": json_data.get("agent_type", registry_info.get("type", "unknown")),
+            "id": json_data.get(
+                "agent_type", read_agent_type(registry_info, "unknown")
+            ),
             "name": metadata.get("name", registry_info.get("name", "Unknown")),
             "description": metadata.get(
                 "description",

@@ -14,6 +14,7 @@ import yaml
 
 from claude_mpm.core.config import Config
 from claude_mpm.core.logging_config import get_logger
+from claude_mpm.utils.frontmatter_utils import read_agent_type
 
 
 class AgentDiscoveryService:
@@ -317,8 +318,8 @@ class AgentDiscoveryService:
                 "description": frontmatter.get(
                     "description", "No description available"
                 ),
-                "type": frontmatter.get(
-                    "agent_type", frontmatter.get("category", "agent")
+                "agent_type": read_agent_type(
+                    frontmatter, frontmatter.get("category", "agent")
                 ),
                 "version": frontmatter.get("version", "1.0.0"),
                 "tools": frontmatter.get("tools", []),

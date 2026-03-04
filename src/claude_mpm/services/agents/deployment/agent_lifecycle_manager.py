@@ -307,7 +307,7 @@ class AgentLifecycleManager(BaseService):
                         last_modified=agent_metadata.last_modified or time.time(),
                         version="1.0.0",
                         metadata={
-                            "type": agent_metadata.type,
+                            "agent_type": agent_metadata.type,
                             "description": agent_metadata.description,
                             "capabilities": agent_metadata.capabilities,
                             "validated": agent_metadata.validated,

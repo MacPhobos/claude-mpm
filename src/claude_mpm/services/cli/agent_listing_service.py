@@ -24,6 +24,7 @@ from ...core.agent_registry import AgentRegistryAdapter
 from ...core.logger import get_logger
 from ...services.agents.deployment import AgentDeploymentService
 from ...services.agents.deployment.deployment_wrapper import DeploymentServiceWrapper
+from ...utils.frontmatter_utils import read_agent_type
 
 
 @dataclass
@@ -211,7 +212,7 @@ class AgentListingService(IAgentListingService):
             for agent_data in agents_data:
                 agent = AgentInfo(
                     name=agent_data.get("name", ""),
-                    type=agent_data.get("type", "agent"),
+                    type=read_agent_type(agent_data, "agent"),
                     tier="system",
                     path=agent_data.get("path", ""),
                     description=agent_data.get("description") if verbose else None,
@@ -247,7 +248,7 @@ class AgentListingService(IAgentListingService):
             for agent_data in agents_data:
                 agent = AgentInfo(
                     name=agent_data.get("name", ""),
-                    type=agent_data.get("type", "agent"),
+                    type=read_agent_type(agent_data, "agent"),
                     tier=agent_data.get("tier", "system"),
                     path=agent_data.get("path", ""),
                     description=agent_data.get("description"),
@@ -293,7 +294,7 @@ class AgentListingService(IAgentListingService):
 
                 agent_info = AgentInfo(
                     name=agent_id,
-                    type=metadata.get("type", "agent"),
+                    type=read_agent_type(metadata, "agent"),
                     tier=tier,
                     path=metadata.get("path", ""),
                     description=metadata.get("description"),
@@ -369,7 +370,9 @@ class AgentListingService(IAgentListingService):
 
             details = {
                 "name": getattr(agent, "name", agent_name),
-                "type": getattr(agent, "type", "agent"),
+                "agent_type": getattr(
+                    agent, "agent_type", getattr(agent, "type", "agent")
+                ),
                 "tier": getattr(agent, "tier", "system"),
                 "path": str(getattr(agent, "path", agent_path)),
                 "description": getattr(agent, "description", None),

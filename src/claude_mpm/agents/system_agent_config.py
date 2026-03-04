@@ -510,7 +510,7 @@ class SystemAgentConfigManager:
             "environment_overrides": env_overrides,
             "agent_priorities": [
                 {
-                    "type": agent.agent_type,
+                    "agent_type": agent.agent_type,
                     "name": agent.agent_name,
                     "priority": agent.priority,
                 }

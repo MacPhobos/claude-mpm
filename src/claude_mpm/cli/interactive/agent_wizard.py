@@ -750,7 +750,7 @@ class AgentWizard:
         config = {
             "agent_id": agent_id,
             "name": agent_name,
-            "type": agent_type,
+            "agent_type": agent_type,
             "model": model,
             "description": description,
             "capabilities": capabilities.get("specializations", []),

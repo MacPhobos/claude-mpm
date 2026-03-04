@@ -102,7 +102,7 @@ class SimpleAgentRegistry:
         for name, unified_metadata in unified_agents.items():
             self.agents[name] = {
                 "name": unified_metadata.name,
-                "type": unified_metadata.agent_type.value,
+                "agent_type": unified_metadata.agent_type.value,
                 "path": unified_metadata.path,
                 "last_modified": unified_metadata.last_modified,
                 "tier": unified_metadata.tier.value,
@@ -205,7 +205,7 @@ class SimpleAgentRegistry:
         for name, unified_metadata in unified_agents.items():
             self.agents[name] = {
                 "name": unified_metadata.name,
-                "type": unified_metadata.agent_type.value,
+                "agent_type": unified_metadata.agent_type.value,
                 "path": unified_metadata.path,
                 "last_modified": unified_metadata.last_modified,
                 "tier": unified_metadata.tier.value,
@@ -236,7 +236,7 @@ class SimpleAgentRegistry:
     @property
     def specialized_agent_types(self) -> Set[str]:
         """Get specialized agent types beyond core (compatibility property)."""
-        all_types = {metadata["type"] for metadata in self.agents.values()}
+        all_types = {metadata["agent_type"] for metadata in self.agents.values()}
         return all_types - self.core_agent_types
 
 
@@ -318,7 +318,7 @@ class AgentRegistryAdapter:
                 "id": agent.name,
                 "metadata": {
                     "name": agent.name,
-                    "type": agent.agent_type.value,
+                    "agent_type": agent.agent_type.value,
                     "path": agent.path,
                     "tier": agent.tier.value,
                     "specializations": agent.specializations,
@@ -744,7 +744,7 @@ def list_agents_all() -> Dict[str, Dict[str, Any]]:
     return {
         name: {
             "name": metadata.name,
-            "type": metadata.agent_type.value,
+            "agent_type": metadata.agent_type.value,
             "path": metadata.path,
             "tier": metadata.tier.value,
             "last_modified": metadata.last_modified,
@@ -798,7 +798,7 @@ def get_agent(agent_name: str) -> Optional[Dict[str, Any]]:
     if unified_agent:
         return {
             "name": unified_agent.name,
-            "type": unified_agent.agent_type.value,
+            "agent_type": unified_agent.agent_type.value,
             "path": unified_agent.path,
             "tier": unified_agent.tier.value,
             "last_modified": unified_agent.last_modified,

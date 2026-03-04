@@ -222,7 +222,7 @@ type: 'engineer'
         assert result["name"] == "quoted-agent"
         assert result["description"] == "Single quoted description"
         assert result["version"] == "1.0.0"
-        assert result["type"] == "engineer"
+        assert result["agent_type"] == "engineer"
 
     def test_preserves_default_values_for_missing_fields(self):
         """Test: Should use defaults when fields are missing"""
@@ -237,7 +237,7 @@ name: minimal-agent
         assert result["name"] == "minimal-agent"
         assert result["description"] == "No description"
         assert result["version"] == "unknown"
-        assert result["type"] == "agent"
+        assert result["agent_type"] == "agent"
 
     def test_extracts_all_frontmatter_fields(self):
         """Test: Should extract all supported frontmatter fields"""
@@ -255,7 +255,7 @@ type: specialist
         assert result["name"] == "full-featured-agent"
         assert result["description"] == "Complete agent with all metadata"
         assert result["version"] == "2.1.0"
-        assert result["type"] == "specialist"
+        assert result["agent_type"] == "specialist"
         assert result["file"] == "full-featured-agent.md"
         assert "path" in result
 
