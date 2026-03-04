@@ -1450,7 +1450,7 @@ def show_agent_summary():
         # Display summary if we have agents (only to TTY to avoid stdout pollution)
         if (installed_count > 0 or available_count > 0) and sys.stdout.isatty():
             print(
-                f"✓ Agents: {installed_count} deployed / {max(0, available_count - installed_count)} cached",
+                f"✓ Agents: {installed_count} deployed / {max(0, available_count - installed_count)} unused in cache",
                 flush=True,
             )
 
@@ -1525,7 +1525,7 @@ def show_skill_summary():
         non_deployed_cached = max(0, cached_count - deployed_count)
         if (deployed_count > 0 or non_deployed_cached > 0) and sys.stdout.isatty():
             print(
-                f"✓ Skills: {deployed_count} deployed / {non_deployed_cached} cached",
+                f"✓ Skills: {deployed_count} deployed / {non_deployed_cached} unused in cache",
                 flush=True,
             )
 
