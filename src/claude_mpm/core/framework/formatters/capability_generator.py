@@ -354,14 +354,14 @@ class CapabilityGenerator:
 
 You have the following specialized agents available for delegation:
 
-- **Engineer** (`engineer`): Code implementation and development
-- **Research** (`research-agent`): Investigation and analysis
-- **QA** (`qa-agent`): Testing and quality assurance
-- **Documentation** (`documentation-agent`): Documentation creation and maintenance
-- **Security** (`security-agent`): Security analysis and protection
-- **Data Engineer** (`data-engineer`): Data management and pipelines
-- **Ops** (`ops-agent`): Deployment and operations
-- **Version Control** (`version-control`): Git operations and version management
+- **Engineer** (`Engineer`): Code implementation and development
+- **Research** (`Research`): Investigation and analysis
+- **QA** (`QA`): Testing and quality assurance
+- **Documentation** (`Documentation Agent`): Documentation creation and maintenance
+- **Security** (`Security`): Security analysis and protection
+- **Data Engineer** (`Data Engineer`): Data management and pipelines
+- **Ops** (`Ops`): Deployment and operations
+- **Version Control** (`Version Control`): Git operations and version management
 
 **IMPORTANT**: Use the exact agent ID in parentheses when delegating tasks.
 """

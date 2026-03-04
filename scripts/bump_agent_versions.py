@@ -4,46 +4,25 @@
 import json
 from pathlib import Path
 
-AGENTS_DIR = Path("/Users/masa/Projects/claude-mpm/src/claude_mpm/agents/templates")
+AGENTS_DIR = (
+    Path(__file__).parent.parent / "src" / "claude_mpm" / "agents" / "templates"
+)
 
-# All agents that received skills field (using actual file names)
-AGENTS_WITH_SKILLS = [
-    "agent-manager",
-    "agentic-coder-optimizer",
-    "api_qa",
-    "clerk-ops",
-    "code_analyzer",
-    "content-agent",
-    "dart_engineer",
-    "data_engineer",
-    "documentation",
-    "engineer",
-    "gcp_ops_agent",
-    "golang_engineer",
-    "imagemagick",
-    "java_engineer",
-    "local_ops_agent",
-    "nextjs_engineer",
-    "ops",
-    "php-engineer",
-    "project_organizer",
-    "python_engineer",
-    "qa",
-    "react_engineer",
-    "refactoring_engineer",
-    "ruby-engineer",
-    "rust_engineer",
-    "security",
-    "ticketing",
-    "typescript_engineer",
-    "vercel_ops_agent",
-    "version_control",
-    "web_ui",
-]
+
+def discover_agents(agents_dir: Path) -> list[str]:
+    """Discover agent template files dynamically.
+
+    Args:
+        agents_dir: Path to the agents templates directory.
+
+    Returns:
+        List of agent names (file stems) found in the directory.
+    """
+    return [f.stem for f in agents_dir.glob("*.json") if f.is_file()]
 
 
 def bump_patch_version(version_str):
-    """Bump patch version (3.0.0 → 3.0.1)."""
+    """Bump patch version (3.0.0 -> 3.0.1)."""
     parts = version_str.split(".")
     if len(parts) == 3:
         major, minor, patch = parts
@@ -72,22 +51,29 @@ def main():
     print("Bumping agent versions for skills integration...")
     print("=" * 60)
 
+    if not AGENTS_DIR.exists():
+        print(f"ERROR: Agents directory not found: {AGENTS_DIR}")
+        return [], [("agents_dir", "directory not found")]
+
+    agents = discover_agents(AGENTS_DIR)
+    if not agents:
+        print("No agent JSON files found in templates directory.")
+        return [], []
+
+    print(f"Discovered {len(agents)} agent template(s).\n")
+
     bumped = []
     failed = []
 
-    for agent_name in AGENTS_WITH_SKILLS:
+    for agent_name in sorted(agents):
         agent_file = AGENTS_DIR / f"{agent_name}.json"
-        if agent_file.exists():
-            try:
-                old, new = bump_agent_version(agent_file)
-                bumped.append((agent_name, old, new))
-                print(f"✓ {agent_name}: {old} → {new}")
-            except Exception as e:
-                failed.append((agent_name, str(e)))
-                print(f"✗ {agent_name}: ERROR - {e}")
-        else:
-            failed.append((agent_name, "file not found"))
-            print(f"✗ {agent_name}: file not found")
+        try:
+            old, new = bump_agent_version(agent_file)
+            bumped.append((agent_name, old, new))
+            print(f"  {agent_name}: {old} -> {new}")
+        except Exception as e:
+            failed.append((agent_name, str(e)))
+            print(f"  {agent_name}: ERROR - {e}")
 
     print("\n" + "=" * 60)
     print(f"Summary: {len(bumped)} bumped, {len(failed)} failed")
