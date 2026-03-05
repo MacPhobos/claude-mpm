@@ -55,8 +55,8 @@ class UtilityService(BaseService, UtilityServiceInterface):
             "research agent",
             "security agent",
             "ops agent",
-            "version_control agent",
-            "data_engineer agent",
+            "version-control agent",
+            "data-engineer agent",
         ]
 
         text_lower = text.lower()
@@ -84,8 +84,8 @@ class UtilityService(BaseService, UtilityServiceInterface):
             "research",
             "security",
             "ops",
-            "version_control",
-            "data_engineer",
+            "version-control",
+            "data-engineer",
         ]
         text_lower = text.lower()
         for agent in agent_names:

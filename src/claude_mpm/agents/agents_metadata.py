@@ -31,7 +31,7 @@ DOCUMENTATION_CONFIG = {
 
 # Version Control Agent Metadata
 VERSION_CONTROL_CONFIG = {
-    "name": "version_control_agent",
+    "name": "version-control-agent",
     "version": "2.0.0",
     "agent_type": "core_agent",
     "capabilities": [
@@ -218,7 +218,7 @@ ENGINEER_CONFIG = {
 
 # Data Engineer Agent Metadata
 DATA_ENGINEER_CONFIG = {
-    "name": "data_engineer_agent",
+    "name": "data-engineer-agent",
     "version": "1.0.0",
     "agent_type": "core_agent",
     "capabilities": [

@@ -40,8 +40,8 @@ Return: Approval status with specific recommendations
 
 **Routing**:
 ```python
-if "API" in implementation: use api_qa
-elif "UI" in implementation: use web_qa
+if "API" in implementation: use api-qa
+elif "UI" in implementation: use web-qa
 else: use qa
 ```
 

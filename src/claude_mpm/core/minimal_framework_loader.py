@@ -103,7 +103,7 @@ Extract from: TODO:, BUG:, FEATURE:, ISSUE:
             "documentation",
             "research",
             "security",
-            "version_control",
+            "version-control",
             "ops",
-            "data_engineer",
+            "data-engineer",
         ]

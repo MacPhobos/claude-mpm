@@ -161,7 +161,7 @@ You have the following specialized agents available for delegation:
 {% endif %}
 ### Engineering Agents
 {% for cap in detailed_capabilities %}
-{% if cap.id in ['engineer', 'data_engineer', 'documentation', 'ops', 'security', 'ticketing', 'version_control', 'web_ui'] %}
+{% if cap.id in ['engineer', 'data-engineer', 'documentation', 'ops', 'security', 'ticketing', 'version-control', 'web-ui'] %}
 - **{{ cap.name }}** (`{{ cap.id }}`): {{ cap.capability_text }}
 {% endif %}
 {% endfor %}
@@ -188,7 +188,7 @@ Use the agent ID in parentheses when delegating tasks via the Task tool.
         logger.warning("Using fallback content due to generation failure")
         return """
 ## Agent Names & Capabilities
-**Core Agents**: research, engineer, qa, documentation, security, ops, version_control, data_engineer
+**Core Agents**: research, engineer, qa, documentation, security, ops, version-control, data-engineer
 
 **Agent Capabilities**:
 - **Research**: Codebase analysis, best practices, technical investigation

@@ -65,7 +65,7 @@ SYSTEM_AGENTS = {
         "version": "2.0.0",
         "integration": "claude_pm_framework",
     },
-    "version_control": {
+    "version-control": {
         "agent_id": "version-control-agent",
         "config": VERSION_CONTROL_CONFIG,
         "version": "2.0.0",
@@ -101,7 +101,7 @@ SYSTEM_AGENTS = {
         "version": "2.0.0",
         "integration": "claude_pm_framework",
     },
-    "data_engineer": {
+    "data-engineer": {
         "agent_id": "data-engineer-agent",
         "config": DATA_ENGINEER_CONFIG,
         "version": "2.0.0",

@@ -44,8 +44,8 @@ class AgentConfigProvider:
             "research": [*base_tools, "WebSearch", "WebFetch", "Bash"],
             "security": [*base_tools, "Bash", "WebSearch", "Grep"],
             "ops": [*base_tools, "Bash", "WebSearch"],
-            "data_engineer": [*base_tools, "Bash", "WebSearch"],
-            "version_control": [*base_tools, "Bash"],
+            "data-engineer": [*base_tools, "Bash", "WebSearch"],
+            "version-control": [*base_tools, "Bash"],
         }
 
         # Return specific tools or default set
@@ -322,7 +322,7 @@ class AgentConfigProvider:
                 ],
                 "authority": "ALL operations decisions",
             },
-            "data_engineer": {
+            "data-engineer": {
                 **base_config,
                 "description": "Data pipeline management and AI API integrations",
                 "tags": ["data", "pipeline", "etl", "ai-integration"],
@@ -362,7 +362,7 @@ class AgentConfigProvider:
                 ],
                 "authority": "ALL data engineering decisions",
             },
-            "version_control": {
+            "version-control": {
                 **base_config,
                 "description": "Git operations, version management, and release coordination",
                 "tags": ["git", "version-control", "release", "branching"],

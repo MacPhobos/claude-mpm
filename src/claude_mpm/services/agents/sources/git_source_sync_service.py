@@ -765,9 +765,9 @@ class GitSourceSyncService:
             "security.md",
             "ops.md",
             "ticketing.md",
-            "product_owner.md",
-            "version_control.md",
-            "project_organizer.md",
+            "product-owner.md",
+            "version-control.md",
+            "project-organizer.md",
         ]
 
     def _discover_agents_via_tree_api(

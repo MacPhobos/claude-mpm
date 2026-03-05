@@ -297,8 +297,8 @@ class SystemAgentConfigManager:
             priority=35,
         )
 
-        self._agents["data_engineer"] = SystemAgentConfig(
-            agent_type="data_engineer",
+        self._agents["data-engineer"] = SystemAgentConfig(
+            agent_type="data-engineer",
             agent_name="Data Engineer Agent",
             description="Data store management and AI API integrations",
             default_model=ModelType.SONNET.value,
@@ -324,8 +324,8 @@ class SystemAgentConfigManager:
             priority=45,
         )
 
-        self._agents["version_control"] = SystemAgentConfig(
-            agent_type="version_control",
+        self._agents["version-control"] = SystemAgentConfig(
+            agent_type="version-control",
             agent_name="Version Control Agent",
             description="Git operations, branch management, and version control",
             default_model=ModelType.SONNET.value,

@@ -132,8 +132,8 @@ class SimpleAgentRegistry:
             "research": ["analysis", "investigation", "exploration"],
             "ops": ["deployment", "monitoring", "infrastructure"],
             "security": ["security", "audit", "compliance"],
-            "version_control": ["git", "versioning", "releases"],
-            "data_engineer": ["data", "etl", "analytics"],
+            "version-control": ["git", "versioning", "releases"],
+            "data-engineer": ["data", "etl", "analytics"],
         }
         return specialization_map.get(agent_id, [])
 
@@ -146,8 +146,8 @@ class SimpleAgentRegistry:
             "research": "Research and investigation",
             "ops": "Operations and deployment",
             "security": "Security analysis and compliance",
-            "version_control": "Version control and release management",
-            "data_engineer": "Data engineering and analytics",
+            "version-control": "Version control and release management",
+            "data-engineer": "Data engineering and analytics",
         }
         return descriptions.get(agent_id, f"{agent_id.title()} agent")
 
@@ -229,8 +229,8 @@ class SimpleAgentRegistry:
             "research",
             "ops",
             "security",
-            "version_control",
-            "data_engineer",
+            "version-control",
+            "data-engineer",
         }
 
     @property
@@ -360,8 +360,8 @@ class AgentRegistryAdapter:
                 "research",
                 "ops",
                 "security",
-                "version_control",
-                "data_engineer",
+                "version-control",
+                "data-engineer",
             ]
 
     def format_agent_for_task_tool(
@@ -376,8 +376,8 @@ class AgentRegistryAdapter:
             "research": "Researcher",
             "ops": "Ops",
             "security": "Security",
-            "version_control": "Versioner",
-            "data_engineer": "Data Engineer",
+            "version-control": "Versioner",
+            "data-engineer": "Data Engineer",
         }
 
         nickname = nicknames.get(agent_name, agent_name.title())

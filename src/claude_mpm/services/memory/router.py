@@ -250,7 +250,7 @@ class MemoryRouter(LoggerMixin):
                 "Risk Management",
             ],
         },
-        "data_engineer": {
+        "data-engineer": {
             "keywords": [
                 "data",
                 "database",
@@ -409,7 +409,7 @@ class MemoryRouter(LoggerMixin):
                 "Scaling and Performance",
             ],
         },
-        "version_control": {
+        "version-control": {
             "keywords": [
                 "git",
                 "github",
