@@ -49,8 +49,8 @@ class ToolAccessControl:
         "security": AGENT_TOOLS,
         "documentation": AGENT_TOOLS,
         "ops": AGENT_TOOLS,
-        "version_control": AGENT_TOOLS,
-        "data_engineer": AGENT_TOOLS,
+        "version-control": AGENT_TOOLS,
+        "data-engineer": AGENT_TOOLS,
         "architect": AGENT_TOOLS,
     }
 
@@ -71,7 +71,7 @@ class ToolAccessControl:
             List of allowed tool names
         """
         # Normalize agent type
-        agent_type = agent_type.lower().replace(" ", "_").replace("-", "_")
+        agent_type = agent_type.lower().replace(" ", "-").replace("_", "-")
 
         # Parent process (PM) gets PM tools
         if is_parent or agent_type == "pm":
@@ -119,7 +119,7 @@ class ToolAccessControl:
             agent_type: The agent type to customize
             allowed_tools: Set of allowed tool names
         """
-        agent_type = agent_type.lower().replace(" ", "_").replace("-", "_")
+        agent_type = agent_type.lower().replace(" ", "-").replace("_", "-")
 
         # Ensure TodoWrite is not in custom restrictions for non-PM agents
         if agent_type != "pm" and "TodoWrite" in allowed_tools:

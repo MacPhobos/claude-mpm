@@ -195,12 +195,12 @@ class TestToKeyFormat:
         "input_name,expected_key",
         [
             ("Research", "research"),
-            ("Python Engineer", "python_engineer"),
-            ("python-engineer", "python_engineer"),
-            ("python_engineer", "python_engineer"),
-            ("Version Control", "version_control"),
-            ("MPM Agent Manager", "mpm_agent_manager"),
-            ("API QA", "api_qa"),
+            ("Python Engineer", "python-engineer"),
+            ("python-engineer", "python-engineer"),
+            ("python_engineer", "python-engineer"),
+            ("Version Control", "version-control"),
+            ("MPM Agent Manager", "mpm-agent-manager"),
+            ("API QA", "api-qa"),
         ],
     )
     def test_to_key_format(self, input_name: str, expected_key: str) -> None:

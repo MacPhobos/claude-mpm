@@ -192,8 +192,8 @@ class AgentSessionManager:
             "research": "You are the Research Agent. Your role is investigation and analysis. Confirm with 'Research Agent ready.'",
             "security": "You are the Security Agent. Your role is security analysis and protection. Confirm with 'Security Agent ready.'",
             "ops": "You are the Ops Agent. Your role is deployment and operations. Confirm with 'Ops Agent ready.'",
-            "data_engineer": "You are the Data Engineer Agent. Your role is data management and processing. Confirm with 'Data Engineer Agent ready.'",
-            "version_control": "You are the Version Control Agent. Your role is Git operations and version management. Confirm with 'Version Control Agent ready.'",
+            "data-engineer": "You are the Data Engineer Agent. Your role is data management and processing. Confirm with 'Data Engineer Agent ready.'",
+            "version-control": "You are the Version Control Agent. Your role is Git operations and version management. Confirm with 'Version Control Agent ready.'",
         }
 
         return initialization_prompts.get(

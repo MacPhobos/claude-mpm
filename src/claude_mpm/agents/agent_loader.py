@@ -805,25 +805,25 @@ def get_agent_prompt(
     else:
         # Get the normalized key (e.g., "engineer", "research", "qa")
         # First check if the agent name is recognized by the normalizer
-        # Note: replace spaces AND hyphens with underscores for multi-word names
-        # e.g., "Version Control" -> "version_control", "data-engineer" -> "data_engineer"
-        cleaned = agent_name.strip().lower().replace("-", "_").replace(" ", "_")
+        # Note: replace underscores AND spaces with hyphens for multi-word names
+        # e.g., "Version Control" -> "version-control", "data_engineer" -> "data-engineer"
+        cleaned = agent_name.strip().lower().replace("_", "-").replace(" ", "-")
 
         # Check if this is a known alias or canonical name
         if cleaned in normalizer.ALIASES or cleaned in normalizer.CANONICAL_NAMES:
             agent_key = normalizer.to_key(agent_name)
-            # Try both with and without _agent suffix
+            # Try both with and without -agent suffix
             if loader.get_agent(agent_key):
                 actual_agent_id = agent_key
-            elif loader.get_agent(f"{agent_key}_agent"):
-                actual_agent_id = f"{agent_key}_agent"
+            elif loader.get_agent(f"{agent_key}-agent"):
+                actual_agent_id = f"{agent_key}-agent"
             else:
                 actual_agent_id = agent_key  # Use normalized key
         # Unknown agent name - check both variations
         elif loader.get_agent(cleaned):
             actual_agent_id = cleaned
-        elif loader.get_agent(f"{cleaned}_agent"):
-            actual_agent_id = f"{cleaned}_agent"
+        elif loader.get_agent(f"{cleaned}-agent"):
+            actual_agent_id = f"{cleaned}-agent"
         else:
             actual_agent_id = cleaned  # Use cleaned name
 

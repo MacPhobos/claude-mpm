@@ -30,8 +30,8 @@ _MOCK_AGENT_INSTRUCTIONS: dict[str, str] = {
     "security": "You are the Security agent. " + "x" * 200,
     "documentation": "You are the Documentation agent. " + "x" * 200,
     "ops": "You are the Ops agent. " + "x" * 200,
-    "version_control": "You are the Version Control agent. " + "x" * 200,
-    "data_engineer": "You are the Data Engineer agent. " + "x" * 200,
+    "version-control": "You are the Version Control agent. " + "x" * 200,
+    "data-engineer": "You are the Data Engineer agent. " + "x" * 200,
     "architect": "You are the Architect agent. " + "x" * 200,
     "pm": "You are the PM agent. " + "x" * 200,
 }
@@ -43,7 +43,7 @@ def _make_mock_loader() -> MagicMock:
 
     def _get_agent(agent_id: str):
         """Return a mock agent dict for any known key; None otherwise."""
-        key = agent_id.lower().replace("-", "_").replace(" ", "_")
+        key = agent_id.lower().replace("_", "-").replace(" ", "-")
         if key in _MOCK_AGENT_INSTRUCTIONS:
             return {
                 "id": key,
@@ -62,7 +62,7 @@ def _make_mock_loader() -> MagicMock:
     # get_agent_prompt delegates to registry, so wire that up too
     loader.get_agent_prompt.side_effect = lambda agent_id, *args, **kwargs: (
         _MOCK_AGENT_INSTRUCTIONS.get(
-            agent_id.lower().replace("-", "_").replace(" ", "_")
+            agent_id.lower().replace("_", "-").replace(" ", "-")
         )
     )
     # Provide a stub registry with a registry dict so iteration works
@@ -168,10 +168,10 @@ class TestAgentNameNormalizer(unittest.TestCase):
         """Test conversion to key format."""
         test_cases = [
             ("Research", "research"),
-            ("Version Control", "version_control"),
-            ("Data Engineer", "data_engineer"),
+            ("Version Control", "version-control"),
+            ("Data Engineer", "data-engineer"),
             ("QA", "qa"),
-            ("version-control", "version_control"),  # Hyphen to underscore
+            ("version-control", "version-control"),  # Hyphen stays hyphen
         ]
 
         for input_name, expected in test_cases:
