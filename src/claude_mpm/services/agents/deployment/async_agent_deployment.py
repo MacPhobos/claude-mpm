@@ -261,7 +261,10 @@ class AsyncAgentDeploymentService:
 
                 # Add file metadata
                 data["_source_file"] = str(file_path)
-                data["_agent_name"] = file_path.stem
+                _raw_stem = file_path.stem.lower().replace("_", "-")
+                if _raw_stem.endswith("-agent"):
+                    _raw_stem = _raw_stem[:-6]
+                data["_agent_name"] = _raw_stem
 
                 return data
 
@@ -479,6 +482,10 @@ class AsyncAgentDeploymentService:
             """Deploy a single agent asynchronously."""
             try:
                 agent_name = agent.get("_agent_name", "unknown")
+                # Normalize for deployment filename
+                agent_name = agent_name.lower().replace("_", "-")
+                if agent_name.endswith("-agent"):
+                    agent_name = agent_name[:-6]
                 target_file = agents_dir / f"{agent_name}.md"
 
                 # Build markdown content in thread pool (CPU-bound)

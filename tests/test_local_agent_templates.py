@@ -260,10 +260,11 @@ class TestLocalTemplateDeploymentService:
             result = service._deploy_single_template(template, force_rebuild=False)
 
             assert result == "deployed"
-            assert (target_dir / "deploy_test.md").exists()
+            # Normalization converts underscores to hyphens: "deploy_test" -> "deploy-test"
+            assert (target_dir / "deploy-test.md").exists()
 
             # Check content
-            content = (target_dir / "deploy_test.md").read_text()
+            content = (target_dir / "deploy-test.md").read_text()
             assert "Deploy Test Agent" in content
             assert "Deploy test instructions" in content
 

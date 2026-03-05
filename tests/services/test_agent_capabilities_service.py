@@ -88,9 +88,10 @@ class TestAgentCapabilitiesService:
         service._discover_agents_from_dir(agents_dir, discovered_agents, "project")
 
         assert len(discovered_agents) == 1
-        assert "test-agent" in discovered_agents
-        assert discovered_agents["test-agent"]["name"] == "Test Agent"
-        assert discovered_agents["test-agent"]["tier"] == "project"
+        # Normalization strips "-agent" suffix: "test-agent" -> "test"
+        assert "test" in discovered_agents
+        assert discovered_agents["test"]["name"] == "Test Agent"
+        assert discovered_agents["test"]["tier"] == "project"
 
     def test_categorize_agent(self, service):
         """Test agent categorization logic."""
@@ -134,13 +135,14 @@ class TestAgentCapabilitiesService:
 
         # Discover system agents first (lower priority)
         service._discover_agents_from_dir(system_dir, discovered_agents, "system")
-        assert discovered_agents["test-agent"]["tier"] == "system"
-        assert discovered_agents["test-agent"]["name"] == "System Test Agent"
+        # Normalization strips "-agent" suffix: "test-agent" -> "test"
+        assert discovered_agents["test"]["tier"] == "system"
+        assert discovered_agents["test"]["name"] == "System Test Agent"
 
         # Discover project agents (higher priority - should override)
         service._discover_agents_from_dir(project_dir, discovered_agents, "project")
-        assert discovered_agents["test-agent"]["tier"] == "project"
-        assert discovered_agents["test-agent"]["name"] == "Project Test Agent"
+        assert discovered_agents["test"]["tier"] == "project"
+        assert discovered_agents["test"]["name"] == "Project Test Agent"
 
     def test_agent_with_yaml_frontmatter(self, service, tmp_path):
         """Test agent discovery with YAML frontmatter."""
@@ -165,10 +167,11 @@ This is the agent content.
         service._discover_agents_from_dir(agents_dir, discovered_agents, "project")
 
         assert len(discovered_agents) == 1
-        assert "custom-agent" in discovered_agents
+        # Note: normalization strips "-agent" suffix, so "custom-agent" -> "custom"
+        assert "custom" in discovered_agents
         # Note: The current implementation may not parse YAML frontmatter correctly
         # This test verifies the method runs without error
-        assert discovered_agents["custom-agent"]["tier"] == "project"
+        assert discovered_agents["custom"]["tier"] == "project"
 
     def test_error_handling_in_discovery(self, service, tmp_path):
         """Test error handling during agent discovery."""

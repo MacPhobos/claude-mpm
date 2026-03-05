@@ -80,18 +80,23 @@ def normalize_deployment_filename(
     return f"{normalized_stem}.md"
 
 
-def ensure_agent_id_in_frontmatter(content: str, filename: str) -> str:
+def ensure_agent_id_in_frontmatter(
+    content: str, filename: str, update_existing: bool = False
+) -> str:
     """Ensure YAML frontmatter has agent_id field.
 
     If the content has YAML frontmatter but no agent_id, derive one from filename.
     If no frontmatter exists, add one with agent_id.
+    If update_existing is True, overwrite an existing agent_id with the normalized value.
 
     Args:
         content: Markdown file content (may have YAML frontmatter)
         filename: Source filename to derive agent_id from
+        update_existing: If True, update existing agent_id to normalized form
 
     Returns:
-        Content with agent_id in frontmatter (may be unchanged if already present)
+        Content with agent_id in frontmatter (may be unchanged if already present
+        and update_existing is False)
 
     Examples:
         >>> content = "---\\nname: Python Engineer\\n---\\n# Content"
@@ -121,6 +126,18 @@ def ensure_agent_id_in_frontmatter(content: str, filename: str) -> str:
     try:
         parsed = yaml.safe_load(yaml_content)
         if isinstance(parsed, dict) and "agent_id" in parsed:
+            if update_existing:
+                # Replace existing agent_id with normalized value
+                import re as _re
+
+                updated_yaml = _re.sub(
+                    r"^agent_id:.*$",
+                    f"agent_id: {derived_agent_id}",
+                    yaml_content,
+                    count=1,
+                    flags=_re.MULTILINE,
+                )
+                return f"---\n{updated_yaml}\n---{frontmatter_match.group(2)}{rest_of_content}"
             # agent_id already exists, return unchanged
             return content
     except yaml.YAMLError:

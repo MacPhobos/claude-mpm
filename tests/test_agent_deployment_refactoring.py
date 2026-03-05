@@ -312,9 +312,10 @@ class TestAgentProcessor:
             deployment_mode="project",
         )
 
-        assert context.agent_name == "test-agent"
+        # Normalization strips "-agent" suffix: "test-agent" -> "test"
+        assert context.agent_name == "test"
         assert context.template_file == template_file
-        assert context.target_file == agents_dir / "test-agent.md"
+        assert context.target_file == agents_dir / "test.md"
         assert context.force_rebuild is True
         assert context.deployment_mode == "project"
         assert context.base_agent_data == base_agent_data

@@ -291,8 +291,11 @@ class DeploymentReconciler:
 
         agent_ids = set()
         for agent_file in deploy_dir.glob("*.md"):
-            # Extract agent ID from filename (remove .md extension)
-            agent_id = agent_file.stem
+            # Extract agent ID from filename, normalized to hyphen-canonical
+            raw_stem = agent_file.stem
+            agent_id = raw_stem.lower().replace("_", "-")
+            if agent_id.endswith("-agent"):
+                agent_id = agent_id[:-6]
             agent_ids.add(agent_id)
 
         return agent_ids
@@ -304,8 +307,11 @@ class DeploymentReconciler:
 
         agent_ids = set()
         for agent_file in cache_dir.glob("**/*.md"):
-            # Extract agent ID from filename
-            agent_id = agent_file.stem
+            # Extract agent ID from filename, normalized to hyphen-canonical
+            raw_stem = agent_file.stem
+            agent_id = raw_stem.lower().replace("_", "-")
+            if agent_id.endswith("-agent"):
+                agent_id = agent_id[:-6]
             agent_ids.add(agent_id)
 
         return agent_ids

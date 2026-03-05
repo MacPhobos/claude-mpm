@@ -40,7 +40,10 @@ class AgentDeploymentContext:
             self.agents_dir = self.target_file.parent
 
         if self.agent_name is None and self.template_file:
-            self.agent_name = self.template_file.stem
+            _stem = self.template_file.stem.lower().replace("_", "-")
+            if _stem.endswith("-agent"):
+                _stem = _stem[:-6]
+            self.agent_name = _stem
 
         if self.target_file is None and self.agents_dir and self.agent_name:
             self.target_file = self.agents_dir / f"{self.agent_name}.md"
@@ -70,7 +73,9 @@ class AgentDeploymentContext:
         Returns:
             AgentDeploymentContext instance
         """
-        agent_name = template_file.stem
+        agent_name = template_file.stem.lower().replace("_", "-")
+        if agent_name.endswith("-agent"):
+            agent_name = agent_name[:-6]
         target_file = agents_dir / f"{agent_name}.md"
 
         return cls(

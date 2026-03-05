@@ -65,7 +65,9 @@ class SingleAgentDeployer:
             # METRICS: Track individual agent deployment time
             agent_start_time = time.time()
 
-            agent_name = template_file.stem
+            agent_name = template_file.stem.lower().replace("_", "-")
+            if agent_name.endswith("-agent"):
+                agent_name = agent_name[:-6]
             target_file = agents_dir / f"{agent_name}.md"
 
             # Check if agent needs update
@@ -212,6 +214,11 @@ class SingleAgentDeployer:
 
             # Ensure target directory exists
             target_dir.mkdir(parents=True, exist_ok=True)
+
+            # Normalize agent_name for deployment filename
+            agent_name = agent_name.lower().replace("_", "-")
+            if agent_name.endswith("-agent"):
+                agent_name = agent_name[:-6]
 
             # Build and deploy the agent
             target_file = target_dir / f"{agent_name}.md"

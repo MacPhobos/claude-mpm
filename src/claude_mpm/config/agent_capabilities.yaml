@@ -10,9 +10,9 @@ agent_capabilities:
   # ENGINEERING AGENTS (Language-Specific)
   # ===================================
 
-  python_engineer:
+  python-engineer:
     name: "Python Engineer"
-    agent_id: "python_engineer"
+    agent_id: "python-engineer"
     specialization: "engineering"
     description: "Python 3.12+ development specialist with async-first, type-safe implementations"
     supports:
@@ -47,9 +47,9 @@ agent_capabilities:
         - engineering
         - performance
 
-  typescript_engineer:
+  typescript-engineer:
     name: "TypeScript Engineer"
-    agent_id: "typescript_engineer"
+    agent_id: "typescript-engineer"
     specialization: "engineering"
     description: "TypeScript specialist for type-safe JavaScript development"
     supports:
@@ -83,9 +83,9 @@ agent_capabilities:
         - javascript
         - engineering
 
-  nextjs_engineer:
+  nextjs-engineer:
     name: "Next.js Engineer"
-    agent_id: "nextjs_engineer"
+    agent_id: "nextjs-engineer"
     specialization: "engineering"
     description: "Next.js and React specialist with SSR/SSG expertise"
     supports:
@@ -119,11 +119,11 @@ agent_capabilities:
         - ssg
       # This agent takes priority over typescript_engineer when Next.js is detected
       overrides:
-        - typescript_engineer
+        - typescript-engineer
 
-  golang_engineer:
+  golang-engineer:
     name: "Golang Engineer"
-    agent_id: "golang_engineer"
+    agent_id: "golang-engineer"
     specialization: "engineering"
     description: "Go language specialist for high-performance backend services"
     supports:
@@ -155,9 +155,9 @@ agent_capabilities:
         - performance
         - microservices
 
-  java_engineer:
+  java-engineer:
     name: "Java Engineer"
-    agent_id: "java_engineer"
+    agent_id: "java-engineer"
     specialization: "engineering"
     description: "Java development specialist with Spring and enterprise patterns"
     supports:
@@ -189,9 +189,9 @@ agent_capabilities:
         - spring
         - enterprise
 
-  rust_engineer:
+  rust-engineer:
     name: "Rust Engineer"
-    agent_id: "rust_engineer"
+    agent_id: "rust-engineer"
     specialization: "engineering"
     description: "Rust specialist for systems programming and performance-critical applications"
     supports:
@@ -219,7 +219,7 @@ agent_capabilities:
         - systems-programming
         - performance
 
-  php_engineer:
+  php-engineer:
     name: "PHP Engineer"
     agent_id: "php-engineer"
     specialization: "engineering"
@@ -253,7 +253,7 @@ agent_capabilities:
         - laravel
         - web
 
-  ruby_engineer:
+  ruby-engineer:
     name: "Ruby Engineer"
     agent_id: "ruby-engineer"
     specialization: "engineering"
@@ -410,9 +410,9 @@ agent_capabilities:
   # DEVOPS AGENTS (Deployment-Specific)
   # ===================================
 
-  vercel_ops_agent:
+  vercel-ops:
     name: "Vercel Ops Agent"
-    agent_id: "vercel_ops_agent"
+    agent_id: "vercel-ops"
     specialization: "devops"
     description: "Vercel deployment and operations specialist"
     supports:
@@ -440,9 +440,9 @@ agent_capabilities:
         - deployment
         - serverless
 
-  gcp_ops_agent:
+  gcp-ops:
     name: "GCP Ops Agent"
-    agent_id: "gcp_ops_agent"
+    agent_id: "gcp-ops"
     specialization: "devops"
     description: "Google Cloud Platform operations specialist"
     supports:
@@ -471,9 +471,9 @@ agent_capabilities:
         - google-cloud
         - devops
 
-  local_ops_agent:
+  local-ops:
     name: "Local Ops Agent"
-    agent_id: "local_ops_agent"
+    agent_id: "local-ops"
     specialization: "devops"
     description: "Local development and deployment operations"
     supports:

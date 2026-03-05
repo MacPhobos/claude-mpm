@@ -221,7 +221,10 @@ class AgentCapabilitiesService(BaseService, AgentCapabilitiesInterface):
         agent_files = list(agents_dir.glob("*.md"))
         for agent_file in sorted(agent_files):
             try:
-                agent_id = agent_file.stem
+                raw_stem = agent_file.stem
+                agent_id = raw_stem.lower().replace("_", "-")
+                if agent_id.endswith("-agent"):
+                    agent_id = agent_id[:-6]
 
                 # Read agent content
                 content = agent_file.read_text(encoding="utf-8")

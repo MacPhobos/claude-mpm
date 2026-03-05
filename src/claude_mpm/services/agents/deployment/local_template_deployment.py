@@ -110,7 +110,11 @@ class LocalTemplateDeploymentService:
         Returns:
             'deployed', 'updated', or 'skipped'
         """
-        target_file = self.target_dir / f"{template.agent_id}.md"
+        # Normalize agent_id for deployment filename (underscore → hyphen)
+        normalized_id = template.agent_id.lower().replace("_", "-")
+        if normalized_id.endswith("-agent"):
+            normalized_id = normalized_id[:-6]
+        target_file = self.target_dir / f"{normalized_id}.md"
 
         # Check if needs update
         if not force_rebuild and target_file.exists():

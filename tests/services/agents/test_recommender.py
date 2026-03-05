@@ -838,10 +838,10 @@ def test_default_configuration_not_applied_with_recommendations(
 
     recommendations = recommender.recommend_agents(toolchain)
 
-    # Should have python_engineer, not default agents
+    # Should have python-engineer, not default agents
     assert len(recommendations) > 0
     agent_ids = [rec.agent_id for rec in recommendations]
-    assert "python_engineer" in agent_ids
+    assert "python-engineer" in agent_ids
 
     # None should be marked as default
     for rec in recommendations:

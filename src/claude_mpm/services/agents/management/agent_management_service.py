@@ -94,7 +94,10 @@ class AgentManager:
         content = self._definition_to_markdown(definition)
 
         # Write file
-        file_path = target_dir / f"{name}.md"
+        normalized_name = name.lower().replace("_", "-")
+        if normalized_name.endswith("-agent"):
+            normalized_name = normalized_name[:-6]
+        file_path = target_dir / f"{normalized_name}.md"
         file_path.write_text(content, encoding="utf-8")
 
         # Clear cache
