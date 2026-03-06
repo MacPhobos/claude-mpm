@@ -558,6 +558,7 @@ class TestGitSourceSyncServiceAgentSync:
         agent_list = git_sync_service._get_agent_list()
         for agent in agent_list:
             cache_file = git_sync_service.cache_dir / agent
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_file.write_text(sample_agent_content)
 
             # Track in SQLite
@@ -594,6 +595,7 @@ class TestGitSourceSyncServiceAgentSync:
         cached_agents = agent_list[:3]
         for agent in cached_agents:
             cache_file = git_sync_service.cache_dir / agent
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_file.write_text(sample_agent_content)
 
             content_sha = get_file_hash(cache_file, algorithm="sha256")
@@ -608,9 +610,9 @@ class TestGitSourceSyncServiceAgentSync:
         # Mock responses: 304 for cached, 200 for updated
         def mock_get_side_effect(url, headers=None, timeout=None):
             mock_response = Mock()
-            filename = url.split("/")[-1]
 
-            if filename in cached_agents:
+            # Check if URL matches any cached agent path
+            if any(agent in url for agent in cached_agents):
                 mock_response.status_code = 304
             else:
                 mock_response.status_code = 200
@@ -960,10 +962,11 @@ class TestHashMismatchHandling:
 
         Covers lines 298-317: ETag returns 304 but hash doesn't match
         """
-        filename = "research-agent.md"
+        filename = "universal/research.md"
         cache_file = git_sync_service.cache_dir / filename
 
         # Create cached file
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(sample_agent_content)
 
         # Track with WRONG hash (simulate corruption)
@@ -1008,10 +1011,11 @@ class TestHashMismatchHandling:
 
         Covers lines 316-317: Re-download failure handling
         """
-        filename = "research-agent.md"
+        filename = "universal/research.md"
         cache_file = git_sync_service.cache_dir / filename
 
         # Create cached file with wrong hash
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(sample_agent_content)
         git_sync_service.sync_state.track_file(
             source_id="github-remote",
@@ -1045,7 +1049,7 @@ class TestCacheFileMissing:
 
         Covers lines 325-349: ETag 304 but cache file missing
         """
-        filename = "research-agent.md"
+        filename = "universal/research.md"
         url = f"{git_sync_service.source_url}/{filename}"
 
         # Set ETag as if file was cached
@@ -1084,7 +1088,7 @@ class TestCacheFileMissing:
 
         Covers lines 343-344: Re-download failure path
         """
-        filename = "research-agent.md"
+        filename = "universal/research.md"
         url = f"{git_sync_service.source_url}/{filename}"
 
         # Set ETag but no cache file
@@ -1167,8 +1171,6 @@ class TestExtendedErrorHandling:
 
         Covers lines 346-349: Unexpected status handling
         """
-        filename = "research-agent.md"
-
         # Mock 418 I'm a teapot (unexpected status)
         mock_response = Mock()
         mock_response.status_code = 418
@@ -1176,8 +1178,8 @@ class TestExtendedErrorHandling:
 
         result = git_sync_service.sync_agents()
 
-        # Should be in failed list
-        assert filename in result["failed"]
+        # Should be in failed list (use a filename from the fallback list)
+        assert "universal/research.md" in result["failed"]
 
 
 class TestNetworkResilience:

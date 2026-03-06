@@ -337,8 +337,8 @@ class TestGitSourceSyncService:
     @mock.patch("requests.Session.head")
     def test_check_for_updates(self, mock_head, service):
         """Test checking for updates without downloading."""
-        # Pre-populate ETag cache
-        url = f"{service.source_url}/research-agent.md"
+        # Pre-populate ETag cache (use repo path format matching fallback list)
+        url = f"{service.source_url}/universal/research.md"
         service.etag_cache.set_etag(url, '"old_etag"')
 
         # Mock HEAD response with new ETag
@@ -350,8 +350,8 @@ class TestGitSourceSyncService:
         updates = service.check_for_updates()
 
         # Should detect update
-        assert "research-agent.md" in updates
-        assert updates["research-agent.md"] is True
+        assert "universal/research.md" in updates
+        assert updates["universal/research.md"] is True
 
         # Verify HEAD request was used (not GET)
         mock_head.assert_called()
@@ -359,8 +359,8 @@ class TestGitSourceSyncService:
     @mock.patch("requests.Session.head")
     def test_check_for_updates_no_changes(self, mock_head, service):
         """Test check when no updates available."""
-        # Pre-populate ETag cache
-        url = f"{service.source_url}/research-agent.md"
+        # Pre-populate ETag cache (use repo path format matching fallback list)
+        url = f"{service.source_url}/universal/research.md"
         service.etag_cache.set_etag(url, '"same_etag"')
 
         # Mock HEAD response with same ETag
@@ -372,8 +372,8 @@ class TestGitSourceSyncService:
         updates = service.check_for_updates()
 
         # Should not detect update
-        assert "research-agent.md" in updates
-        assert updates["research-agent.md"] is False
+        assert "universal/research.md" in updates
+        assert updates["universal/research.md"] is False
 
     @mock.patch("requests.Session.get")
     def test_download_agent_file(self, mock_get, service):
@@ -465,9 +465,9 @@ class TestGitSourceSyncService:
 
             # Should return fallback list
             assert isinstance(agent_list, list)
-            assert len(agent_list) == 11  # Fallback list size
-            assert "research-agent.md" in agent_list
-            assert "engineer.md" in agent_list
+            assert len(agent_list) == 13  # Fallback list size
+            assert "universal/research.md" in agent_list
+            assert "engineer/core/engineer.md" in agent_list
 
     def test_get_agent_list_rate_limit_fallback(self, service):
         """Test fallback when GitHub API rate limit is exceeded."""
@@ -481,7 +481,7 @@ class TestGitSourceSyncService:
 
             # Should return fallback list
             assert isinstance(agent_list, list)
-            assert len(agent_list) == 11  # Fallback list size
+            assert len(agent_list) == 13  # Fallback list size
 
     def test_get_agent_list_excludes_readme(self, service_with_agents_path):
         """Test that README.md is excluded from agent list."""
@@ -624,11 +624,11 @@ class TestGitSourceSyncService:
             agent_list = service._get_agent_list()
 
             # When a path field is missing, parsing fails and the implementation
-            # falls back to the hardcoded default agent list (10 agents)
+            # falls back to the hardcoded default agent list
             assert isinstance(agent_list, list)
-            assert len(agent_list) == 11  # fallback list size
+            assert len(agent_list) == 13  # fallback list size
             assert (
-                "research-agent.md" in agent_list
+                "universal/research.md" in agent_list
             )  # fallback includes standard agents
 
     @mock.patch("requests.Session.get")
@@ -746,7 +746,7 @@ class TestGitSourceSyncServiceIntegration:
         # Third sync - some updates
         def mixed_response(*args, **kwargs):
             url = args[0]
-            if "research-agent.md" in url:
+            if "universal/research.md" in url:
                 # Updated file
                 r = mock.MagicMock()
                 r.status_code = 200

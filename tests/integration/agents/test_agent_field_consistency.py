@@ -218,16 +218,26 @@ class TestAgentFieldConsistency:
         assert len(fallback_agents) > 0, "No fallback agent filenames extracted"
 
         def _resolve_agent_name(filename: str) -> bool:
-            """Check if agent exists directly or via naming variant."""
+            """Check if agent exists directly or via naming variant.
+
+            Fallback paths may use repo directory structure (e.g.,
+            'universal/research.md') while deployed agents are flat files
+            (e.g., 'research.md'). Extract the leaf filename for matching.
+            """
+            # Extract leaf filename from repo path (e.g., "universal/research.md" -> "research.md")
+            leaf_name = Path(filename).name
+            if (AGENTS_DIR / leaf_name).exists():
+                return True
+            # Try full path as-is (flat filename case)
             if (AGENTS_DIR / filename).exists():
                 return True
             # Try underscore -> hyphen conversion
-            hyphen_name = filename.replace("_", "-")
-            if hyphen_name != filename and (AGENTS_DIR / hyphen_name).exists():
+            hyphen_name = leaf_name.replace("_", "-")
+            if hyphen_name != leaf_name and (AGENTS_DIR / hyphen_name).exists():
                 return True
             # Try removing -agent suffix (e.g., research-agent.md -> research.md)
-            base_name = filename.replace("-agent.md", ".md")
-            if base_name != filename and (AGENTS_DIR / base_name).exists():
+            base_name = leaf_name.replace("-agent.md", ".md")
+            if base_name != leaf_name and (AGENTS_DIR / base_name).exists():
                 return True
             return False
 
@@ -541,8 +551,12 @@ class TestAgentFieldConsistency:
         """Verify agent_check core_agents are a subset of git_sync fallback agents.
 
         The core_agents list (4 agents) should be contained within the larger
-        fallback list (11 agents). If a core agent is missing from the fallback,
+        fallback list (13 agents). If a core agent is missing from the fallback,
         it indicates a synchronization issue between the two hardcoded lists.
+
+        Note: Fallback agents use repo paths (e.g., "universal/research.md")
+        while core_agents may use flat filenames (e.g., "research-agent.md").
+        We normalize to leaf filenames (with -agent suffix stripped) for comparison.
         """
         if not AGENT_CHECK_SOURCE.exists() or not GIT_SYNC_SOURCE.exists():
             pytest.skip("Source files not available")
@@ -551,7 +565,9 @@ class TestAgentFieldConsistency:
         ac_content = AGENT_CHECK_SOURCE.read_text(encoding="utf-8")
         core_match = re.search(r"core_agents\s*=\s*\[(.*?)\]", ac_content, re.DOTALL)
         assert core_match is not None
-        core_agents = set(re.findall(r'"([^"]+\.md)"', core_match.group(1)))
+        raw_core = re.findall(r'"([^"]+\.md)"', core_match.group(1))
+        # Normalize: strip -agent suffix and use leaf filename
+        core_agents = {Path(a).name.replace("-agent.md", ".md") for a in raw_core}
 
         # Extract fallback agents
         gs_content = GIT_SYNC_SOURCE.read_text(encoding="utf-8")
@@ -561,7 +577,9 @@ class TestAgentFieldConsistency:
             re.DOTALL,
         )
         assert fb_match is not None
-        fallback_agents = set(re.findall(r'"([^"]+\.md)"', fb_match.group(1)))
+        raw_fallback = re.findall(r'"([^"]+\.md)"', fb_match.group(1))
+        # Normalize: use leaf filename from repo path
+        fallback_agents = {Path(a).name for a in raw_fallback}
 
         not_in_fallback = core_agents - fallback_agents
         assert not not_in_fallback, "Core agents not in fallback list:\n" + "\n".join(

@@ -755,19 +755,23 @@ class GitSourceSyncService:
             )
 
         # Fallback to known agent list if API fails
+        # Paths must match the actual repo directory structure (relative to agents/)
+        # These are the most critical agents for a working PM workflow
         logger.debug("Using fallback agent list")
         return [
-            "research-agent.md",
-            "engineer.md",
-            "qa-agent.md",
-            "documentation-agent.md",
-            "web-qa-agent.md",
-            "security.md",
-            "ops.md",
-            "ticketing.md",
-            "product-owner.md",
-            "version-control.md",
-            "project-organizer.md",
+            "universal/research.md",
+            "engineer/core/engineer.md",
+            "qa/qa.md",
+            "qa/web-qa.md",
+            "qa/api-qa.md",
+            "documentation/documentation.md",
+            "documentation/ticketing.md",
+            "security/security.md",
+            "ops/core/ops.md",
+            "ops/platform/local-ops.md",
+            "ops/tooling/version-control.md",
+            "ops/project-organizer.md",
+            "universal/product-owner.md",
         ]
 
     def _discover_agents_via_tree_api(

@@ -430,7 +430,7 @@ class AgentCategory(StrEnum):
     """Product ownership and strategy agents."""
 
     # Legacy and General
-    VERSION_CONTROL = "version_control"
+    VERSION_CONTROL = "version-control"
     """Version control and release management agents."""
 
     DESIGN = "design"

@@ -348,7 +348,7 @@ class TestAgentCategory:
             "project-management",
             "product",
             # Legacy and General
-            "version_control",
+            "version-control",
             "design",
             "general",
             "custom",
@@ -392,7 +392,7 @@ class TestAgentCategory:
         """Test category enum equality with string literals."""
         assert AgentCategory.RESEARCH == "research"
         assert AgentCategory.ENGINEERING == "engineering"
-        assert AgentCategory.VERSION_CONTROL == "version_control"
+        assert AgentCategory.VERSION_CONTROL == "version-control"
 
     def test_value_uniqueness(self):
         """Ensure all AgentCategory values are unique."""
