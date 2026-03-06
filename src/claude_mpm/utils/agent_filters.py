@@ -24,6 +24,28 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 
+def normalize_agent_id_for_comparison(agent_id: str) -> str:
+    """Normalize agent ID to match deployed file stem format.
+
+    Applies the same transformations as the deployment pipeline:
+    1. Convert underscores to hyphens
+    2. Strip '-agent' suffix (deployment convention)
+    3. Lowercase for case-insensitive comparison
+
+    Examples:
+        >>> normalize_agent_id_for_comparison("research-agent")
+        'research'
+        >>> normalize_agent_id_for_comparison("dart_engineer")
+        'dart-engineer'
+        >>> normalize_agent_id_for_comparison("engineer")
+        'engineer'
+    """
+    stem = agent_id.lower().replace("_", "-")
+    if stem.endswith("-agent"):
+        stem = stem[:-6]
+    return stem
+
+
 def is_base_agent(agent_id: str) -> bool:
     """Check if agent is BASE_AGENT (build tool, not deployable).
 
@@ -165,7 +187,11 @@ def get_deployed_agent_ids(project_dir: Optional[Path] = None) -> Set[str]:
     if agents_dir.exists():
         for file in agents_dir.glob("*.md"):
             if file.stem not in {"BASE-AGENT", ".DS_Store"}:
+                # Add both raw stem and normalized version for maximum compatibility
                 deployed.add(file.stem)
+                normalized = normalize_agent_id_for_comparison(file.stem)
+                if normalized != file.stem:
+                    deployed.add(normalized)
 
     # NOTE: .claude/templates/ contains PM instruction templates, NOT deployed agents
     # It should NOT be checked here. Agents are deployed to:

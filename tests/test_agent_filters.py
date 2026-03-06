@@ -19,6 +19,7 @@ from claude_mpm.utils.agent_filters import (
     filter_deployed_agents,
     get_deployed_agent_ids,
     is_base_agent,
+    normalize_agent_id_for_comparison,
 )
 
 
@@ -80,6 +81,90 @@ class TestIsBaseAgent:
         assert is_base_agent("qa/QA") is False
         assert is_base_agent("pm/PM") is False
         assert is_base_agent("engineer/ENGINEER") is False
+
+
+class TestNormalizeAgentIdForComparison:
+    """Test agent ID normalization for deployment matching."""
+
+    def test_strip_agent_suffix(self):
+        """'-agent' suffix should be stripped."""
+        assert normalize_agent_id_for_comparison("research-agent") == "research"
+
+    def test_underscore_to_hyphen(self):
+        """Underscores should be converted to hyphens."""
+        assert normalize_agent_id_for_comparison("dart_engineer") == "dart-engineer"
+
+    def test_no_change_needed(self):
+        """Names already in normalized form should be unchanged."""
+        assert normalize_agent_id_for_comparison("engineer") == "engineer"
+
+    def test_combined_transforms(self):
+        """Both underscore conversion and suffix stripping should apply."""
+        assert normalize_agent_id_for_comparison("research_agent") == "research"
+
+    def test_case_insensitive(self):
+        """Normalization should lowercase."""
+        assert normalize_agent_id_for_comparison("ENGINEER") == "engineer"
+        assert normalize_agent_id_for_comparison("Research-Agent") == "research"
+
+    def test_agent_suffix_only_at_end(self):
+        """'-agent' should only be stripped from the end, not middle."""
+        assert normalize_agent_id_for_comparison("agent-manager") == "agent-manager"
+
+    def test_tmux_agent_edge_case(self):
+        """tmux-agent normalizes to 'tmux' but fallback handles raw match."""
+        assert normalize_agent_id_for_comparison("tmux-agent") == "tmux"
+
+    def test_content_agent_edge_case(self):
+        """content-agent normalizes to 'content'."""
+        assert normalize_agent_id_for_comparison("content-agent") == "content"
+
+    def test_memory_manager_agent(self):
+        """memory-manager-agent normalizes to 'memory-manager'."""
+        assert (
+            normalize_agent_id_for_comparison("memory-manager-agent")
+            == "memory-manager"
+        )
+
+
+class TestDeployedAgentNormalization:
+    """Test that deployed agent detection handles naming mismatches."""
+
+    def test_underscore_agent_matches_hyphen_file(self):
+        """Agent 'dart_engineer' should match deployed file 'dart-engineer.md'."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = Path(tmpdir)
+            agents_dir = project_dir / ".claude" / "agents"
+            agents_dir.mkdir(parents=True)
+            (agents_dir / "dart-engineer.md").write_text("# Dart Engineer")
+
+            deployed = get_deployed_agent_ids(project_dir)
+            # The normalized form should be in deployed set
+            assert "dart-engineer" in deployed
+
+    def test_agent_suffix_stripped_in_deployed(self):
+        """File 'research.md' should match agent_id 'research-agent' via normalization."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = Path(tmpdir)
+            agents_dir = project_dir / ".claude" / "agents"
+            agents_dir.mkdir(parents=True)
+            (agents_dir / "research.md").write_text("# Research Agent")
+
+            deployed = get_deployed_agent_ids(project_dir)
+            assert "research" in deployed
+
+    def test_agent_suffix_file_adds_normalized(self):
+        """File 'tmux-agent.md' should add both raw and normalized forms."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = Path(tmpdir)
+            agents_dir = project_dir / ".claude" / "agents"
+            agents_dir.mkdir(parents=True)
+            (agents_dir / "tmux-agent.md").write_text("# Tmux Agent")
+
+            deployed = get_deployed_agent_ids(project_dir)
+            # Both raw file stem and normalized version should be in the set
+            assert "tmux-agent" in deployed
+            assert "tmux" in deployed
 
 
 class TestFilterBaseAgents:
@@ -179,7 +264,9 @@ class TestGetDeployedAgentIds:
             deployed = get_deployed_agent_ids(project_dir)
             assert "ENGINEER" in deployed
             assert "PM" in deployed
-            assert len(deployed) == 2
+            # Also check normalized versions are present
+            assert "engineer" in deployed
+            assert "pm" in deployed
 
     def test_legacy_architecture_detection(self):
         """Test for legacy .claude/agents/ detection (same as new architecture now)."""
@@ -195,7 +282,9 @@ class TestGetDeployedAgentIds:
             deployed = get_deployed_agent_ids(project_dir)
             assert "QA" in deployed
             assert "DEVOPS" in deployed
-            assert len(deployed) == 2
+            # Normalized versions also present
+            assert "qa" in deployed
+            assert "devops" in deployed
 
     def test_both_architectures_detection(self):
         """Multiple agents in single deployment directory should be detected."""
@@ -211,7 +300,8 @@ class TestGetDeployedAgentIds:
             deployed = get_deployed_agent_ids(project_dir)
             assert "ENGINEER" in deployed
             assert "PM" in deployed
-            assert len(deployed) == 2
+            assert "engineer" in deployed
+            assert "pm" in deployed
 
     def test_duplicate_across_architectures(self):
         """Same agent should only be counted once (simplified architecture)."""
@@ -225,7 +315,7 @@ class TestGetDeployedAgentIds:
 
             deployed = get_deployed_agent_ids(project_dir)
             assert "ENGINEER" in deployed
-            assert len(deployed) == 1  # Only counted once
+            assert "engineer" in deployed  # Normalized version also present
 
     def test_no_deployed_agents(self):
         """Empty directories should return empty set."""
@@ -267,7 +357,8 @@ class TestGetDeployedAgentIds:
 
             deployed = get_deployed_agent_ids(project_dir)
             assert "ENGINEER" in deployed
-            assert len(deployed) == 1  # Only .md file
+            assert "engineer" in deployed  # Normalized version
+            assert "README" not in deployed  # Non-.md files excluded
 
     def test_virtual_deployment_state_detection(self):
         """Agents in .mpm_deployment_state should be detected."""
@@ -333,7 +424,7 @@ class TestGetDeployedAgentIds:
             assert "python-engineer" in deployed
             assert "qa" in deployed
             assert "DEVOPS" in deployed
-            assert len(deployed) == 3  # Combined from both sources
+            assert "devops" in deployed  # Normalized version of physical file
 
     def test_malformed_deployment_state_graceful(self):
         """Malformed deployment state should not break detection."""
@@ -352,7 +443,7 @@ class TestGetDeployedAgentIds:
             # Should still detect physical file even if state is malformed
             deployed = get_deployed_agent_ids(project_dir)
             assert "ENGINEER" in deployed
-            assert len(deployed) == 1
+            assert "engineer" in deployed  # Normalized version also present
 
 
 class TestFilterDeployedAgents:

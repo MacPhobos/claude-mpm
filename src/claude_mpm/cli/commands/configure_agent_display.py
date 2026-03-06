@@ -66,7 +66,10 @@ class AgentDisplay:
             agents: List of agent configurations to display
         """
 
-        from ...utils.agent_filters import get_deployed_agent_ids
+        from ...utils.agent_filters import (
+            get_deployed_agent_ids,
+            normalize_agent_id_for_comparison,
+        )
 
         table = Table(
             title=f"Available Agents ({len(agents)} total)",
@@ -91,7 +94,10 @@ class AgentDisplay:
             # Use agent_id (technical ID) for comparison, not display name
             agent_id = getattr(agent, "agent_id", agent.name)
             agent_leaf_name = agent_id.split("/")[-1]
-            is_deployed = agent_leaf_name in deployed_ids
+            normalized_name = normalize_agent_id_for_comparison(agent_leaf_name)
+            is_deployed = (
+                normalized_name in deployed_ids or agent_leaf_name in deployed_ids
+            )
 
             # Increment installed count
             if is_deployed:
