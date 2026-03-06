@@ -1,0 +1,74 @@
+Difference between the agent frontmatter field "agent_id" and the subagent_type. How they differ and what they are used for.
+
+hey serve completely different systems and don't directly reference each other.
+
+  subagent_type (Claude Code's Agent Resolution)
+
+  This is the parameter you pass when spawning an agent via the Agent() tool:
+
+  Agent(subagent_type="Golang Engineer")
+
+  Claude Code resolves subagent_type by matching it against the name: frontmatter field of deployed .md files in .claude/agents/. It's an exact match:
+
+  ┌─────────────────────┬─────────────────────────────────────────────┬────────────┐
+  │ subagent_type value │               Matches against               │   Result   │
+  ├─────────────────────┼─────────────────────────────────────────────┼────────────┤
+  │ "Golang Engineer"   │ name: Golang Engineer in golang-engineer.md │ ✅ SUCCESS │
+  ├─────────────────────┼─────────────────────────────────────────────┼────────────┤
+  │ "golang-engineer"   │ No agent has name: golang-engineer          │ ❌ FAILURE │
+  ├─────────────────────┼─────────────────────────────────────────────┼────────────┤
+  │ "golang_engineer"   │ No agent has name: golang_engineer          │ ❌ FAILURE │
+  └─────────────────────┴─────────────────────────────────────────────┴────────────┘
+
+  subagent_type = the name: field. They must be identical strings.
+
+  agent_id: (claude-mpm's Internal Identifier)
+
+  This is a frontmatter field inside the agent .md file used by claude-mpm's Python code for internal operations:
+
+  ---
+  name: Golang Engineer        # ← Claude Code uses THIS
+  agent_id: golang_engineer    # ← claude-mpm uses THIS
+  agent_type: engineer
+  ---
+
+  agent_id is used by:
+  - Deployment pipeline — ensure_agent_id_in_frontmatter() derives it from the filename
+  - Registry lookups — AGENT_NAME_MAP maps agent_id-like stems to name: values
+  - Normalization functions — normalize_agent_id_for_comparison() for deduplication
+  - configure CLI — Installed agent detection compares normalized agent_id values
+  - Filtering/exclusion — Agent presets and recommendations reference agents by stem/id
+
+  Claude Code does NOT use agent_id at all. It's invisible to the delegation system.
+
+  The Relationship (and the Mess)
+
+                      Claude Code world           claude-mpm world
+                      ─────────────────           ────────────────
+  Resolution key:     name: "Golang Engineer"     agent_id: golang_engineer
+                           ▲                              ▲
+                           │                              │
+  Used by:            subagent_type parameter      Python code (deploy,
+                      in Agent() tool calls        registry, normalize,
+                                                   configure CLI)
+                           │                              │
+  Should match:       Exactly (case-sensitive)     Filename stem (but
+                                                   54% DON'T match)
+
+  Why This Matters
+
+  The analysis found that agent_id is 54% mismatched with filename stems:
+
+  ┌────────────────────┬─────────────────────────────────┬───────────────────────────────┐
+  │      Filename      │            agent_id:            │ name: (what actually matters) │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ golang-engineer.md │ golang_engineer (underscore!)   │ Golang Engineer               │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ research.md        │ research-agent (has suffix!)    │ Research                      │
+  ├────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+  │ web-ui.md          │ web-ui-engineer (wrong suffix!) │ Web UI                        │
+  └────────────────────┴─────────────────────────────────┴───────────────────────────────┘
+
+  The agent_id mismatches are a claude-mpm internal consistency problem — they don't directly break delegation. But they create confusion because developers assume agent_id is how agents are referenced, when in reality it's name: that drives resolution.
+
+  Bottom line: If you're delegating to an agent, the only thing that matters is that subagent_type exactly matches the name: frontmatter field. agent_id is internal plumbing that Claude Code never sees.

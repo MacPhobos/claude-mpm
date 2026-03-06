@@ -1,0 +1,133 @@
+Three Deployment Paths
+
+  There are three active deployment paths which handle agent deployment:
+
+  Path 1: deploy_agent_file() — The Unified Modern Path
+
+  File: deployment_utils.py:316
+  Called by:
+  - GitSourceSyncService.deploy_cached_agents() — git sync deployment
+  - SingleTierDeploymentService._deploy_agent_file() — single-tier orchestrator
+
+  What it does (full pipeline):
+  1. normalize_deployment_filename() → lowercase, _ → -, strip -agent suffix
+  2. Cleans up legacy underscore variants (deletes old _ files)
+  3. ensure_agent_id_in_frontmatter() → adds agent_id if missing (but update_existing=False)
+  4. Writes the file
+
+  Input: An already-complete .md file from the git cache. It copies and normalizes.
+
+  When it runs: claude-mpm agents deploy, claude-mpm agents sync, startup auto-sync — the primary flow for getting agents from the remote git repo to .claude/agents/.
+
+  ---
+  Path 2: SingleAgentDeployer.deploy_single_agent() — Legacy Template Builder
+
+  File: single_agent_deployer.py:38
+  Called by: AgentDeploymentService.deploy_agents() in agent_deployment.py:493
+
+  What it does:
+  1. Inline normalization: stem.lower().replace("_", "-"), strip -agent suffix (same logic, duplicated)
+  2. Version check against existing deployed file
+  3. Builds new markdown content via template_builder.build_agent_markdown() — this is the key difference
+  4. target_file.write_text(agent_content) — direct write, NO underscore cleanup, NO frontmatter injection
+
+  Input: A template file (historically JSON, now .md). It doesn't just copy — it builds a new agent file by combining the template with base_agent_data.
+
+  When it runs: The legacy AgentDeploymentService.deploy_agents() batch deployment flow. This was the original deployment system before git-sourced agents existed.
+
+  ---
+  Path 3: configure.py._deploy_single_agent() — Raw File Copy
+
+  File: configure.py:3101
+  Called by: Interactive claude-mpm configure command (5 call sites in configure.py)
+
+  What it does:
+  1. Determines target filename from full_agent_id (just splits on / and appends .md)
+  2. shutil.copy2(source_file, target_file) — raw copy, ZERO normalization
+  3. No underscore conversion, no -agent stripping, no frontmatter injection
+
+  Input: A source file path from the cached agent. When a user picks an agent in the interactive configure menu, it copies the file as-is.
+
+  When it runs: Every time a user runs claude-mpm configure and adds an agent interactively. This is arguably the most user-facing deployment path.
+
+  ---
+  Why They Exist Separately
+
+  ┌─────────────────────┬────────────────────┬──────────────────────────────────────────────────────┬──────────────────────────────────────────────────────┐
+  │        Path         │        Era         │                       Purpose                        │                  Design Assumption                   │
+  ├─────────────────────┼────────────────────┼──────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ SingleAgentDeployer │ Gen 1              │ Build agents from JSON templates + base_agent config │ Agents are constructed from templates at deploy time │
+  ├─────────────────────┼────────────────────┼──────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ deploy_agent_file() │ Gen 2 (Issue #299) │ Copy pre-built .md files from git cache              │ Agents arrive as complete .md files from upstream    │
+  ├─────────────────────┼────────────────────┼──────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ configure.py        │ Gen 2.5            │ Interactive single-agent install from cache          │ Same as Gen 2, but embedded in CLI code              │
+  └─────────────────────┴────────────────────┴──────────────────────────────────────────────────────┴──────────────────────────────────────────────────────┘
+
+  The fundamental split is build vs. copy:
+
+  - SingleAgentDeployer was designed when agents were JSON templates that needed to be assembled into markdown (combining template + base_agent + source_info). The template_builder.build_agent_markdown() call is doing real construction work.
+  - deploy_agent_file() was designed when the architecture shifted to pre-built .md files living in a git repo. No assembly needed — just normalize the filename and copy.
+  - configure.py was bolted on for the interactive CLI and never integrated with either system. It's the most concerning because it does shutil.copy2 with zero normalization.
+
+  ---
+  Can They Be Consolidated?
+
+  Yes, and here's how:
+
+  The Key Insight
+
+  The difference between Path 1 and Path 2 is WHERE the content comes from:
+  - Path 1: Content comes from a pre-built file (read from disk)
+  - Path 2: Content comes from template_builder.build_agent_markdown() (built in memory)
+
+  But once you have the content string, the write-to-disk step should be identical. The consolidation point is:
+
+  # SingleAgentDeployer.deploy_single_agent() currently does:
+  agent_content = self.template_builder.build_agent_markdown(...)
+  target_file.write_text(agent_content)  # ← raw write, no normalization
+
+  # Should instead do:
+  agent_content = self.template_builder.build_agent_markdown(...)
+  # Write to temp file, then use unified deploy:
+  temp_file = write_to_temp(agent_content)
+  deploy_agent_file(source_file=temp_file, deployment_dir=agents_dir, ...)
+
+  Or better — extract the normalize + write + cleanup logic from deploy_agent_file() into a function that works on content strings:
+
+  def deploy_agent_content(
+      content: str,
+      target_filename: str,   # e.g., "python-engineer.md"
+      deployment_dir: Path,
+      cleanup_legacy: bool = True,
+      ensure_frontmatter: bool = True,
+  ) -> DeployResult:
+      """Deploy agent content with full normalization."""
+      normalized = normalize_deployment_filename(target_filename)
+      if cleanup_legacy:
+          cleanup_underscore_variants(deployment_dir, normalized)
+      if ensure_frontmatter:
+          content = ensure_agent_id_in_frontmatter(content, normalized)
+      (deployment_dir / normalized).write_text(content)
+
+  Then all three paths call this:
+  - deploy_agent_file() reads the source file, calls deploy_agent_content()
+  - SingleAgentDeployer builds content via template_builder, calls deploy_agent_content()
+  - configure.py reads the source file, calls deploy_agent_content()
+
+  Regression Risk Assessment
+
+  ┌─────────────────────────────────────────────────────────┬────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                          Risk                           │ Likelihood │                                                                                            Mitigation                                                                                            │
+  ├─────────────────────────────────────────────────────────┼────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ SingleAgentDeployer version checking breaks             │ Low        │ Version check happens BEFORE content generation — keep it in place                                                                                                                               │
+  ├─────────────────────────────────────────────────────────┼────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ template_builder output incompatible with normalization │ Very Low   │ Both already produce markdown with YAML frontmatter                                                                                                                                              │
+  ├─────────────────────────────────────────────────────────┼────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ -agent suffix stripping changes deployed filenames      │ Medium     │ 3 agents (content-agent.md, memory-manager-agent.md, tmux-agent.md) would be renamed to content.md, memory-manager.md, tmux.md — this is a DESIRED cleanup but needs the filename change tracked │
+  ├─────────────────────────────────────────────────────────┼────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ configure.py raw copy was intentional                   │ Low        │ No evidence it was intentional; looks like it was just the quick implementation                                                                                                                  │
+  ├─────────────────────────────────────────────────────────┼────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Metrics recording in SingleAgentDeployer disrupted      │ Low        │ Metrics happen after the write — keep that layer intact                                                                                                                                          │
+  └─────────────────────────────────────────────────────────┴────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Bottom line: Consolidation is safe and recommended. The main thing to watch is the 3 -agent suffixed files that would get renamed when normalization kicks in — but that's the correct behavior anyway. Add a migration note or cleanup step for those.
