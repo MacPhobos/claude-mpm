@@ -365,6 +365,7 @@ docs/research/*.md
 docs-local/
 mcp-browser-extensions/
 tests/eval/reports/
+tests/eval/results/*.json
 ccusage.json
 
 # Database backups (added 2026-01-07 cleanup)

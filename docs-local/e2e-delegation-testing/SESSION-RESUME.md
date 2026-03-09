@@ -1,7 +1,7 @@
 # E2E Delegation Testing: Session Resume Guide
 
 **Last Updated:** 2026-03-09
-**Current Phase:** Phase 0+1+2+3 COMPLETE. Phase 4 ready to start.
+**Current Phase:** Phase 0+1+2+3+4 COMPLETE. All phases done (CI integration deferred).
 **Branch:** `e2e-delegation-tests`
 
 ---
@@ -172,7 +172,17 @@ tests/eval/tier3/
   conftest.py                            # Auto-skip + harness fixture (Phase 3)
   test_delegation_behavior.py            # 7 tests: behavioral delegation validation (Phase 3)
 
+tests/eval/tracking/
+  __init__.py                            # Module init (Phase 4)
+  __main__.py                           # CLI entry for python -m (Phase 4)
+  result_recorder.py                     # Pytest plugin for recording results (Phase 4)
+  degradation_detector.py                # Historical comparison + alerting (Phase 4)
+
+tests/eval/results/
+  .gitkeep                               # Directory placeholder (JSON results gitignored)
+
 docs-local/e2e-delegation-testing/
+  DEVELOPER-GUIDE.md                     # How to run, extend, troubleshoot (Phase 4)
   03-verification-results/
     phase0-verification-results.md       # Comprehensive V1-V4 results
     phase0-verification-20260309-155101.md  # Raw script output
@@ -180,47 +190,49 @@ docs-local/e2e-delegation-testing/
 
 ---
 
-## Next Phase: Phase 4 -- Hardening, Historical Tracking, CI Integration
+### Phase 4: Hardening — Result Tracking + Degradation Detection (COMPLETE)
 
-**Goal:** Result tracking, degradation alerts, GitHub Actions workflow, comprehensive documentation.
+**Commit:** (pending -- to be committed this session)
 
-**Reference:** Plan Section 7 Phase 4 (lines 1151-1164), Section 11 (lines 1277-1368)
+| Component | What It Does |
+|---|---|
+| `result_recorder.py` | Pytest plugin hooking `pytest_runtest_makereport` + `pytest_sessionfinish`. Records per-test pass/fail, duration, tier, scenario_id, git info to JSON. Activated via `--eval-record` flag or `EVAL_RECORD_RESULTS=1` env var. |
+| `degradation_detector.py` | Standalone module + CLI. Loads historical JSON results, detects test regressions (>=80% historical pass now fails), new failures, cost spikes (>50%), pass rate drops (>5%). Exit code 0=clean, 1=degraded. |
+| `DEVELOPER-GUIDE.md` | Comprehensive docs: running tests, adding scenarios, result tracking, fidelity gap, cost model, troubleshooting. |
 
-### What to Build
+**Key artifacts:**
+- `tests/eval/tracking/result_recorder.py` -- EvalResultRecorder pytest plugin
+- `tests/eval/tracking/degradation_detector.py` -- DegradationDetector + DegradationReport/TestRegression/CostAlert dataclasses
+- `tests/eval/tracking/__main__.py` -- CLI entry point for `python -m tests.eval.tracking`
+- `tests/eval/results/.gitkeep` -- Results directory (JSON files gitignored)
+- `tests/eval/conftest.py` -- Updated with `--eval-record` option + plugin registration
+- `docs-local/e2e-delegation-testing/DEVELOPER-GUIDE.md` -- Developer documentation
 
-#### 1. Result Tracking (`tests/eval/results/`)
+**Exit Criteria:**
+- [x] Result tracking JSON schema defined and implemented
+- [x] Historical comparison via DegradationDetector
+- [x] Degradation alerting (test regressions, cost spikes, pass rate drops)
+- [x] `make test-eval-record` target for recording results
+- [x] `make test-eval-check-degradation` target for degradation checks
+- [x] Developer documentation with fidelity gap, adding scenarios, troubleshooting
+- [x] All 45 structural tests still pass (0 regressions)
+- [x] Both modules import cleanly
+- [ ] **DEFERRED: GitHub Actions CI workflow** (not implemented per user request)
 
-- JSON result files with timestamps, pass/fail, cost data
-- Historical comparison (detect degradation across runs)
-- Cost tracking aggregation
+---
 
-#### 2. Degradation Alerts
+## Deferred Work: CI Integration
 
-- Compare current run against historical baselines
-- Alert on regression (e.g., agent that used to route correctly now fails)
-- Threshold-based warnings for cost increases
+GitHub Actions workflow was intentionally deferred. When ready to implement:
 
-#### 3. GitHub Actions Workflow (`.github/workflows/eval-tests.yml`)
+**Reference:** Plan Section 11 (lines 1277-1368) in `04-implementation-plan-synthesis.md`
 
-- Tier 1 runs on every PR (zero cost, <2s)
-- Tier 2 runs on schedule or manual trigger (API cost)
-- Tier 3 runs on schedule or manual trigger (API cost)
-- Secret management for Claude API key
-
-#### 4. Documentation
-
-- Update README with eval test section
-- Document how to run each tier
-- Document how to add new test scenarios
-- Document result tracking format
-
-### Exit Criteria for Phase 4
-
-- [ ] Result tracking JSON schema defined
-- [ ] Historical comparison script
-- [ ] GitHub Actions workflow for all 3 tiers
-- [ ] `make test-eval` runs all tiers with appropriate markers
-- [ ] Comprehensive documentation in docs-local/
+Key requirements:
+- Tier 1 runs on every PR (zero cost, <2s) — BLOCKING
+- Tier 2 canary on PM file changes — BLOCKING for PM changes, advisory otherwise
+- Tier 3 nightly — advisory only (continue-on-error)
+- GitHub Actions secret for Anthropic API access (Tier 2+3)  # pragma: allowlist secret
+- Pin Claude Code CLI version in CI
 
 ---
 
@@ -236,6 +248,8 @@ docs-local/e2e-delegation-testing/
 | **PM Instructions source** | `PM_INSTRUCTIONS.md` | The actual PM prompt being tested |
 
 ## Running Tests
+
+See also: `docs-local/e2e-delegation-testing/DEVELOPER-GUIDE.md` for comprehensive documentation.
 
 ```bash
 # Run ALL structural tests (Phase 0 + Phase 1) -- $0 cost, <2s
@@ -264,11 +278,17 @@ make test-eval-tier2-canary
 
 # Run only Tier 3
 make test-eval-tier3
+
+# Run all tiers with result recording
+make test-eval-record
+
+# Check for degradation against historical results
+make test-eval-check-degradation
 ```
 
 ## Git State
 
 - **Branch:** `e2e-delegation-tests`
-- **Latest commit:** (Phase 3 commit pending)
-- **Previous commits:** `2349209c` (research-first fix), `30cb01e5` (Phase 2), `8a746f84` (Phase 0+1)
+- **Latest commit:** (Phase 4 commit pending)
+- **Previous commits:** `d2cf0199` (Phase 3), `2349209c` (research-first fix), `30cb01e5` (Phase 2), `8a746f84` (Phase 0+1)
 - **Base branch for PRs:** `main`

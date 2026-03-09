@@ -497,7 +497,7 @@ dev-complete: setup-dev setup-pre-commit ## Complete development setup with pre-
 # ============================================================================
 # Test Execution Targets
 
-.PHONY: test test-serial test-parallel test-fast test-coverage test-unit test-integration test-e2e test-eval test-eval-structural test-eval-tier2 test-eval-tier2-canary test-eval-tier3
+.PHONY: test test-serial test-parallel test-fast test-coverage test-unit test-integration test-e2e test-eval test-eval-structural test-eval-tier2 test-eval-tier2-canary test-eval-tier3 test-eval-record test-eval-check-degradation
 
 test: test-parallel ## Run tests with parallel execution (default, 3-4x faster)
 
@@ -548,6 +548,12 @@ test-eval-tier2-canary:  ## Run Tier 2 canary (5 delegation routing tests only, 
 
 test-eval-tier3:  ## Run Tier 3 hook interception behavioral tests (requires claude CLI, ~$0.50 for 7 tests)
 	uv run pytest tests/eval/tier3/ -xvs -p no:xdist --tb=long
+
+test-eval-record:  ## Run all eval tests with result recording
+	EVAL_RECORD_RESULTS=1 uv run pytest tests/eval/ -v -p no:xdist --tb=long
+
+test-eval-check-degradation:  ## Check for test degradation against historical results
+	uv run python -m tests.eval.tracking.degradation_detector
 
 deprecation-check: ## Check for obsolete files according to deprecation policy
 	@echo "$(YELLOW)Checking for obsolete files...$(NC)"

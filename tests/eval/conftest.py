@@ -26,7 +26,7 @@ from .utils.response_replay import ResponseReplay
 
 
 def pytest_configure(config):
-    """Register custom markers for integration tests."""
+    """Register custom markers and plugins for integration tests."""
     config.addinivalue_line(
         "markers", "integration: mark test as integration test (requires PM agent)"
     )
@@ -40,9 +40,26 @@ def pytest_configure(config):
         "markers", "capture_responses: mark test to capture PM responses"
     )
 
+    # Register the eval result recorder plugin when requested
+    if (
+        config.getoption("--eval-record", default=False)
+        or os.environ.get("EVAL_RECORD_RESULTS") == "1"
+    ):
+        from tests.eval.tracking.result_recorder import EvalResultRecorder
+
+        config.pluginmanager.register(
+            EvalResultRecorder(config), "eval_result_recorder"
+        )
+
 
 def pytest_addoption(parser):
     """Add custom command line options."""
+    parser.addoption(
+        "--eval-record",
+        action="store_true",
+        default=False,
+        help="Record eval test results to tests/eval/results/",
+    )
     parser.addoption(
         "--capture-responses",
         action="store_true",
