@@ -497,7 +497,7 @@ dev-complete: setup-dev setup-pre-commit ## Complete development setup with pre-
 # ============================================================================
 # Test Execution Targets
 
-.PHONY: test test-serial test-parallel test-fast test-coverage test-unit test-integration test-e2e test-eval test-eval-structural
+.PHONY: test test-serial test-parallel test-fast test-coverage test-unit test-integration test-e2e test-eval test-eval-structural test-eval-tier2 test-eval-tier2-canary
 
 test: test-parallel ## Run tests with parallel execution (default, 3-4x faster)
 
@@ -533,12 +533,18 @@ test-e2e: ## Run end-to-end tests only
 	@echo "$(YELLOW)🧪 Running e2e tests...$(NC)"
 	@uv run pytest tests/e2e/ -n auto -v
 
-test-eval: test-eval-structural ## Run all eval tests (manual, not part of 'make test')
+test-eval: test-eval-structural test-eval-tier2 ## Run all eval tests (manual, not part of 'make test')
 
 test-eval-structural: ## Run Tier 1 structural eval tests ($0 cost, <2s)
 	@echo "$(YELLOW)🔍 Running Tier 1 structural eval tests...$(NC)"
 	@uv run pytest tests/eval/structural/ -v -m structural
 	@echo "$(GREEN)✓ Structural eval tests completed$(NC)"
+
+test-eval-tier2:  ## Run Tier 2 delegation intent tests (requires claude CLI, ~$0.84 for 12 tests)
+	uv run pytest tests/eval/tier2/ -xvs -p no:xdist --tb=long
+
+test-eval-tier2-canary:  ## Run Tier 2 canary (5 delegation routing tests only, ~$0.11)
+	uv run pytest tests/eval/tier2/test_delegation_intent.py -xvs -p no:xdist --tb=long -k "test_delegation_routing"
 
 deprecation-check: ## Check for obsolete files according to deprecation policy
 	@echo "$(YELLOW)Checking for obsolete files...$(NC)"

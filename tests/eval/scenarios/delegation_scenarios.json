@@ -1,0 +1,125 @@
+{
+  "version": "1.0",
+  "description": "E2E delegation test scenarios for PM prompt validation",
+  "scenarios": {
+    "delegation": [
+      {
+        "id": "DEL-01",
+        "prompt": "Implement user authentication with OAuth2 and JWT tokens",
+        "expected_agent": "engineer",
+        "agent_alternatives": [],
+        "description": "Complex implementation task -> engineer",
+        "category": "delegation",
+        "tier": [2, 3]
+      },
+      {
+        "id": "DEL-02",
+        "prompt": "Investigate the authentication patterns used in this codebase and document your findings",
+        "expected_agent": "research",
+        "agent_alternatives": [],
+        "description": "Investigation task -> research",
+        "category": "delegation",
+        "tier": [2, 3]
+      },
+      {
+        "id": "DEL-03",
+        "prompt": "Deploy the application to the local development server and verify it starts correctly",
+        "expected_agent": "local-ops",
+        "agent_alternatives": ["ops"],
+        "description": "Local deployment -> local-ops",
+        "category": "delegation",
+        "tier": [2, 3]
+      },
+      {
+        "id": "DEL-04",
+        "prompt": "Run the full test suite and verify all tests pass, then test the login flow end-to-end",
+        "expected_agent": "qa",
+        "agent_alternatives": ["web-qa", "api-qa"],
+        "description": "Testing task -> qa (or web-qa/api-qa)",
+        "category": "delegation",
+        "tier": [2, 3]
+      },
+      {
+        "id": "DEL-05",
+        "prompt": "Refactor the database module to use the repository pattern. This affects 15 files across 3 packages.",
+        "expected_agent": "engineer",
+        "agent_alternatives": ["refactoring-engineer"],
+        "description": "Large refactoring -> engineer",
+        "category": "delegation",
+        "tier": [2, 3]
+      }
+    ],
+    "no_delegation": [
+      {
+        "id": "NODL-01",
+        "prompt": "How many agents are available in this project?",
+        "description": "PM capability question -> direct answer",
+        "category": "no_delegation",
+        "tier": [2]
+      },
+      {
+        "id": "NODL-02",
+        "prompt": "What is your role as PM?",
+        "description": "Self-description -> direct answer",
+        "category": "no_delegation",
+        "tier": [2]
+      }
+    ],
+    "context_quality": [
+      {
+        "id": "CTX-01",
+        "prompt": "Implement a Redis caching layer for the user profile API endpoint",
+        "expected_agent": "engineer",
+        "agent_alternatives": [],
+        "description": "Delegation prompt should reference original task keywords (Redis, caching, user profile)",
+        "expected_keywords": ["redis", "cach", "user", "profile", "api"],
+        "category": "context_quality",
+        "tier": [2, 3]
+      },
+      {
+        "id": "CTX-02",
+        "prompt": "Set up Datadog monitoring for the production Kubernetes cluster",
+        "expected_agent": "ops",
+        "agent_alternatives": ["local-ops", "gcp-ops"],
+        "description": "Delegation reasoning should be meaningful (>50 chars)",
+        "category": "context_quality",
+        "tier": [2, 3]
+      }
+    ],
+    "circuit_breaker": [
+      {
+        "id": "CB-01",
+        "prompt": "Edit the file src/auth/handler.py and add a complete OAuth2 flow with token refresh, session management, and PKCE support. Here is the full 200-line implementation to add.",
+        "expected_agent": "engineer",
+        "agent_alternatives": [],
+        "description": "Large edit (>5 lines) -> must delegate to engineer, not handle directly",
+        "must_delegate": true,
+        "circuit_breaker": 1,
+        "category": "circuit_breaker",
+        "tier": [2]
+      },
+      {
+        "id": "CB-02",
+        "prompt": "Read all 10 files in the src/auth/ directory, analyze the authentication architecture, trace the request flow, and identify security vulnerabilities",
+        "expected_agent": "research",
+        "agent_alternatives": [],
+        "description": "Deep investigation (>3 files) -> must delegate to research",
+        "must_delegate": true,
+        "circuit_breaker": 2,
+        "category": "circuit_breaker",
+        "tier": [2]
+      },
+      {
+        "id": "CB-03",
+        "prompt": "Run curl against the production API at https://api.example.com/health to check if the deployment is working, then use lsof to check what ports are in use",
+        "expected_agent": "local-ops",
+        "agent_alternatives": ["ops", "qa", "api-qa"],
+        "description": "Verification commands (curl, lsof) -> must delegate to ops/qa",
+        "must_delegate": true,
+        "circuit_breaker": 7,
+        "category": "circuit_breaker",
+        "tier": [2]
+      }
+    ]
+  }
+}
