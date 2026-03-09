@@ -497,7 +497,7 @@ dev-complete: setup-dev setup-pre-commit ## Complete development setup with pre-
 # ============================================================================
 # Test Execution Targets
 
-.PHONY: test test-serial test-parallel test-fast test-coverage test-unit test-integration test-e2e
+.PHONY: test test-serial test-parallel test-fast test-coverage test-unit test-integration test-e2e test-eval test-eval-structural
 
 test: test-parallel ## Run tests with parallel execution (default, 3-4x faster)
 
@@ -532,6 +532,13 @@ test-integration: ## Run integration tests only
 test-e2e: ## Run end-to-end tests only
 	@echo "$(YELLOW)🧪 Running e2e tests...$(NC)"
 	@uv run pytest tests/e2e/ -n auto -v
+
+test-eval: test-eval-structural ## Run all eval tests (manual, not part of 'make test')
+
+test-eval-structural: ## Run Tier 1 structural eval tests ($0 cost, <2s)
+	@echo "$(YELLOW)🔍 Running Tier 1 structural eval tests...$(NC)"
+	@uv run pytest tests/eval/structural/ -v -m structural
+	@echo "$(GREEN)✓ Structural eval tests completed$(NC)"
 
 deprecation-check: ## Check for obsolete files according to deprecation policy
 	@echo "$(YELLOW)Checking for obsolete files...$(NC)"
