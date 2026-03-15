@@ -231,7 +231,7 @@ class AgentManagerCommand(AgentCommand):
             # Find agent files
             template_dir = Path(__file__).parent.parent.parent / "agents" / "templates"
             json_file = template_dir / f"{agent_id}.json"
-            template_dir / f"{agent_id}.md"
+            _md_file = template_dir / f"{agent_id}.md"
 
             if not json_file.exists():
                 return CommandResult.error_result(f"Agent '{agent_id}' not found")
@@ -347,7 +347,9 @@ class AgentManagerCommand(AgentCommand):
 
         output_format = self._get_output_format(args)
         if str(output_format).lower() == OutputFormat.JSON:
-            return CommandResult.success_result("Templates listed", data=templates)
+            return CommandResult.success_result(
+                "Templates listed", data={"templates": templates}
+            )
         output = "Available Agent Templates:\n\n"
         for template in templates:
             template_id = template.get("id", "unknown")
@@ -885,7 +887,9 @@ class AgentManagerCommand(AgentCommand):
                     }
                     for t in templates
                 ]
-                return CommandResult.success_result("Local agents", data=data)
+                return CommandResult.success_result(
+                    "Local agents", data={"agents": data}
+                )
 
             # Text format
             output = "Local Agent Templates:\n\n"
@@ -1124,7 +1128,7 @@ class AgentManagerCommand(AgentCommand):
             # Test deployment
             try:
                 success = deployment_service.deploy_single_local_template(
-                    agent_id, force=True
+                    agent_id, force_rebuild=True
                 )
                 if not success:
                     return CommandResult.error_result(
@@ -1235,6 +1239,10 @@ class AgentManagerCommand(AgentCommand):
                 # Confirmation for single agent
                 elif len(agent_ids) == 1 and not force:
                     template = manager.get_local_template(agent_ids[0])
+                    if template is None:
+                        return CommandResult.error_result(
+                            f"Agent not found: {agent_ids[0]}"
+                        )
                     print("\n📋 Agent to delete:")
                     print(f"  ID: {template.agent_id}")
                     print(f"  Name: {template.metadata.get('name', template.agent_id)}")
