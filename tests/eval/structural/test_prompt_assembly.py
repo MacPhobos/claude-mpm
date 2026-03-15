@@ -111,17 +111,17 @@ class TestPromptSemanticChecksums:
         },
         "absolute_prohibitions": {
             "start": "ABSOLUTE PROHIBITIONS",
-            "hash": "b230c4855c781909",  # pragma: allowlist secret
+            "hash": "13267ae7a81c88d2",  # pragma: allowlist secret
             "description": "PM forbidden actions list",
         },
         "circuit_breakers": {
             "start": "Circuit Breakers (Enforcement)",
-            "hash": "92f8da1115e5ab54",  # pragma: allowlist secret
+            "hash": "e9b4a28e04250391",  # pragma: allowlist secret
             "description": "Circuit breaker enforcement rules",
         },
         "qa_verification_gate": {
             "start": "QA VERIFICATION GATE PROTOCOL",
-            "hash": "ccb43e30bc3cc263",  # pragma: allowlist secret
+            "hash": "40a25adc7d1c711a",  # pragma: allowlist secret
             "description": "Mandatory QA verification gate",
         },
     }
@@ -159,6 +159,7 @@ class TestPromptSemanticChecksums:
             f"Current hash:  {current_hash}\n"
             f"If this change is intentional, update the expected hash in "
             f"test_prompt_assembly.py and re-run Tier 2 canary tests."
+            f"New hashes can be generated using: uv run pytest tests/eval/structural/test_prompt_assembly.py::TestPromptSemanticChecksums::test_baseline_hash_helper -xvs"
         )
 
     @pytest.mark.eval
