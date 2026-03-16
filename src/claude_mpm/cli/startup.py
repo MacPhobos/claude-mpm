@@ -1087,6 +1087,52 @@ def sync_remote_agents_on_startup(force_sync: bool = False):
                 # Load configuration
                 unified_config = UnifiedConfig()
 
+                # Agent configuration precedence (highest wins):
+                #   1. Active profile (overrides everything below)
+                #   2. agent_states.json from `claude-mpm configure` (project scope > user scope)
+                #   3. UnifiedConfig defaults (agents.required + universal)
+                #
+                # TODO(pipeline-unification): This bridge should move into
+                # AgentPipelineConfig.resolve() when the pipeline unification
+                # work lands. See docs-local/todo/01-startup-and-deployment-pipeline-unification/
+
+                # If no agents are explicitly configured, honour user
+                # selections saved by ``claude-mpm configure`` in
+                # agent_states.json.  This prevents --force-sync from
+                # deleting agents the user chose to enable.
+                #
+                # agent_states.json is a *sparse* override (only stores
+                # toggled agents).  We use the currently deployed set as
+                # the baseline and subtract explicitly disabled agents.
+                if not unified_config.agents.enabled:
+                    try:
+                        from ..services.agents.agent_states_loader import (
+                            load_effective_enabled_agents,
+                        )
+
+                        # The deploy dir is always the project's .claude/agents/
+                        project_deploy_dir = Path.cwd() / ".claude" / "agents"
+
+                        # Try project scope first, then user scope
+                        for search_path in [Path.cwd(), Path.home()]:
+                            states_enabled = load_effective_enabled_agents(
+                                search_path,
+                                deploy_dir=project_deploy_dir,
+                            )
+                            if states_enabled:
+                                unified_config.agents.enabled = states_enabled
+                                logger.info(
+                                    "Loaded %d enabled agents from %s/.claude-mpm/agent_states.json",
+                                    len(states_enabled),
+                                    search_path,
+                                )
+                                break
+                    except Exception:
+                        logger.warning(
+                            "Failed to load agent states, continuing with defaults",
+                            exc_info=True,
+                        )
+
                 # Override with profile settings if active
                 if active_profile and profile_manager.active_profile:
                     # Get enabled agents from profile (returns Set[str])
