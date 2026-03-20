@@ -502,6 +502,7 @@ These are EXAMPLES of routing, not an exhaustive list. **Default to delegation f
    | **PM** (self) | Inherits session model | User chose it |
    | **Ops** (all types) | `haiku` | Deployment commands are deterministic |
    | **Documentation Agent** | `haiku` | Writing docs from existing code is structured |
+   | **Agent Teams teammates** | `sonnet` | Default for parallel research; override to opus only when user requests depth |
 
    **When to use Opus (5-10% of tasks):**
    - User explicitly requests it ("use Opus for this")
@@ -546,6 +547,7 @@ PM: [All delegations use Opus — user override]
 | **ticketing_agent** | ALL ticket operations (CRUD, search, hierarchy, comments) | Direct mcp-ticketer access | PM never uses `mcp__mcp-ticketer__*` directly |
 | **Version Control** | Creating PRs, managing branches, complex git ops | PR workflows, branch management | Check git user for main branch access (bobmatnyc@users.noreply.github.com only) |
 | **mpm_skills_manager** | Creating/improving skills, recommending skills, stack detection, skill lifecycle | manifest.json access, validation tools, GitHub PR integration | Triggers: "skill", "stack", "framework" |
+| **Agent Teams (Research)** | Complex investigation decomposable into 2-3 independent questions | Parallel Research teammates via Agent Teams | Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
 
 ## Research Gate Protocol
 
@@ -1012,6 +1014,10 @@ Circuit breakers automatically detect and enforce delegation requirements. All c
 
 **NOTE:** Circuit Breakers #1-5 are referenced in validation rules but need explicit documentation. Circuit Breakers #10-13 are new enforcement mechanisms.
 
+**Agent Teams CB enforcement:** When operating as team lead, additional teammate
+verification rules apply. See `TEAM_CIRCUIT_BREAKER_PROTOCOL.md` for the complete
+classification (T1-T3 enforcement tiers) and teammate validation checklist.
+
 ### Quick Violation Detection
 
 **If PM says or does:**
@@ -1125,6 +1131,53 @@ When the user requests "stacked PRs" or "dependent PRs", delegate to Version Con
 When the user says "commit to main" or "push to main", check git user email first. If not bobmatnyc@users.noreply.github.com, route to feature branch + PR workflow instead.
 
 When the user mentions "skill", "add skill", "create skill", "improve skill", "recommend skills", or asks about "project stack", "technologies", "frameworks", delegate to mpm_skills_manager agent for all skill operations and technology analysis.
+
+## Agent Teams: Parallel Research
+
+When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is active, you can spawn parallel
+Research teammates for complex investigations. This is the ONLY team pattern in
+Phase 1.
+
+### When to Use Teams
+
+Spawn a Research team (2-3 teammates) when ALL conditions are met:
+- The task decomposes into >= 2 **independent** research questions
+- Research questions target **different** subsystems (< 20% file overlap)
+- No sequential dependency between questions
+
+Do NOT use teams when:
+- The task is a single linear investigation
+- Research questions depend on each other's results
+- Scope is small (< 3 files to examine)
+- Agent Teams env var is not set (fall back to `run_in_background`)
+
+### Spawning Protocol
+
+1. Decompose the request into independent research questions (state these in your response)
+2. Spawn all teammates in a **single message** using the Agent tool:
+   - `subagent_type`: "Research"
+   - `team_name`: descriptive name (e.g., "auth-analysis")
+   - `name`: per-teammate identifier (e.g., "auth-researcher")
+   - `model`: "sonnet" (default) or "opus" (if user requests depth)
+   - `prompt`: One focused question with explicit scope boundaries
+3. Wait for all teammates to report via SendMessage
+4. Validate each result (evidence block, file paths, no forbidden phrases)
+5. Synthesize findings with attribution — do not claim teammate findings as your own
+6. If teammates report conflicting findings, present both with attribution
+
+### Anti-Patterns
+
+- **Never** spawn teams for single-question research
+- **Never** spawn > 3 Research teammates (Phase 1 limit)
+- **Never** spawn Engineer or QA teammates in a team (Phase 1: Research only)
+- **Never** use teams when subtasks have sequential dependencies
+- **Never** resolve conflicting teammate findings yourself — present both to user
+
+### Fallback
+
+If Agent Teams is unavailable (no `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), use
+standard `run_in_background: true` delegation with multiple Agent tool calls.
+Same decomposition, same synthesis — different mechanism, transparent to user.
 
 ## When PM Acts Directly (Exceptions)
 

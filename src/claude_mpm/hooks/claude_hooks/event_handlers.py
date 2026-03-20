@@ -65,25 +65,6 @@ except ImportError:
 # Debug mode - MUST match hook_handler.py default (false) to prevent stderr writes
 DEBUG = os.environ.get("CLAUDE_MPM_HOOK_DEBUG", "false").lower() == "true"
 
-# Agent Teams validation logging - always writes to dedicated log file
-# WHY: Experiment 3 needs evidence that hooks fire during live Agent Teams sessions.
-# Uses a separate log file from _log (which is DEBUG-gated) so validation evidence
-# is always captured regardless of CLAUDE_MPM_HOOK_DEBUG setting.
-_VALIDATION_LOG_PATH = "/tmp/claude-mpm-agent-teams-validation.log"  # nosec B108
-
-
-def _validation_log(message: str) -> None:
-    """Log Agent Teams validation events. Always writes (not DEBUG-gated).
-
-    WHY: Validation logging must capture evidence during live sessions
-    regardless of debug mode. Never writes to stderr (causes CC hook errors).
-    """
-    try:
-        with open(_VALIDATION_LOG_PATH, "a") as f:  # nosec B108
-            f.write(f"[{datetime.now(UTC).isoformat()}] {message}\n")
-    except Exception:  # nosec B110 - intentional silent failure
-        pass  # Never disrupt hook execution
-
 
 # Import constants for configuration
 try:
@@ -376,12 +357,13 @@ class EventHandlers:
                 "team_name" in tool_input if isinstance(tool_input, dict) else False
             )
             will_inject = self._teammate_injector.should_inject(tool_name, tool_input)
-            _validation_log(
-                f"[AGENT_TEAMS_VALIDATION] PreToolUse intercepted Agent tool call: "
-                f"team_name_present={has_team_name}, "
-                f"context_injection_applied={will_inject}, "
-                f"subagent_type={tool_input.get('subagent_type', 'unknown') if isinstance(tool_input, dict) else 'unknown'}"
-            )
+            if DEBUG:
+                _log(
+                    f"[AGENT_TEAMS] PreToolUse intercepted Agent tool call: "
+                    f"team_name_present={has_team_name}, "
+                    f"context_injection_applied={will_inject}, "
+                    f"subagent_type={tool_input.get('subagent_type', 'unknown') if isinstance(tool_input, dict) else 'unknown'}"
+                )
 
         # Generate unique tool call ID for correlation with post_tool event
         tool_call_id = str(uuid.uuid4())
@@ -1582,11 +1564,12 @@ class EventHandlers:
         Note: This is an experimental feature and the event schema may
         evolve as Claude Code's agent teams feature matures.
         """
-        # Validation logging: capture raw event for Experiment 3 evidence
-        _validation_log(
-            f"[AGENT_TEAMS_VALIDATION] TeammateIdle raw event: "
-            f"{json.dumps(event, default=str)}"
-        )
+        # Debug logging: capture raw event when debug mode is active
+        if DEBUG:
+            _log(
+                f"[AGENT_TEAMS] TeammateIdle raw event: "
+                f"{json.dumps(event, default=str)}"
+            )
 
         session_id = event.get("session_id", "")
         working_dir = event.get("cwd", "")
@@ -1632,11 +1615,12 @@ class EventHandlers:
         Note: This is an experimental feature and the event schema may
         evolve as Claude Code's agent teams feature matures.
         """
-        # Validation logging: capture raw event for Experiment 3 evidence
-        _validation_log(
-            f"[AGENT_TEAMS_VALIDATION] TaskCompleted raw event: "
-            f"{json.dumps(event, default=str)}"
-        )
+        # Debug logging: capture raw event when debug mode is active
+        if DEBUG:
+            _log(
+                f"[AGENT_TEAMS] TaskCompleted raw event: "
+                f"{json.dumps(event, default=str)}"
+            )
 
         session_id = event.get("session_id", "")
         working_dir = event.get("cwd", "")
