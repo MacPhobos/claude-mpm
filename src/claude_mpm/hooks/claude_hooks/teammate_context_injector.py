@@ -24,9 +24,9 @@ except ImportError:
 
 # SYNC: This block must match TEAM_CIRCUIT_BREAKER_PROTOCOL.md Section 3.
 # Source of truth: docs-local/mpm-agent-teams/02-phase-0/TEAM_CIRCUIT_BREAKER_PROTOCOL.md
-# Last synced: 2026-03-20 (Phase 1 production)
-# Token budget: ~421 tokens (max 500)
-TEAMMATE_PROTOCOL = """\
+# Last synced: 2026-03-20 (Phase 2 role-aware routing)
+# Token budget: base ~330 tokens, base+addendum <500 tokens each role
+TEAMMATE_PROTOCOL_BASE = """\
 ## MPM Teammate Protocol
 
 You are operating as a teammate in an MPM-managed Agent Teams session. The team lead (PM) assigned you this task. Follow these rules strictly.
@@ -45,14 +45,45 @@ Before reporting completion, list ALL files you created, modified, or deleted:
 - One-line summary of the change
 Omit nothing. The team lead will cross-reference against git status.
 
-### Rule 3: QA Scope Honesty (CB#8)
-If your role is implementation (not QA), you MUST state: "QA verification has not been performed" when reporting completion. Do NOT claim your work is fully verified unless you independently ran tests and included results per Rule 1.
-
-### Rule 4: Self-Execution (CB#9)
+### Rule 3: Self-Execution (CB#9)
 Execute all work yourself using available tools. Never instruct the user or any teammate to run commands on your behalf.
 
-### Rule 5: No Peer Delegation
-Do NOT delegate your assigned task to another teammate via SendMessage. Do NOT orchestrate multi-step workflows with other teammates. If you cannot complete your task, report the blocker to the team lead — do not ask a peer to do it. You have ONE task. Complete it and report results to the team lead."""
+### Rule 4: No Peer Delegation
+Do NOT delegate your assigned task to another teammate via SendMessage. Do NOT orchestrate multi-step workflows with other teammates. If you cannot complete your task, report the blocker to the team lead -- do not ask a peer to do it. You have ONE task. Complete it and report results to the team lead."""
+
+TEAMMATE_PROTOCOL_ENGINEER = """\
+### Engineer Rules
+- You MUST state "QA verification has not been performed" when reporting completion. Do NOT claim your work is fully verified.
+- Declare intended file scope BEFORE starting work. Do not modify files outside that scope.
+- Run linting/formatting checks before reporting completion.
+- Include git diff summary (files changed, insertions, deletions) in your completion report.
+- You are working in an isolated worktree. Do not reference or modify files in the main working tree."""
+
+TEAMMATE_PROTOCOL_QA = """\
+### QA Rules
+- You ARE the QA verification layer. Your evidence must be independent of the Engineer's claims.
+- Run tests in a clean state (no uncommitted changes from your own edits).
+- Report the full test command AND its complete output, not just pass/fail counts.
+- When verifying an Engineer's work, explicitly state which Engineer and which files you are verifying.
+- Test against the MERGED code when verifying work from multiple Engineers."""
+
+TEAMMATE_PROTOCOL_RESEARCH = """\
+### Research Rules
+- Do not modify source code files. Your deliverable is analysis, not implementation.
+- Cite specific file paths and line numbers for every claim about the codebase."""
+
+_ROLE_ADDENDA = {
+    "engineer": TEAMMATE_PROTOCOL_ENGINEER,
+    "engineer-agent": TEAMMATE_PROTOCOL_ENGINEER,
+    "qa": TEAMMATE_PROTOCOL_QA,
+    "qa-agent": TEAMMATE_PROTOCOL_QA,
+    "research": TEAMMATE_PROTOCOL_RESEARCH,
+    "research-agent": TEAMMATE_PROTOCOL_RESEARCH,
+}
+
+# Backward-compat alias: TEAMMATE_PROTOCOL still importable.
+# Phase 2 changed: this now points to the base (Rule 3 removed, renumbered).
+TEAMMATE_PROTOCOL = TEAMMATE_PROTOCOL_BASE
 
 
 class TeammateContextInjector:
@@ -117,14 +148,13 @@ class TeammateContextInjector:
         return "team_name" in tool_input
 
     def inject_context(self, tool_input: dict) -> dict:
-        """Prepend TEAMMATE_PROTOCOL to the prompt in tool_input.
+        """Prepend role-appropriate TEAMMATE_PROTOCOL to the prompt in tool_input.
 
         Creates a shallow copy of tool_input and modifies the prompt field.
         The original dict is NOT mutated.
 
-        Also logs a warning if subagent_type is not "research" (Phase 1
-        supports Research teammates only). Injection still proceeds — the
-        hook cannot block tool calls.
+        Assembles protocol from TEAMMATE_PROTOCOL_BASE plus the role-specific
+        addendum determined by subagent_type. Unknown roles get base only.
 
         Args:
             tool_input: The Agent tool's input parameters.
@@ -134,24 +164,22 @@ class TeammateContextInjector:
         """
         modified = copy.copy(tool_input)
 
-        # Log role violations (non-research subagent_type in Agent Teams)
-        # Injection still proceeds — hook API cannot block, only observe
         team_name = tool_input.get("team_name", "")
-        subagent_type = tool_input.get("subagent_type", "unknown")
-        if subagent_type not in ("research", "Research"):
-            _log(
-                f"[AGENT_TEAMS] WARNING: Non-research subagent_type '{subagent_type}' "
-                f"in Agent Teams call (team_name={team_name}). "
-                f"Phase 1 supports Research only. Injection proceeds."
-            )
+        subagent_type = tool_input.get("subagent_type") or "unknown"
+
+        # Build role-appropriate protocol
+        protocol = TEAMMATE_PROTOCOL_BASE
+        addendum = _ROLE_ADDENDA.get(subagent_type.lower(), "")
+        if addendum:
+            protocol += "\n\n" + addendum
+
+        # Log injection details
+        _log(
+            f"TeammateContextInjector: Injected protocol "
+            f"(team_name={team_name}, subagent_type={subagent_type}, "
+            f"addendum={'yes' if addendum else 'none'})"
+        )
 
         original_prompt = tool_input.get("prompt") or ""
-        modified["prompt"] = TEAMMATE_PROTOCOL + "\n\n---\n\n" + original_prompt
-        _log(
-            f"TeammateContextInjector: Injected protocol into Agent tool prompt "
-            f"(team_name={tool_input.get('team_name')}, "
-            f"subagent_type={subagent_type}, "
-            f"original_prompt_len={len(original_prompt)}, "
-            f"new_prompt_len={len(modified['prompt'])})"
-        )
+        modified["prompt"] = protocol + "\n\n---\n\n" + original_prompt
         return modified

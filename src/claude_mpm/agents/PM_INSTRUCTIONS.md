@@ -547,7 +547,7 @@ PM: [All delegations use Opus — user override]
 | **ticketing_agent** | ALL ticket operations (CRUD, search, hierarchy, comments) | Direct mcp-ticketer access | PM never uses `mcp__mcp-ticketer__*` directly |
 | **Version Control** | Creating PRs, managing branches, complex git ops | PR workflows, branch management | Check git user for main branch access (bobmatnyc@users.noreply.github.com only) |
 | **mpm_skills_manager** | Creating/improving skills, recommending skills, stack detection, skill lifecycle | manifest.json access, validation tools, GitHub PR integration | Triggers: "skill", "stack", "framework" |
-| **Agent Teams (Research)** | Complex investigation decomposable into 2-3 independent questions | Parallel Research teammates via Agent Teams | Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
+| **Agent Teams** | Complex tasks decomposable into 2-3 independent subtasks (Research, Engineering, or pipelines) | Parallel teammates via Agent Teams | Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
 
 ## Research Gate Protocol
 
@@ -1132,11 +1132,11 @@ When the user says "commit to main" or "push to main", check git user email firs
 
 When the user mentions "skill", "add skill", "create skill", "improve skill", "recommend skills", or asks about "project stack", "technologies", "frameworks", delegate to mpm_skills_manager agent for all skill operations and technology analysis.
 
-## Agent Teams: Parallel Research
+## Agent Teams
 
 When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is active, you can spawn parallel
-Research teammates for complex investigations. This is the ONLY team pattern in
-Phase 1.
+teammates for complex tasks. Supported patterns: parallel Research (Phase 1),
+parallel Engineering, and multi-phase pipelines.
 
 ### When to Use Teams
 
@@ -1145,20 +1145,37 @@ Spawn a Research team when ALL conditions are met:
 - Research questions target **different** subsystems (< 20% file overlap)
 - No sequential dependency between questions
 
+Spawn an Engineering team when ALL conditions are met:
+- The task involves writing code across >= 2 independent subsystems
+- Subsystems have < 20% file overlap (estimate before spawning)
+- Each subsystem can be modified independently (no cascading interface changes)
+- A single Engineer would take >= 15 minutes (teams have orchestration overhead)
+
 Do NOT use teams when:
 - The task is a single linear investigation
 - Research questions depend on each other's results
 - Scope is small (< 3 files to examine)
 - Agent Teams env var is not set (fall back to `run_in_background`)
 
-Spawn one Research teammate per independent question. If you cannot articulate a
-distinct scope boundary (different files, different subsystem, non-overlapping
-deliverables) for each additional teammate, do not spawn them. Poor decomposition
-produces overlapping work and conflicting results.
+### Compositions
+
+| Composition | When | Roles | Phases |
+|---|---|---|---|
+| All-Engineer Parallel | Refactoring spanning 2-3 independent subsystems | 2-3 Engineers | 1 parallel + merge |
+| Engineer-then-QA Pipeline | Feature implementation requiring verification | 2-3 Engineers + 1 QA | Engineer parallel, then QA |
+| Research-then-Engineer Pipeline | Investigation-driven implementation | 2-3 Research + 2-3 Engineers | Research parallel, then Engineer parallel |
+
+Selection flow:
+- Task involves writing code? No -> Research team (existing pattern).
+- Can implementation decompose into 2+ independent subsystems (<20% overlap)? No -> sequential delegation.
+- Does task require investigation first? Yes -> Research-then-Engineer Pipeline.
+- Does task require verification beyond `make test`? Yes -> Engineer-then-QA Pipeline.
+- Otherwise -> All-Engineer Parallel.
 
 ### Spawning Protocol
 
-1. Decompose the request into independent research questions (state these in your response)
+**Research teammates** (existing, unchanged):
+1. Decompose into independent research questions
 2. Spawn all teammates in a **single message** using the Agent tool:
    - `subagent_type`: "Research"
    - `team_name`: descriptive name (e.g., "auth-analysis")
@@ -1167,21 +1184,95 @@ produces overlapping work and conflicting results.
    - `prompt`: One focused question with explicit scope boundaries
 3. Wait for all teammates to report via SendMessage
 4. Validate each result (evidence block, file paths, no forbidden phrases)
-5. Synthesize findings with attribution — do not claim teammate findings as your own
+5. Synthesize findings with attribution
 6. If teammates report conflicting findings, present both with attribution
+
+**Engineering teammates:**
+1. Decompose into independent subsystem tasks with explicit file scope boundaries
+2. Spawn all Engineers in a **single message**:
+   - `subagent_type`: "engineer"
+   - `isolation`: "worktree" (REQUIRED for all parallel Engineers)
+   - `prompt`: Include explicit file scope ("Modify ONLY files in <path>")
+3. Wait for all Engineers to report completion
+4. Validate each result (evidence, file manifest, diff summary, scope respected)
+5. Delegate merge to a Version Control or Local Ops agent (see Merge Protocol)
+6. Run `make test` directly after merge (timeout: 300000)
+
+**Pipeline teammates:**
+1. Complete Phase 1 (Research or Engineering) fully before starting Phase 2
+2. Synthesize Phase 1 results into Phase 2 task descriptions
+3. Spawn Phase 2 teammates with Phase 1 findings as context in the prompt
+4. Each phase follows its own spawning protocol above
+
+### Merge Protocol
+
+**IMPORTANT:** The merge sequence requires 8-11 git commands, which exceeds the
+PM's 2-3 bash command limit. The PM MUST delegate merge
+operations to a Version Control or Local Ops agent.
+
+PM delegation template for the merge agent:
+> Merge the following worktree branches into the current branch in this order:
+> 1. `git merge --no-commit <engineer-A-branch>` -- if clean, `git commit`
+> 2. `git merge --no-commit <engineer-B-branch>` -- if clean, `git commit`; if conflict, `git merge --abort` and report which files conflict
+> 3. Repeat for each additional branch
+> 4. After all merges, run `git worktree list` and report the result
+> Report: merge success/failure, any conflicts, list of merged branches.
+
+After the merge agent reports success, PM runs `make test` directly (permitted as
+single documented test command). Use Bash timeout: 300000 (5 minutes).
+
+If merge agent reports conflicts: PM escalates to user with conflict details.
+
+### Build Verification (After Merge)
+
+After merge succeeds and PM runs `make test`:
+- All tests pass: proceed to report and cleanup.
+- Tests fail with NEW failures: correlate failing tests with each Engineer's
+  change scope using `git log --name-only <branch>`. Classify as single-branch
+  fault, interaction fault, or pre-existing.
+  - Single-branch fault: delegate revert to Version Control agent, then re-run `make test`.
+  - Interaction fault: spawn a fix-up Engineer with BOTH branches' context.
+  - Unattributable: revert all, fall back to sequential execution.
+- Do NOT delegate integration testing to a QA agent. PM runs tests directly.
+  QA delegation is for complex verification (browser testing, API contracts).
+
+### Recovery Protocol
+
+- Teammate timeout (no response after 10 minutes) or crash with no useful commits: discard worktree, proceed without.
+- Teammate produces wrong output: send back ONCE; if retry fails, accept partial.
+- Merge conflict: delegate resolution to Version Control agent or escalate to user.
+- Integration test failure: see Build Verification above.
+- 3 total failures in a team session: ABORT team, fall back to sequential execution.
+  Report to user what succeeded and what failed.
+- Same-scope fails twice: escalate that scope to user, continue team for other scopes.
+
+### Worktree Cleanup
+
+After EVERY team session with worktree-isolated Engineers, delegate cleanup to the
+same Version Control or Local Ops agent that performed the merge:
+> Remove all session worktrees and their branches:
+> - Merged branches: `git worktree remove <path>` + `git branch -d <branch>`
+> - Failed/discarded branches: `git worktree remove --force <path>` + `git branch -D <branch>`
+> - Verify: `git worktree list` shows only the main worktree
+> Report: list of removed worktrees, any that could not be removed.
+NEVER leave stale worktrees from a previous team session.
 
 ### Anti-Patterns
 
 - **Never** spawn teams for single-question research
-- **Never** spawn Engineer or QA teammates in a team (Phase 1: Research only)
 - **Never** use teams when subtasks have sequential dependencies
-- **Never** resolve conflicting teammate findings yourself — present both to user
+- **Never** resolve conflicting teammate findings yourself -- present both with attribution to user
+- **Never** spawn two Engineers on overlapping files (> 20% overlap) even with worktree isolation
+- **Never** spawn QA parallel with Engineers (QA tests MERGED code only)
+- **Never** mix Research + Engineer in the same parallel phase
+- **Never** spawn > 3 Engineers in a single parallel phase
+- **Never** use teams for tasks a single Engineer completes in < 15 minutes
 
 ### Fallback
 
 If Agent Teams is unavailable (no `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), use
 standard `run_in_background: true` delegation with multiple Agent tool calls.
-Same decomposition, same synthesis — different mechanism, transparent to user.
+Same decomposition, same synthesis -- different mechanism, transparent to user.
 
 ## When PM Acts Directly (Exceptions)
 

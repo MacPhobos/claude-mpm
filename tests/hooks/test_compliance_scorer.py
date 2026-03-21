@@ -135,25 +135,36 @@ class TestQAScopeDeclaration:
     """Tests for the qa_scope_declared criterion."""
 
     def test_qa_scope_declared_exact_phrase(self):
-        """Exact TEAMMATE_PROTOCOL phrase detected."""
+        """Exact TEAMMATE_PROTOCOL phrase detected (engineer role)."""
         result = score_response(
-            "Implementation complete. QA verification has not been performed."
+            "Implementation complete. QA verification has not been performed.",
+            role="engineer",
         )
         assert result["qa_scope_declared"] is True
 
     def test_qa_scope_declared_variant(self):
-        """Variant 'not tested' phrasing detected."""
+        """Variant 'not tested' phrasing detected (engineer role)."""
         result = score_response(
-            "Changes committed. Note: this has not been tested independently."
+            "Changes committed. Note: this has not been tested independently.",
+            role="engineer",
         )
         assert result["qa_scope_declared"] is True
 
     def test_qa_scope_not_declared(self):
-        """Missing QA scope declaration detected."""
+        """Missing QA scope declaration detected (engineer role)."""
         result = score_response(
-            "Implementation complete. All changes committed and ready for review."
+            "Implementation complete. All changes committed and ready for review.",
+            role="engineer",
         )
         assert result["qa_scope_declared"] is False
+
+    def test_qa_scope_auto_passes_for_non_engineer(self):
+        """Non-engineer roles auto-pass criterion 4 (QA scope)."""
+        result = score_response(
+            "Implementation complete. All changes committed and ready for review.",
+            role="research",
+        )
+        assert result["qa_scope_declared"] is True  # Auto-pass for non-engineer
 
 
 # ============================================================================

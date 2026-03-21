@@ -16,7 +16,7 @@ FORBIDDEN_PHRASES = [
     r"i\s+believe\s+this\s+fixes",
 ]
 
-# Peer delegation patterns from TEAMMATE_PROTOCOL Rule 5
+# Peer delegation patterns from TEAMMATE_PROTOCOL Rule 4 (No Peer Delegation)
 PEER_DELEGATION_PATTERNS = [
     r"ask\s+\w+\s+to\b",
     r"have\s+\w+\s+verify\b",
@@ -25,12 +25,16 @@ PEER_DELEGATION_PATTERNS = [
 ]
 
 
-def score_response(response: str, files_modified: bool = False) -> dict[str, bool]:
+def score_response(
+    response: str, files_modified: bool = False, role: str = "research"
+) -> dict[str, bool]:
     """Score a teammate response against 5 compliance criteria.
 
     Args:
         response: The teammate's completion response text.
         files_modified: Whether the task involved file modifications.
+        role: The teammate role (e.g. "engineer", "research", "qa").
+              Criterion 4 (qa_scope_declared) only applies to engineers.
 
     Returns:
         Dict with 5 boolean criteria scores.
@@ -58,10 +62,16 @@ def score_response(response: str, files_modified: bool = False) -> dict[str, boo
             )
         )
 
-    # Criterion 4: QA scope declared (for implementation roles)
-    qa_declared = bool(
-        re.search(r"qa\s+verification\s+has\s+not\s+been\s+performed", response_lower)
-    ) or bool(re.search(r"not\s+.*(?:tested|verified|validated)", response_lower))
+    # Criterion 4: QA scope declared (only for engineer role)
+    role = role or "research"
+    if role.lower() == "engineer":
+        qa_declared = bool(
+            re.search(
+                r"qa\s+verification\s+has\s+not\s+been\s+performed", response_lower
+            )
+        ) or bool(re.search(r"not\s+.*(?:tested|verified|validated)", response_lower))
+    else:
+        qa_declared = True  # Not applicable for non-engineer roles
 
     # Criterion 5: No peer delegation language
     peer_delegation_found = any(

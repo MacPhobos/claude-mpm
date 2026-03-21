@@ -1,0 +1,130 @@
+# Multi-phase pipeline scenarios for Phase 2 Agent Teams
+# Tests PM's ability to orchestrate sequential team phases
+
+# Stratum: research-then-eng (pipe-01 to pipe-03)
+
+- id: "pipe-01"
+  stratum: "research-then-eng"
+  description: "Research-then-Engineer: security audit and fix"
+  prompt: "First, research security vulnerabilities in the authentication system (src/auth/) and authorization system (src/authz/) in parallel. Then, based on findings, have engineers fix the identified issues independently."
+  expected_behavior: "team_spawn"
+  roles: ["research", "research", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "pipe-02"
+  stratum: "research-then-eng"
+  description: "Research-then-Engineer: performance analysis and optimization"
+  prompt: "First, research performance bottlenecks in the API layer (src/api/) and database layer (src/models/) in parallel. Then have engineers implement the recommended optimizations in each subsystem."
+  expected_behavior: "team_spawn"
+  roles: ["research", "research", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "pipe-03"
+  stratum: "research-then-eng"
+  description: "Research-then-Engineer: dependency audit and update"
+  prompt: "Research outdated dependencies in the backend (pyproject.toml) and frontend (package.json) in parallel. Then have engineers update the dependencies in each subsystem independently."
+  expected_behavior: "team_spawn"
+  roles: ["research", "research", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+# Stratum: eng-then-qa (pipe-04 to pipe-06)
+
+- id: "pipe-04"
+  stratum: "eng-then-qa"
+  description: "Engineer-then-QA: implement and verify API changes"
+  prompt: "Phase 1: Two engineers independently add pagination to /api/users and sorting to /api/products. Phase 2: After merging, QA verifies both endpoints return correctly paginated and sorted results."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "pipe-05"
+  stratum: "eng-then-qa"
+  description: "Engineer-then-QA: frontend components with browser testing"
+  prompt: "Phase 1: Engineer A builds the search component (src/frontend/Search/), Engineer B builds the filter component (src/frontend/Filter/). Phase 2: QA runs browser tests to verify both components work together."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "pipe-06"
+  stratum: "eng-then-qa"
+  description: "Engineer-then-QA: backend refactor with regression testing"
+  prompt: "Phase 1: Two engineers refactor the database access layer (src/db/) and the caching layer (src/cache/) independently. Phase 2: QA runs the full regression suite to verify no functionality was broken."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+# Stratum: full-pipeline (pipe-07 to pipe-08)
+
+- id: "pipe-07"
+  stratum: "full-pipeline"
+  description: "Full 3-phase pipeline: research, implement, verify"
+  prompt: "Complete 3-phase pipeline: (1) Research the codebase architecture for src/hooks/ and src/agents/ in parallel, (2) Based on findings, engineers implement improvements to both subsystems, (3) QA verifies the implementations."
+  expected_behavior: "team_spawn"
+  roles: ["research", "research", "engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 1200
+
+- id: "pipe-08"
+  stratum: "full-pipeline"
+  description: "Full pipeline with phase transition synthesis"
+  prompt: "Phase 1: Research team investigates error handling patterns in src/api/ and src/cli/. Phase 2: Based on research synthesis, engineers implement consistent error handling in both subsystems. Phase 3: QA verifies error responses match the specification."
+  expected_behavior: "team_spawn"
+  roles: ["research", "research", "engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 1200
+
+# Stratum: pipeline-antipattern (pipe-09 to pipe-10)
+
+- id: "pipe-09"
+  stratum: "pipeline-antipattern"
+  description: "Never mix Research and Engineer in same parallel phase"
+  prompt: "Have a researcher investigate the auth patterns while an engineer simultaneously implements new auth endpoints. They can work in parallel since research is read-only."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "pipe-10"
+  stratum: "pipeline-antipattern"
+  description: "Pipeline phases must be sequential"
+  prompt: "Start engineering work immediately while research is still investigating. Don't wait for research to finish - just start coding based on what we know so far."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600

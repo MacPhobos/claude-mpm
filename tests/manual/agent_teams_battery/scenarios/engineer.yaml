@@ -1,0 +1,194 @@
+# Engineer scenarios for Phase 2 Agent Teams
+# Tests PM's ability to decompose engineering work and manage parallel execution
+
+# Stratum: engineer-parallel (eng-01 to eng-05)
+# PM decomposes into 2-3 Engineering tasks with isolation: "worktree"
+
+- id: "eng-01"
+  stratum: "engineer-parallel"
+  description: "Refactor auth and payment subsystems independently"
+  prompt: "Refactor the authentication module (src/auth/) to use dependency injection, and simultaneously refactor the payment module (src/payments/) to use the repository pattern. These modules have no shared dependencies."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-02"
+  stratum: "engineer-parallel"
+  description: "Add logging to API routes and update database schema independently"
+  prompt: "Add structured logging to all API route handlers in src/routes/, and independently add a new 'audit_log' table with migration in src/models/. The routes and models are independent subsystems."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-03"
+  stratum: "engineer-parallel"
+  description: "Three independent subsystem refactors"
+  prompt: "We need to refactor three independent subsystems: (1) Replace string-based error codes with enums in src/errors/, (2) Add input validation to all CLI commands in src/cli/, (3) Update the configuration loader in src/config/ to support YAML. These have no shared files."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-04"
+  stratum: "engineer-parallel"
+  description: "Frontend and backend feature implementation"
+  prompt: "Implement user profile editing: one engineer handles the API endpoints in src/api/profile.py, another handles the React components in src/frontend/components/Profile/. These are independent subsystems with no file overlap."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-05"
+  stratum: "engineer-parallel"
+  description: "Test suite and documentation updates independently"
+  prompt: "Two independent tasks: (1) Add integration tests for the webhook handler in tests/integration/test_webhooks.py, (2) Add API documentation with docstrings to all public functions in src/api/. These can be done in parallel."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: engineer-antipattern (eng-06 to eng-08)
+# PM should NOT spawn a team
+
+- id: "eng-06"
+  stratum: "engineer-antipattern"
+  description: "Small task under 15-minute threshold"
+  prompt: "Add a type hint to the return value of the get_config() function in src/config/loader.py."
+  expected_behavior: "single_agent"
+  roles: ["engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 300
+
+- id: "eng-07"
+  stratum: "engineer-antipattern"
+  description: "Overlapping file modifications"
+  prompt: "Refactor src/api/routes.py to split the authentication routes and the payment routes into separate functions. Both changes are in the same file."
+  expected_behavior: "single_agent"
+  roles: ["engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 300
+
+- id: "eng-08"
+  stratum: "engineer-antipattern"
+  description: "Sequentially dependent changes"
+  prompt: "First update the database schema in src/models/user.py to add an email_verified field, then update the authentication middleware in src/auth/middleware.py to check that field. The middleware change depends on the schema change."
+  expected_behavior: "single_agent"
+  roles: ["engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 300
+
+# Stratum: engineer-merge (eng-09 to eng-12)
+# PM must delegate merge to Version Control agent after Engineers complete
+
+- id: "eng-09"
+  stratum: "engineer-merge"
+  description: "Two-engineer merge with make test verification"
+  prompt: "Two engineers worked in worktrees: one added caching in src/cache/ and another added rate limiting in src/middleware/. Both are done. Merge their work and verify with make test."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-10"
+  stratum: "engineer-merge"
+  description: "Three-engineer merge with ordered sequence"
+  prompt: "Three engineers completed parallel work: Engineer A modified src/auth/, Engineer B modified src/api/, Engineer C modified src/cli/. Merge all three branches into the main working tree and run tests."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-11"
+  stratum: "engineer-merge"
+  description: "Merge with conflict detection"
+  prompt: "Two engineers worked on overlapping areas by mistake: both modified src/config/settings.py. One added environment variable support, the other added validation. Merge their work, handling any conflicts."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-12"
+  stratum: "engineer-merge"
+  description: "Post-merge test failure attribution"
+  prompt: "After merging two engineer branches, make test shows 3 failures in tests/test_api.py. Engineer A modified src/api/auth.py and Engineer B modified src/api/payments.py. Determine which engineer's changes caused the failures and fix."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: engineer-recovery (eng-13 to eng-15)
+# PM handles teammate failures, timeouts, cleanup
+
+- id: "eng-13"
+  stratum: "engineer-recovery"
+  description: "Teammate timeout - proceed without"
+  prompt: "You spawned two engineers: one for src/auth/ and one for src/payments/. The auth engineer completed successfully but the payments engineer timed out with no useful commits. Proceed with the auth work only."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-14"
+  stratum: "engineer-recovery"
+  description: "Worktree cleanup after session"
+  prompt: "A previous team session left stale worktrees. Clean up all worktrees and their branches, then verify only the main worktree remains."
+  expected_behavior: "team_spawn"
+  roles: ["engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 300
+
+- id: "eng-15"
+  stratum: "engineer-recovery"
+  description: "Three-failure abort threshold"
+  prompt: "You've attempted a 2-engineer team session. Engineer A failed twice on src/auth/ and Engineer B failed once on src/payments/. This is the 3rd total failure. Fall back to sequential execution."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 300

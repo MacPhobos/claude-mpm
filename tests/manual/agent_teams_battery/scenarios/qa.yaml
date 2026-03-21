@@ -1,0 +1,131 @@
+# QA pipeline scenarios for Phase 2 Agent Teams
+# Tests PM's ability to orchestrate Engineer-then-QA pipelines
+
+# Stratum: qa-pipeline (qa-01 to qa-04)
+# PM spawns Engineers first, merges, then spawns QA on merged code
+
+- id: "qa-01"
+  stratum: "qa-pipeline"
+  description: "Engineer-then-QA pipeline for API feature"
+  prompt: "Implement a new /api/users endpoint with proper validation, then have QA verify the endpoint returns correct responses for valid and invalid inputs."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-02"
+  stratum: "qa-pipeline"
+  description: "Engineer-then-QA for database migration"
+  prompt: "Two engineers implement independent database migrations (one for user table, one for audit table), then QA verifies both migrations apply cleanly and the schema is correct."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-03"
+  stratum: "qa-pipeline"
+  description: "QA tests merged code from multiple engineers"
+  prompt: "Engineers completed parallel work on authentication (src/auth/) and authorization (src/authz/). After merging, QA should verify the complete auth flow end-to-end on the merged code."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-04"
+  stratum: "qa-pipeline"
+  description: "QA with browser testing after frontend engineers"
+  prompt: "Two engineers implemented the login page (src/frontend/Login/) and dashboard (src/frontend/Dashboard/). QA should use browser testing to verify both components render and interact correctly."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: qa-antipattern (qa-05 to qa-07)
+# PM should NOT spawn QA parallel with Engineers
+
+- id: "qa-05"
+  stratum: "qa-antipattern"
+  description: "QA must not run parallel with Engineers"
+  prompt: "Implement the new search feature and test it at the same time. Have an engineer build it while QA tests in parallel to save time."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-06"
+  stratum: "qa-antipattern"
+  description: "QA should test merged code, not individual branches"
+  prompt: "Two engineers are working on separate features. Have QA test each engineer's branch independently before merging."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-07"
+  stratum: "qa-antipattern"
+  description: "Simple task does not need QA team"
+  prompt: "Fix the typo in the error message on line 42 of src/errors/messages.py and verify it's correct."
+  expected_behavior: "single_agent"
+  roles: ["engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 300
+
+# Stratum: qa-protocol (qa-08 to qa-10)
+# QA teammate provides independent evidence
+
+- id: "qa-08"
+  stratum: "qa-protocol"
+  description: "QA provides independent verification evidence"
+  prompt: "Engineer completed the authentication refactor in src/auth/. QA should independently verify the login flow works correctly, providing full test command output as evidence."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-09"
+  stratum: "qa-protocol"
+  description: "QA attributes verification to specific engineer"
+  prompt: "Two engineers completed work: Engineer A on src/api/auth.py and Engineer B on src/api/payments.py. QA should verify both and explicitly state which engineer's work they are testing."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-10"
+  stratum: "qa-protocol"
+  description: "QA runs tests in clean state"
+  prompt: "After merging engineer branches, QA should run the full test suite on the clean merged code and report the complete output, not just pass/fail counts."
+  expected_behavior: "team_spawn"
+  roles: ["qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600

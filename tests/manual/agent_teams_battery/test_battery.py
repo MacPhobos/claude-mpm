@@ -56,7 +56,7 @@ def generate_compliant_response(scenario: dict) -> str:
     """Generate a synthetic compliant teammate response for a scenario."""
     scenario_id = scenario.get("id", "unknown")
 
-    return f"""## Research Findings: {scenario_id}
+    response = f"""## Research Findings: {scenario_id}
 
 ### Investigation
 
@@ -85,10 +85,15 @@ src/claude_mpm/hooks/claude_hooks/event_handlers.py:524:    def handle_post_tool
 
 ### Files Changed
 - docs/research/investigation-{scenario_id}.md: created (analysis report)
+"""
+    # Only include QA disclaimer for engineer roles
+    scenario_roles = scenario.get("roles", ["research"])
+    primary_role = scenario_roles[0] if scenario_roles else "research"
+    if primary_role == "engineer":
+        response += "\n\nQA verification has not been performed."
 
-QA verification has not been performed.
-
-I completed this investigation independently using grep and file reading tools."""
+    response += "\n\nI completed this investigation independently using grep and file reading tools."
+    return response
 
 
 def generate_non_compliant_response(scenario: dict) -> str:
@@ -162,6 +167,105 @@ class TestBatteryPipelineValidation:
         monkeypatch.setenv("CLAUDE_MPM_COMPLIANCE_STRATUM", "adversarial")
         self._run_scenario(scenario, compliant=False)
 
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "engineer-parallel"],
+        ids=lambda s: s["id"],
+    )
+    def test_engineer_parallel_scenarios(self, scenario):
+        """Engineer parallel scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "engineer-antipattern"],
+        ids=lambda s: s["id"],
+    )
+    def test_engineer_antipattern_scenarios(self, scenario):
+        """Engineer anti-pattern scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=False)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "engineer-merge"],
+        ids=lambda s: s["id"],
+    )
+    def test_engineer_merge_scenarios(self, scenario):
+        """Engineer merge scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "engineer-recovery"],
+        ids=lambda s: s["id"],
+    )
+    def test_engineer_recovery_scenarios(self, scenario):
+        """Engineer recovery scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "qa-pipeline"],
+        ids=lambda s: s["id"],
+    )
+    def test_qa_pipeline_scenarios(self, scenario):
+        """QA pipeline scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "qa-antipattern"],
+        ids=lambda s: s["id"],
+    )
+    def test_qa_antipattern_scenarios(self, scenario):
+        """QA anti-pattern scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=False)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "qa-protocol"],
+        ids=lambda s: s["id"],
+    )
+    def test_qa_protocol_scenarios(self, scenario):
+        """QA protocol scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "research-then-eng"],
+        ids=lambda s: s["id"],
+    )
+    def test_research_then_eng_scenarios(self, scenario):
+        """Research-then-Engineer pipeline scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "eng-then-qa"],
+        ids=lambda s: s["id"],
+    )
+    def test_eng_then_qa_scenarios(self, scenario):
+        """Engineer-then-QA pipeline scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "full-pipeline"],
+        ids=lambda s: s["id"],
+    )
+    def test_full_pipeline_scenarios(self, scenario):
+        """Full 3-phase pipeline scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=True)
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [s for s in ALL_SCENARIOS if s.get("stratum") == "pipeline-antipattern"],
+        ids=lambda s: s["id"],
+    )
+    def test_pipeline_antipattern_scenarios(self, scenario):
+        """Pipeline anti-pattern scenarios produce compliant responses."""
+        self._run_scenario(scenario, compliant=False)
+
     def _run_scenario(self, scenario: dict, compliant: bool):
         """Execute a single scenario through the compliance pipeline."""
         from claude_mpm.hooks.claude_hooks.event_handlers import _compliance_log
@@ -178,7 +282,12 @@ class TestBatteryPipelineValidation:
 
         # Score the response
         files_modified = criteria.get("manifest_required", False)
-        scores = score_response(response, files_modified=files_modified)
+        # Extract role for scoring (first role in the list, or default to "research")
+        scenario_roles = scenario.get("roles", ["research"])
+        primary_role = scenario_roles[0] if scenario_roles else "research"
+        scores = score_response(
+            response, files_modified=files_modified, role=primary_role
+        )
 
         # Write compliance log record
         _compliance_log(
@@ -186,7 +295,7 @@ class TestBatteryPipelineValidation:
                 "event_type": "injection",
                 "session_id": f"battery-{scenario_id}",
                 "team_name": f"battery-team-{stratum}",
-                "subagent_type": "research",
+                "subagent_type": primary_role,
                 "teammate_name": f"researcher-{scenario_id}",
                 "injection_applied": True,
                 "stratum": stratum,

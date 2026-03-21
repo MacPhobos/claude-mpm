@@ -1,3 +1,7 @@
+> **Phase 2 Extension:** This design has been extended to support parallel Engineering and multi-phase pipelines. See [`06-phase-2-impl-plan/00_implementation_plan.md`](../06-phase-2-impl-plan/00_implementation_plan.md) for the Phase 2 design, and [`06-phase-2-impl-plan/01_implementation_results.md`](../06-phase-2-impl-plan/01_implementation_results.md) for implementation results.
+
+---
+
 # Parallel Research Pattern: Design Spec
 
 **Phase:** 1
