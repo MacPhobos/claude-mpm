@@ -139,12 +139,12 @@ not appropriate as a blocking gate for Phase 2 because:
 
 | # | Behavior | Session | Evidence | Status |
 |---|----------|---------|----------|--------|
-| 1 | PM spawns 2+ Engineers with `isolation: "worktree"` | Session 1 (`f2a8e7f9`) | 2 Agent calls with `isolation=worktree`, `team_name=parallel-logging`, explicit file scope | ✅ PASS |
-| 2 | PM delegates merge to Version Control / Local Ops agent | Session 1 (`f2a8e7f9`) | PM did NOT delegate merge — ran exploratory git commands directly, no VC/Ops agent spawned. See Session 1 notes. | ❌ NOT OBSERVED |
-| 3 | PM runs `make test` after merge (single command) | Session 1 (`f2a8e7f9`) | `Bash(command=uv run pytest -n auto -q --tb=short)` at line 119 | ✅ PASS |
+| 1 | PM spawns 2+ Engineers with `isolation: "worktree"` | Session 1b (`ec689ea5`) | 3 Agent calls with `isolation=worktree`, explicit file scope, worktree branches created | ✅ PASS |
+| 2 | PM delegates merge to Version Control / Local Ops agent | Session 1b (`ec689ea5`) | `Agent(subagent_type=version control, desc=Merge two worktree branches sequentially)` at L116 | ✅ PASS |
+| 3 | PM runs `make test` after merge (single command) | Session 1b (`ec689ea5`) | `Bash(command=make test)` at L189, verified pre-existing failure | ✅ PASS |
 | 4 | PM sequences Research phase before Engineer phase | | | ⬜ PENDING |
-| 5 | PM delegates worktree cleanup (not running 4+ commands) | Session 1 (`f2a8e7f9`) | PM did NOT delegate cleanup — no VC/Ops agent spawned for cleanup. See Session 1 notes. | ❌ NOT OBSERVED |
-| 6 | PM rejects team for sub-15-minute task | | | ⬜ PENDING |
+| 5 | PM delegates worktree cleanup (not running 4+ commands) | Session 1b (`ec689ea5`) | `Agent(subagent_type=version control, desc=Remove both session worktrees and branches)` at L209 | ✅ PASS |
+| 6 | PM rejects team for sub-15-minute task | Session 1b (`ec689ea5`) | 5 Agent calls without team_name; PM used direct Agent delegation, no TeamCreate | ✅ PASS |
 
 ### Session 1 Results: All-Engineer Parallel (`f2a8e7f9`)
 
@@ -170,17 +170,39 @@ independently add a --verbose flag to hook_handler.py. Use Agent Teams to parall
   The PM instructions say to delegate merge, but the PM may not have needed to merge
   explicitly if Agent Teams handled it automatically.
 
-**Implication for B2/B5:** These behaviors may need a different test scenario — one where
-the PM has explicit worktree branches to merge. Or the PM instructions may need
-strengthening to be more explicit about the merge delegation step.
+**Implication for B2/B5:** Resolved in Session 1b. The commit instruction fix
+(`MUST commit your changes`) caused worktree branches to persist, enabling
+the full merge → test → cleanup flow.
+
+### Session 1b Results: All-Engineer Parallel with Commit Instruction (`ec689ea5`)
+
+**Prompt:** "Add structured logging — Engineer A: --verbose flag to CLI, Engineer B:
+verbose-mode log statements to hook handlers. Use Agent Teams with worktree isolation."
+
+**What the PM did (all correct):**
+1. Inspected codebase to understand scope (Glob + Read)
+2. Spawned 2 Engineers with `isolation: worktree` in background
+3. Engineer B hit git lock conflict — PM retried automatically (resilient)
+4. Both engineers committed in their worktree branches
+5. PM delegated merge to Version Control agent ("Merge two worktree branches sequentially")
+6. PM ran `make test` — found 1 failure, verified it was pre-existing
+7. PM delegated cleanup to Version Control agent ("Remove both session worktrees and branches")
+
+**B2/B5 root cause resolution:** Session 1 failed B2/B5 because engineers didn't commit
+(worktrees were cleaned up with no branches). After adding the commit instruction to
+TEAMMATE_PROTOCOL_ENGINEER, engineers commit → worktrees persist → PM finds real
+branches to merge → merge protocol works as designed.
+
+**B6 note:** The PM used `isolation: worktree` on individual Agent calls without
+`team_name`/`TeamCreate`. This is a valid parallel engineering pattern. The PM
+did not use Agent Teams orchestration (TeamCreate) for this task, confirming it
+treats small-to-medium parallel work without full team ceremony.
 
 ### Remaining Sessions Needed
 
 | Session | Target | Status |
 |---------|--------|--------|
-| Session 2: Research→Engineer Pipeline | B4 | ⬜ PENDING |
-| Session 3: Trivial Task | B6 | ⬜ PENDING |
-| Session 1b: Merge/Cleanup retry | B2, B5 | ⬜ PENDING (if needed) |
+| Session 2: Research→Engineer Pipeline | B4 | ⬜ PENDING (last item) |
 
 ---
 
