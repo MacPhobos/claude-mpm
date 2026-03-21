@@ -533,6 +533,11 @@ test-e2e: ## Run end-to-end tests only
 	@echo "$(YELLOW)🧪 Running e2e tests...$(NC)"
 	@uv run pytest tests/e2e/ -n auto -v
 
+test-agent-teams: ## Run Agent Teams compliance battery (requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
+	@echo "$(YELLOW)🧪 Running Agent Teams compliance battery...$(NC)"
+	@echo "This requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 and an active API key."
+	@uv run pytest tests/manual/agent_teams_battery/ -n 0 -v --tb=long
+
 deprecation-check: ## Check for obsolete files according to deprecation policy
 	@echo "$(YELLOW)Checking for obsolete files...$(NC)"
 	@if [ -f "scripts/apply_deprecation_policy.py" ]; then \

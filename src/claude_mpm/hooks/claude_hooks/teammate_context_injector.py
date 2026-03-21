@@ -122,6 +122,10 @@ class TeammateContextInjector:
         Creates a shallow copy of tool_input and modifies the prompt field.
         The original dict is NOT mutated.
 
+        Also logs a warning if subagent_type is not "research" (Phase 1
+        supports Research teammates only). Injection still proceeds — the
+        hook cannot block tool calls.
+
         Args:
             tool_input: The Agent tool's input parameters.
 
@@ -129,11 +133,24 @@ class TeammateContextInjector:
             A new dict with the protocol prepended to prompt.
         """
         modified = copy.copy(tool_input)
+
+        # Log role violations (non-research subagent_type in Agent Teams)
+        # Injection still proceeds — hook API cannot block, only observe
+        team_name = tool_input.get("team_name", "")
+        subagent_type = tool_input.get("subagent_type", "unknown")
+        if subagent_type not in ("research", "Research"):
+            _log(
+                f"[AGENT_TEAMS] WARNING: Non-research subagent_type '{subagent_type}' "
+                f"in Agent Teams call (team_name={team_name}). "
+                f"Phase 1 supports Research only. Injection proceeds."
+            )
+
         original_prompt = tool_input.get("prompt") or ""
         modified["prompt"] = TEAMMATE_PROTOCOL + "\n\n---\n\n" + original_prompt
         _log(
             f"TeammateContextInjector: Injected protocol into Agent tool prompt "
             f"(team_name={tool_input.get('team_name')}, "
+            f"subagent_type={subagent_type}, "
             f"original_prompt_len={len(original_prompt)}, "
             f"new_prompt_len={len(modified['prompt'])})"
         )

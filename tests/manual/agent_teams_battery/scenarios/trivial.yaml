@@ -1,0 +1,331 @@
+# Trivial tasks: single-file lookups, yes/no checks, factual queries
+# Expected behavior: single_agent (should NOT spawn teams)
+- id: "trivial-01"
+  stratum: "trivial"
+  description: "Check if README.md exists and report its first heading"
+  prompt: "Does this project have a README.md? If so, what is the first heading?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-02"
+  stratum: "trivial"
+  description: "Find the Python version requirement"
+  prompt: "What Python version does this project require? Check pyproject.toml."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-03"
+  stratum: "trivial"
+  description: "Find the project name in pyproject.toml"
+  prompt: "What is the project name as declared in pyproject.toml?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-04"
+  stratum: "trivial"
+  description: "Find the project version"
+  prompt: "What is the current version of this project? Check pyproject.toml or the VERSION file."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-05"
+  stratum: "trivial"
+  description: "Find the project license type"
+  prompt: "What license does this project use? Check pyproject.toml."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-06"
+  stratum: "trivial"
+  description: "Find the CLI entry point"
+  prompt: "What is the main CLI entry point for this project? Check the [project.scripts] section of pyproject.toml."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-07"
+  stratum: "trivial"
+  description: "Check if a Makefile exists"
+  prompt: "Does this project have a Makefile at the root? If so, is there a 'test' target defined?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-08"
+  stratum: "trivial"
+  description: "Find the build system"
+  prompt: "What build system does this project use? Check the [build-system] section of pyproject.toml."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-09"
+  stratum: "trivial"
+  description: "Count the number of test files"
+  prompt: "How many Python test files (files matching test_*.py or *_test.py) exist under the tests/ directory?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-10"
+  stratum: "trivial"
+  description: "Check if CI configuration exists"
+  prompt: "Does this project have any GitHub Actions workflow files? If so, list their filenames."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-11"
+  stratum: "trivial"
+  description: "Find the project description"
+  prompt: "What is the project description as listed in pyproject.toml?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-12"
+  stratum: "trivial"
+  description: "Check if pytest-xdist is a dependency"
+  prompt: "Is pytest-xdist listed as a dependency in pyproject.toml? If so, what minimum version is required?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-13"
+  stratum: "trivial"
+  description: "Find the number of agent definition files in the bundled agents directory"
+  prompt: "How many agent definition files exist under src/claude_mpm/agents/bundled/?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-14"
+  stratum: "trivial"
+  description: "Check if pre-commit hooks are configured"
+  prompt: "Does this project have a .pre-commit-config.yaml file? If so, which linter does it use for Python code?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-15"
+  stratum: "trivial"
+  description: "Find the default test command"
+  prompt: "What is the default test command for this project? Check the Makefile for a 'test' target."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-16"
+  stratum: "trivial"
+  description: "Check if documentation directory exists"
+  prompt: "Does a docs/ directory exist at the project root? If so, how many immediate subdirectories does it contain?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-17"
+  stratum: "trivial"
+  description: "Check if .gitignore includes Python cache patterns"
+  prompt: "Does the project's .gitignore file include entries for Python cache directories such as __pycache__ or .pytest_cache?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-18"
+  stratum: "trivial"
+  description: "Find the hook handler entry point"
+  prompt: "What is the console-script entry point for the claude-hook command? Check [project.scripts] in pyproject.toml."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-19"
+  stratum: "trivial"
+  description: "Check if async patterns are used in core session management"
+  prompt: "Does the file src/claude_mpm/core/claude_runner.py use async/await patterns? Answer yes or no and cite evidence."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-20"
+  stratum: "trivial"
+  description: "Check if logging is configured in the CLI init"
+  prompt: "Does src/claude_mpm/cli/__init__.py import or configure logging? Answer yes or no."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-21"
+  stratum: "trivial"
+  description: "Count the number of source subdirectories"
+  prompt: "How many immediate subdirectories are there under src/claude_mpm/?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-22"
+  stratum: "trivial"
+  description: "Find the minimum supported Python version from classifiers"
+  prompt: "According to the classifiers in pyproject.toml, what is the minimum Python version this project officially supports?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-23"
+  stratum: "trivial"
+  description: "Check what linter is used"
+  prompt: "What linting tool is configured for this project? Check pyproject.toml and .pre-commit-config.yaml."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-24"
+  stratum: "trivial"
+  description: "Find the hook installer script name"
+  prompt: "What is the filename of the hook installer module under src/claude_mpm/hooks/claude_hooks/?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-25"
+  stratum: "trivial"
+  description: "Check if a specific test file exists"
+  prompt: "Does the file tests/hooks/test_teammate_context_injector.py exist in the project?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-26"
+  stratum: "trivial"
+  description: "Find the skills registry file"
+  prompt: "Does a file named skills_registry.py exist under src/claude_mpm/skills/? What is its path?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-27"
+  stratum: "trivial"
+  description: "Check if environment variable handling exists"
+  prompt: "Does the file src/claude_mpm/core/env_defaults.py exist? Answer yes or no."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-28"
+  stratum: "trivial"
+  description: "Find the project URL or repository from pyproject.toml"
+  prompt: "Is there a project URL or repository URL listed in pyproject.toml? If so, what is it?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-29"
+  stratum: "trivial"
+  description: "Check testpaths configuration in pyproject.toml"
+  prompt: "What directory is configured as the pytest testpaths in pyproject.toml?"
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180
+
+- id: "trivial-30"
+  stratum: "trivial"
+  description: "Find the socketio daemon entry point"
+  prompt: "What Python module does the claude-mpm-socketio console script point to? Check [project.scripts] in pyproject.toml."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 180

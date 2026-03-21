@@ -1,0 +1,331 @@
+# Complex tasks: cross-cutting concerns requiring deep analysis across 3+ areas
+# Expected behavior: team_spawn (3+ independent research threads)
+- id: "complex-01"
+  stratum: "complex"
+  description: "Security audit of hook system, environment variable management, and tool access control"
+  prompt: "Conduct a security audit across three independent areas of this codebase: (1) examine the hook system in src/claude_mpm/hooks/claude_hooks/ for any inputs that are passed to shell commands, file paths that are not validated, or secrets that might be logged; (2) review how environment variables are handled in src/claude_mpm/core/env_defaults.py and src/claude_mpm/services/environment/ for any leakage or insecure defaults; and (3) audit the tool access control in src/claude_mpm/core/tool_access_control.py for policy gaps or bypass vectors. Summarise findings per area."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-02"
+  stratum: "complex"
+  description: "Complete data flow from user request through PM delegation to agent execution"
+  prompt: "Trace the complete data flow for a user request end-to-end across these independent layers: (1) how the CLI in src/claude_mpm/cli/commands/run.py receives input and initiates a session, (2) how the PM hook interceptor in src/claude_mpm/core/pm_hook_interceptor.py and delegation detector in src/claude_mpm/services/delegation_detector.py identify delegation intent, and (3) how the subprocess launcher service in src/claude_mpm/services/subprocess_launcher_service.py spawns the agent and how results are collected. Describe what data is passed at each handoff boundary."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-03"
+  stratum: "complex"
+  description: "Error handling consistency audit across hooks, CLI, and agent framework"
+  prompt: "Research all error handling patterns across three independent subsystems and identify inconsistencies: (1) how errors are caught, logged, and propagated in src/claude_mpm/hooks/ — check base_hook.py, validation_hooks.py, and the claude_hooks event_handlers.py; (2) how the CLI in src/claude_mpm/cli/ handles exceptions — look at executor.py and the commands that invoke services; and (3) how the core agent framework in src/claude_mpm/core/error_handler.py and src/claude_mpm/services/exceptions.py defines and raises typed exceptions. Identify where patterns differ or where errors are silently swallowed."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-04"
+  stratum: "complex"
+  description: "Performance bottleneck investigation in hook processing, agent spawning, and socketio emission"
+  prompt: "Investigate potential performance bottlenecks independently across three areas: (1) the hook processing pipeline — look at src/claude_mpm/core/hook_performance_config.py, src/claude_mpm/core/hook_manager.py, and src/claude_mpm/hooks/claude_hooks/connection_pool.py for synchronous waits or unbounded operations; (2) agent spawning — examine src/claude_mpm/services/subprocess_launcher_service.py and src/claude_mpm/agents/async_agent_loader.py for blocking I/O or missing timeouts; and (3) socketio event emission — look at src/claude_mpm/services/socketio/ for large payload serialisation or fan-out patterns. Report specific lines or patterns that could be slow."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-05"
+  stratum: "complex"
+  description: "Dependency and coupling analysis: which modules depend on each other and what would break if core changed"
+  prompt: "Analyse the dependency structure across three independent areas: (1) what does src/claude_mpm/core/container.py import and what services depend on it — would changing the DI container interface break other modules; (2) which modules import from src/claude_mpm/core/config.py and src/claude_mpm/core/unified_config.py — how many callers would be affected by a config schema change; and (3) which services import src/claude_mpm/services/event_bus/event_bus.py — map the pub/sub coupling. For each area, list the top five most-coupled modules."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-06"
+  stratum: "complex"
+  description: "Complete test architecture audit: coverage gaps, unit vs integration split, and flaky patterns"
+  prompt: "Audit the complete test architecture across three independent dimensions: (1) the structural split — examine tests/ subdirectories (agents/, hooks/, core/, cli/, e2e/) and classify what percentage is unit vs integration vs e2e based on imports and fixtures; (2) identify coverage gaps — which major service files in src/claude_mpm/services/ have no corresponding test file in tests/; and (3) identify patterns that suggest flaky tests — look for time.sleep() calls, hardcoded ports, global state mutations, or missing teardown in conftest.py and test files. Report findings per dimension."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-07"
+  stratum: "complex"
+  description: "File I/O audit: what files are read/written, permissions needed, and failure modes"
+  prompt: "Audit all file I/O operations across three independent areas: (1) hook installation — what files does src/claude_mpm/hooks/claude_hooks/installer.py create or modify, what directories must be writable, and what happens if they are read-only; (2) agent loading — what file paths does src/claude_mpm/agents/agent_loader.py read, whether it validates existence before opening, and what exception is raised on missing files; and (3) config persistence — what files does src/claude_mpm/core/config.py or src/claude_mpm/core/config_file_lock.py write, and how file locking is handled to prevent corruption. For each area, list the specific file paths and error paths."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-08"
+  stratum: "complex"
+  description: "Agent discovery and routing end-to-end: from user request to agent selection to execution"
+  prompt: "Research the agent discovery and routing pipeline across three independent stages: (1) discovery — how src/claude_mpm/agents/agent_loader.py and src/claude_mpm/core/unified_agent_registry.py find and index agent definitions, including which directories are scanned and how YAML metadata is parsed; (2) routing/selection — how src/claude_mpm/services/agents/agent_selection_service.py and src/claude_mpm/services/agent_capabilities_service.py choose which agent to delegate to for a given task description; and (3) execution — how src/claude_mpm/core/claude_runner.py or src/claude_mpm/services/subprocess_launcher_service.py actually spawns the chosen agent. Describe the interfaces between each stage."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-09"
+  stratum: "complex"
+  description: "Memory system architecture: kuzu graph, memory router, and hook integration"
+  prompt: "Analyse the complete memory architecture across three independent layers: (1) storage — how the Kuzu graph database is used in src/claude_mpm/hooks/kuzu_memory_hook.py and src/claude_mpm/services/memory/ for storing and querying conversation facts; (2) routing — how src/claude_mpm/services/memory/router.py decides which memory backend to use and how memories are indexed in src/claude_mpm/services/memory/indexed_memory.py; and (3) hook integration — how src/claude_mpm/hooks/memory_integration_hook.py and src/claude_mpm/hooks/kuzu_enrichment_hook.py enrich requests with recalled memories. Identify what data persists across sessions and what is ephemeral."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-10"
+  stratum: "complex"
+  description: "MCP integration architecture: config management, service registry, and tool routing"
+  prompt: "Research the MCP integration architecture across three independent components: (1) configuration — how src/claude_mpm/services/mcp_config_manager.py reads, validates, and writes MCP server entries in settings.json, and how the CLI commands in mcp_config_commands.py expose this; (2) registry and verification — how src/claude_mpm/services/mcp_service_registry.py tracks running MCP servers and how src/claude_mpm/services/mcp_service_verifier.py checks their health; and (3) tool routing — how src/claude_mpm/mcp/ exposes tools to the Claude process and how tool calls are dispatched. List all files involved in each layer."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-11"
+  stratum: "complex"
+  description: "Startup sequence audit: what happens from CLI invocation to first agent-ready state"
+  prompt: "Audit the startup sequence across three independent phases: (1) CLI bootstrap — what src/claude_mpm/cli/startup.py, startup_logging.py, and startup_migrations.py do before accepting user input; (2) service initialisation — which services in src/claude_mpm/core/container.py are eagerly vs lazily instantiated, and in what order; and (3) hook installation verification — how src/claude_mpm/services/hook_installer_service.py checks whether hooks are installed and what it does if they are missing. Identify any blocking operations and their expected durations."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-12"
+  stratum: "complex"
+  description: "Cross-cutting logging architecture: configuration, structured fields, and log management"
+  prompt: "Investigate the logging architecture across three independent aspects: (1) configuration — how src/claude_mpm/core/logging_config.py and src/claude_mpm/core/log_manager.py configure log levels, handlers, and formatters; (2) structured logging fields — what fields are consistently present across log calls in src/claude_mpm/core/logger.py and src/claude_mpm/core/logging_utils.py, and whether request IDs or session IDs are correlated; and (3) async session logging — how src/claude_mpm/services/async_session_logger.py buffers and flushes logs without blocking the main thread. Identify any gaps where errors could be lost."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-13"
+  stratum: "complex"
+  description: "Agent teams feature: teammate context injection, validation logging, and team spawn detection"
+  prompt: "Research the Agent Teams feature across three independent components: (1) context injection — how src/claude_mpm/hooks/claude_hooks/teammate_context_injector.py injects teammate context into prompts, what data it includes, and when it fires; (2) validation logging — what src/claude_mpm/hooks/claude_hooks/event_handlers.py logs about team-spawn events and what validation it performs; and (3) team spawn detection — how the PM decides to spawn a team vs use a single agent, looking at src/claude_mpm/services/delegation_detector.py and any team-related logic in PM_INSTRUCTIONS.md. Identify how the three components coordinate."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-14"
+  stratum: "complex"
+  description: "Config validation chain: pyproject.toml schema, runtime config, and agent YAML validation"
+  prompt: "Audit the complete configuration validation chain across three independent layers: (1) project-level — what does src/claude_mpm/services/config/config_validation_service.py validate and what schema does it check against; (2) runtime config — how src/claude_mpm/core/api_validator.py validates configuration at runtime and what errors it raises for invalid values; and (3) agent definitions — how src/claude_mpm/agents/frontmatter_validator.py validates agent YAML files, what required fields it enforces, and what happens when an invalid agent is loaded. Identify any gaps where invalid configuration could reach production code unchecked."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-15"
+  stratum: "complex"
+  description: "Session resumption and recovery: checkpoint storage, resume hook, and recovery manager"
+  prompt: "Investigate the session resumption and recovery mechanisms across three independent components: (1) checkpoint storage — how src/claude_mpm/hooks/session_resume_hook.py stores session checkpoints and what data is persisted; (2) recovery — how src/claude_mpm/services/recovery_manager.py detects an interrupted session and restores it; and (3) failure learning — how src/claude_mpm/hooks/failure_learning/ records failure patterns and whether recovered sessions adapt based on past failures. Describe the data formats and storage locations used."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-16"
+  stratum: "complex"
+  description: "Dashboard real-time pipeline: event ingestion, normalisation, and browser delivery"
+  prompt: "Analyse the dashboard real-time pipeline across three independent stages: (1) event ingestion — how events from agent processes enter the system via src/claude_mpm/services/event_bus/ and reach src/claude_mpm/services/socketio/; (2) normalisation — how src/claude_mpm/services/socketio/event_normalizer.py transforms raw events into a consistent dashboard schema; and (3) delivery — how src/claude_mpm/services/socketio/dashboard_server.py broadcasts events to browser clients, including how rooms or namespaces are used and how disconnected clients are handled. Map the full event journey from agent output to browser."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-17"
+  stratum: "complex"
+  description: "Async patterns audit: asyncio usage, event loop management, and blocking call detection"
+  prompt: "Audit async patterns across three independent areas: (1) core session execution — examine src/claude_mpm/core/claude_runner.py, src/claude_mpm/core/interactive_session.py, and src/claude_mpm/core/oneshot_session.py for how the asyncio event loop is created and managed; (2) service layer — look at src/claude_mpm/services/async_session_logger.py, src/claude_mpm/services/event_bus/event_bus.py, and src/claude_mpm/agents/async_agent_loader.py for proper use of async context managers and task cancellation; and (3) hook layer — check src/claude_mpm/hooks/ for any synchronous blocking calls (e.g. blocking file I/O, synchronous HTTP) that are called from within async hook handlers. List specific files and line patterns for each area."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-18"
+  stratum: "complex"
+  description: "Skill deployment pipeline: discovery, bundling, and injection into agent context"
+  prompt: "Research the complete skill deployment pipeline across three independent stages: (1) discovery — how src/claude_mpm/services/skills/skill_discovery_service.py finds skill files on disk and how src/claude_mpm/services/skills/git_skill_source_manager.py retrieves skills from git repositories; (2) bundling and deployment — how src/claude_mpm/services/skills_deployer.py and src/claude_mpm/services/pm_skills_deployer.py package and deploy skills into the agent working directory; and (3) injection — how src/claude_mpm/skills/agent_skills_injector.py injects the deployed skills into the agent's system prompt or context. Describe the file formats and directory structure at each stage."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-19"
+  stratum: "complex"
+  description: "CLI command registration, routing, and shared utilities"
+  prompt: "Analyse the CLI architecture across three independent dimensions: (1) command registration — how commands under src/claude_mpm/cli/commands/ are discovered and wired into the main CLI in src/claude_mpm/cli/__init__.py and cli/__main__.py; (2) shared utilities — what helpers are in src/claude_mpm/cli/shared/ and src/claude_mpm/cli/helpers.py, and which commands use them; and (3) parser configuration — how src/claude_mpm/cli/parser.py and command_config.py define argument schemas and how subcommand parsers are composed. Identify any commands that bypass shared utilities and handle concerns directly."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-20"
+  stratum: "complex"
+  description: "Agent output style management: style files, output style manager, and per-agent overrides"
+  prompt: "Investigate the agent output style system across three independent components: (1) style definitions — what do the markdown files src/claude_mpm/agents/CLAUDE_MPM_OUTPUT_STYLE.md, CLAUDE_MPM_RESEARCH_OUTPUT_STYLE.md, and CLAUDE_MPM_TEACHER_OUTPUT_STYLE.md specify and how do they differ; (2) output style manager — how src/claude_mpm/core/output_style_manager.py selects and applies a style for a given agent invocation; and (3) per-agent overrides — whether individual agent YAML files in src/claude_mpm/agents/bundled/ can override the global style, and how that override is parsed and applied. Describe the precedence rules."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-21"
+  stratum: "complex"
+  description: "Instruction reinforcement: hook, service, and agent-side assembly"
+  prompt: "Analyse the instruction reinforcement mechanism across three independent layers: (1) hook — how src/claude_mpm/hooks/instruction_reinforcement.py and src/claude_mpm/core/instruction_reinforcement_hook.py inject reinforcement text into messages; (2) service — how src/claude_mpm/services/system_instructions_service.py builds and caches the full system instruction including reinforcement sections; and (3) agent-side — how the assembled instruction is passed to the subprocess agent and whether agents can further modify it. Identify what text is reinforced and under what conditions."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-22"
+  stratum: "complex"
+  description: "Profile and model management: profile service, model configuration, and per-invocation overrides"
+  prompt: "Research the profile and model management system across three independent areas: (1) profile management — how src/claude_mpm/services/profile_manager.py stores and retrieves named profiles, what a profile contains (model, temperature, etc.), and how profiles are listed via the CLI; (2) model configuration — how src/claude_mpm/cli/commands/configure_models.py lets users set default models and what model identifiers are accepted; and (3) per-invocation overrides — how a user can override the model for a single run via CLI flags and how that override propagates into the runner configuration. Trace a model value from CLI flag to subprocess environment."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-23"
+  stratum: "complex"
+  description: "Ticket integration: ticket manager, ticket services, and CLI ticket commands"
+  prompt: "Analyse the ticket integration across three independent layers: (1) core ticket management — how src/claude_mpm/services/ticket_manager.py creates, updates, and queries tickets and what storage backend it uses; (2) ticket services — what services exist in src/claude_mpm/services/ticket_services/ and what additional operations they provide beyond basic CRUD; and (3) CLI exposure — how src/claude_mpm/cli/commands/tickets.py exposes ticket operations to the user, what subcommands exist, and how output is formatted. Identify any integration with GitHub issues or external ticketing systems."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-24"
+  stratum: "complex"
+  description: "Native agent converter and agent preset service: transformation and preset management"
+  prompt: "Research the agent transformation pipeline across three independent components: (1) native agent conversion — how src/claude_mpm/services/native_agent_converter.py converts between different agent definition formats and what the input and output schemas look like; (2) agent presets — how src/claude_mpm/services/agents/agent_preset_service.py stores, retrieves, and applies preset configurations to agents; and (3) agent builder — how src/claude_mpm/services/agents/agent_builder.py assembles a final agent definition from a base template, preset, and per-invocation overrides. Describe the data flow through all three stages."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-25"
+  stratum: "complex"
+  description: "Diagnostics and doctor command: health checks, dependency verification, and repair actions"
+  prompt: "Analyse the diagnostics system across three independent areas: (1) doctor command — what checks src/claude_mpm/cli/commands/doctor.py runs, how it reports failures, and whether it can auto-repair; (2) diagnostic services — what services exist in src/claude_mpm/services/diagnostics/ and how they verify system state (hooks installed, MCP servers reachable, git configured); and (3) startup checks — what src/claude_mpm/cli/startup_migrations.py checks on every startup and how it handles schema migrations without user intervention. List every check and its failure mode."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-26"
+  stratum: "complex"
+  description: "Kuzu graph memory: schema design, query patterns, and cross-session persistence"
+  prompt: "Investigate the Kuzu graph memory system across three independent aspects: (1) schema — what node types and relationships are defined in src/claude_mpm/services/memory/ and how they represent conversation entities; (2) query patterns — how src/claude_mpm/hooks/kuzu_memory_hook.py and src/claude_mpm/hooks/kuzu_enrichment_hook.py query the graph to recall relevant memories, including what Cypher-like queries are used; and (3) persistence — where the Kuzu database file is stored (check kuzu-memories/ at the project root and any configuration that controls the path), how it survives across sessions, and whether there is any TTL or eviction policy. Describe the full data lifecycle."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-27"
+  stratum: "complex"
+  description: "Framework loader and workflow loader: lazy loading, caching, and hot-reload"
+  prompt: "Research the loading infrastructure across three independent components: (1) framework loader — how src/claude_mpm/core/framework_loader.py and src/claude_mpm/core/minimal_framework_loader.py load the Claude framework definition and what they cache; (2) workflow loader — how src/claude_mpm/core/workflow_loader.py loads workflow definitions and whether it supports hot-reload during a running session; and (3) optimised startup — what src/claude_mpm/core/optimized_startup.py and src/claude_mpm/core/optimized_agent_loader.py do differently from the standard loaders to reduce startup time. Quantify any documented performance differences."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-28"
+  stratum: "complex"
+  description: "PR and git integration: pr service, git operations, and version control workflow"
+  prompt: "Analyse the PR and git integration across three independent layers: (1) PR service — what src/claude_mpm/services/pr/ contains and how it automates pull request creation, including how branch names and PR bodies are generated; (2) git operations — how src/claude_mpm/services/version_control/git_operations.py wraps git CLI commands, what error handling it applies, and how it handles merge conflicts via conflict_resolution.py; and (3) workflow integration — how the CLI commands in src/claude_mpm/cli/commands/gh.py combine the PR service and git operations to provide an end-to-end PR workflow. Identify any assumptions about the git remote structure."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-29"
+  stratum: "complex"
+  description: "Self-upgrade, package installer, and version service: end-to-end upgrade flow"
+  prompt: "Research the self-upgrade mechanism across three independent components: (1) version checking — how src/claude_mpm/services/version_service.py determines the current version and checks for a newer release (look at how it compares versions and where it fetches release information from); (2) package installation — how src/claude_mpm/services/package_installer.py downloads and installs a new version, including what package manager it uses and how it handles the running process; and (3) self-upgrade service — how src/claude_mpm/services/self_upgrade_service.py orchestrates the full upgrade, including pre- and post-upgrade validation. Identify rollback behaviour if upgrade fails."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800
+
+- id: "complex-30"
+  stratum: "complex"
+  description: "Cross-cutting type safety: type hints, protocols, and mypy configuration"
+  prompt: "Audit the type safety posture of the codebase across three independent areas: (1) mypy configuration — what options are set in pyproject.toml under [tool.mypy] and whether strict mode is enabled; (2) protocols and interfaces — how src/claude_mpm/core/protocols/ and src/claude_mpm/core/interfaces.py define structural types and whether services implement them correctly; and (3) typing utilities — what helpers exist in src/claude_mpm/core/typing_utils.py and src/claude_mpm/core/types.py and how widely they are used across the codebase. Identify modules that use bare Any or type: ignore comments."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 1800

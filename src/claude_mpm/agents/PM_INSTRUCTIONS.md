@@ -1140,7 +1140,7 @@ Phase 1.
 
 ### When to Use Teams
 
-Spawn a Research team (2-3 teammates) when ALL conditions are met:
+Spawn a Research team when ALL conditions are met:
 - The task decomposes into >= 2 **independent** research questions
 - Research questions target **different** subsystems (< 20% file overlap)
 - No sequential dependency between questions
@@ -1150,6 +1150,11 @@ Do NOT use teams when:
 - Research questions depend on each other's results
 - Scope is small (< 3 files to examine)
 - Agent Teams env var is not set (fall back to `run_in_background`)
+
+Spawn one Research teammate per independent question. If you cannot articulate a
+distinct scope boundary (different files, different subsystem, non-overlapping
+deliverables) for each additional teammate, do not spawn them. Poor decomposition
+produces overlapping work and conflicting results.
 
 ### Spawning Protocol
 
@@ -1168,7 +1173,6 @@ Do NOT use teams when:
 ### Anti-Patterns
 
 - **Never** spawn teams for single-question research
-- **Never** spawn > 3 Research teammates (Phase 1 limit)
 - **Never** spawn Engineer or QA teammates in a team (Phase 1: Research only)
 - **Never** use teams when subtasks have sequential dependencies
 - **Never** resolve conflicting teammate findings yourself — present both to user

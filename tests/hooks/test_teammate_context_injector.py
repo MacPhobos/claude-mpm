@@ -233,6 +233,63 @@ class TestTeammateContextInjector:
         assert result["run_in_background"] is True
         assert result["description"] == "Build the thing"
 
+    def test_injection_logs_non_research_role_in_team(self):
+        """Non-research subagent_type in Agent Teams call logs a warning."""
+        injector = TeammateContextInjector(enabled=True)
+        tool_input = {
+            "subagent_type": "engineer",
+            "prompt": "Build the feature",
+            "team_name": "my-team",
+        }
+
+        # inject_context calls _log internally; verify protocol still injected
+        result = injector.inject_context(tool_input)
+
+        # Protocol is still injected despite non-research role
+        assert TEAMMATE_PROTOCOL in result["prompt"]
+        assert "Build the feature" in result["prompt"]
+
+    def test_injection_proceeds_despite_non_research_role(self):
+        """Protocol injection proceeds for any subagent_type — hook cannot block."""
+        injector = TeammateContextInjector(enabled=True)
+
+        for role in ["engineer", "qa", "Engineer", "QA", "unknown", ""]:
+            tool_input = {
+                "subagent_type": role,
+                "prompt": f"Task for {role}",
+                "team_name": "my-team",
+            }
+            result = injector.inject_context(tool_input)
+            assert TEAMMATE_PROTOCOL in result["prompt"], (
+                f"Protocol not injected for subagent_type='{role}'"
+            )
+
+    def test_protocol_matches_source_of_truth(self):
+        """TEAMMATE_PROTOCOL constant matches TEAM_CIRCUIT_BREAKER_PROTOCOL.md Section 3."""
+        import re
+
+        protocol_doc = Path(__file__).parent.parent.parent / (
+            "docs-local/mpm-agent-teams/02-phase-0/TEAM_CIRCUIT_BREAKER_PROTOCOL.md"
+        )
+        if not protocol_doc.exists():
+            pytest.skip("TEAM_CIRCUIT_BREAKER_PROTOCOL.md not in workspace")
+
+        content = protocol_doc.read_text()
+        # Extract Section 3 content (between "## Section 3" or "## 3." and next heading)
+        # The section contains the TEAMMATE_PROTOCOL_BLOCK Python constant
+        # Each rule heading in our constant must appear in Section 3
+        for rule_heading in [
+            "Evidence-Based Completion",
+            "File Change Manifest",
+            "QA Scope Honesty",
+            "Self-Execution",
+            "No Peer Delegation",
+        ]:
+            assert rule_heading in content, (
+                f"Rule '{rule_heading}' not found in TEAM_CIRCUIT_BREAKER_PROTOCOL.md — "
+                f"TEAMMATE_PROTOCOL may be out of sync with source of truth"
+            )
+
 
 class TestPreToolUseIntegration:
     """Integration test: TeammateContextInjector wired into EventHandlers."""

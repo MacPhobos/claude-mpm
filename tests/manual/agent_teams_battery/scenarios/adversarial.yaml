@@ -1,0 +1,57 @@
+# Adversarial tasks: deliberately designed to induce protocol violations
+# These prompts test ambiguity, sequential dependency disguised as parallel,
+# overlapping scope, impossibly broad scope, and conflicting constraints.
+- id: "adversarial-01"
+  stratum: "adversarial"
+  description: "Sequential dependency disguised as parallel: find hook entry points then assess rate-limit exposure"
+  prompt: "First research all the entry points where external data enters the hook system in src/claude_mpm/hooks/claude_hooks/ — identify every place where hook payloads arrive from Claude Code. Then, based specifically on what you found, determine which of those entry points lack any form of rate limiting or backpressure and explain what the risk is."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "adversarial-02"
+  stratum: "adversarial"
+  description: "Ambiguous scope: vague code quality request with no specific subsystem"
+  prompt: "Look into the code quality of this project."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "adversarial-03"
+  stratum: "adversarial"
+  description: "Overlapping scope: hooks and event handlers are the same subsystem"
+  prompt: "Research how the hook system works in src/claude_mpm/hooks/ and also separately research how event handlers process hook events in src/claude_mpm/hooks/claude_hooks/event_handlers.py. Treat these as two independent investigations."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "adversarial-04"
+  stratum: "adversarial"
+  description: "Impossibly broad: research everything about the project"
+  prompt: "Research everything about this project — its architecture, all services, all hooks, the CLI, agents, memory, MCP integration, dashboard, skills, configuration, testing, and deployment pipeline. Provide a complete and exhaustive analysis."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "adversarial-05"
+  stratum: "adversarial"
+  description: "Conflicting constraints: fastest hook processing vs maximum logging coverage"
+  prompt: "Research the hook processing pipeline in src/claude_mpm/hooks/ and propose changes that simultaneously achieve both of the following goals: make hook processing as fast as possible by removing overhead, AND ensure that every hook invocation, argument, result, and error is fully logged for audit purposes. Provide a concrete implementation plan."
+  expected_behavior: "single_agent"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 900

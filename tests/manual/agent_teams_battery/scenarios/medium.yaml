@@ -1,0 +1,331 @@
+# Medium tasks: multi-file investigation across 2-3 independent subsystems
+# Expected behavior: team_spawn (2-3 independent questions benefit from parallel research)
+- id: "medium-01"
+  stratum: "medium"
+  description: "Research hook system architecture and event handler dispatch"
+  prompt: "Research how the hook system works in this project and how event handlers dispatch hook events. Specifically: (1) how does src/claude_mpm/hooks/claude_hooks/hook_handler.py receive and process events, and (2) how does src/claude_mpm/hooks/claude_hooks/event_handlers.py decide which handler to invoke?"
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-02"
+  stratum: "medium"
+  description: "Investigate CLI command structure and configuration loading mechanism"
+  prompt: "Investigate two independent aspects of this project: (1) how the CLI command structure is organised under src/claude_mpm/cli/commands/ — what commands exist and how they are registered, and (2) how configuration is loaded and validated in src/claude_mpm/core/config.py and src/claude_mpm/services/config/."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-03"
+  stratum: "medium"
+  description: "Analyze agent loader and the memory routing system"
+  prompt: "Analyze two independent subsystems: (1) how agents are discovered and loaded via src/claude_mpm/agents/agent_loader.py and src/claude_mpm/agents/async_agent_loader.py, and (2) how memory routing works in src/claude_mpm/services/memory/router.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-04"
+  stratum: "medium"
+  description: "Research PM instruction assembly and skill loading mechanism"
+  prompt: "Research two independent processes: (1) how the PM instructions are assembled — look at src/claude_mpm/agents/PM_INSTRUCTIONS.md and src/claude_mpm/services/system_instructions_service.py, and (2) how skills are loaded and deployed via src/claude_mpm/skills/skill_manager.py and src/claude_mpm/services/skills/."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-05"
+  stratum: "medium"
+  description: "Investigate testing infrastructure and CI/CD pipeline"
+  prompt: "Investigate two independent areas: (1) how the testing infrastructure is structured — look at tests/conftest.py, the test directory layout, and any pytest fixtures or plugins configured in pyproject.toml, and (2) how the CI/CD pipeline is configured in .github/workflows/."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-06"
+  stratum: "medium"
+  description: "Analyze dashboard socketio integration and event emission patterns"
+  prompt: "Analyze two independent aspects: (1) how the dashboard socketio server is implemented in src/claude_mpm/services/socketio/dashboard_server.py and src/claude_mpm/core/socketio_pool.py, and (2) how events are emitted and normalised in src/claude_mpm/services/socketio/event_normalizer.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-07"
+  stratum: "medium"
+  description: "Research hook installer and settings.json management"
+  prompt: "Research two independent areas: (1) how the hook installer works in src/claude_mpm/hooks/claude_hooks/installer.py — what files it creates and where, and (2) how MCP configuration is managed in src/claude_mpm/services/mcp_config_manager.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-08"
+  stratum: "medium"
+  description: "Analyze version management and release workflow"
+  prompt: "Analyze two independent areas: (1) how version management works — look at src/claude_mpm/services/version_service.py and src/claude_mpm/services/version_control/semantic_versioning.py, and (2) how the release workflow is orchestrated in the Makefile (look for release-patch, release-minor, release-major targets)."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-09"
+  stratum: "medium"
+  description: "Research authentication handling and GitHub account management"
+  prompt: "Research two independent areas: (1) how CLI authentication is handled — look at src/claude_mpm/cli/commands/auth.py and src/claude_mpm/auth/, and (2) how GitHub account management is implemented in src/claude_mpm/services/github/github_account_manager.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-10"
+  stratum: "medium"
+  description: "Investigate event bus and delegation detector"
+  prompt: "Investigate two independent subsystems: (1) how the event bus is implemented in src/claude_mpm/services/event_bus/event_bus.py and how events are relayed, and (2) how the delegation detector in src/claude_mpm/services/delegation_detector.py identifies when a PM delegates to an agent."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-11"
+  stratum: "medium"
+  description: "Analyze session management service and orphan detection"
+  prompt: "Analyze two independent components: (1) how sessions are managed in src/claude_mpm/services/session_management_service.py and src/claude_mpm/core/session_manager.py, and (2) how orphaned agent processes are detected in src/claude_mpm/services/orphan_detection.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-12"
+  stratum: "medium"
+  description: "Research agent capability service and agent selection logic"
+  prompt: "Research two independent areas: (1) how agent capabilities are described and served via src/claude_mpm/services/agent_capabilities_service.py, and (2) how the agent selection service in src/claude_mpm/services/agents/agent_selection_service.py chooses which agent to delegate a task to."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-13"
+  stratum: "medium"
+  description: "Investigate tool access control and the tool call interceptor"
+  prompt: "Investigate two independent components: (1) how tool access is controlled in src/claude_mpm/core/tool_access_control.py — what rules or policies are enforced, and (2) how the tool call interceptor in src/claude_mpm/hooks/tool_call_interceptor.py intercepts and processes tool invocations."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-14"
+  stratum: "medium"
+  description: "Analyze the kuzu memory hook and response hook"
+  prompt: "Analyze two independent hooks: (1) how src/claude_mpm/hooks/kuzu_memory_hook.py stores memories in the Kuzu graph database, and (2) how src/claude_mpm/hooks/kuzu_response_hook.py processes responses and extracts learnings."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-15"
+  stratum: "medium"
+  description: "Research MCP service registry and MCP config management"
+  prompt: "Research two independent subsystems: (1) how MCP servers are registered and discovered in src/claude_mpm/services/mcp_service_registry.py, and (2) how MCP configuration is validated and modified via the CLI commands in src/claude_mpm/cli/commands/mcp_config_commands.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-16"
+  stratum: "medium"
+  description: "Analyze subprocess launcher and runner configuration service"
+  prompt: "Analyze two independent components: (1) how child processes are launched in src/claude_mpm/services/subprocess_launcher_service.py — what environment and arguments are set, and (2) how runner configuration is assembled in src/claude_mpm/services/runner_configuration_service.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-17"
+  stratum: "medium"
+  description: "Research instruction cache service and dynamic skills generator"
+  prompt: "Research two independent caching/generation components: (1) how instructions are cached in src/claude_mpm/services/instructions/instruction_cache_service.py, and (2) how skills are dynamically generated in src/claude_mpm/services/dynamic_skills_generator.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-18"
+  stratum: "medium"
+  description: "Investigate hook performance config and hook error memory"
+  prompt: "Investigate two independent aspects of hook reliability: (1) how hook performance is configured and constrained in src/claude_mpm/core/hook_performance_config.py, and (2) how hook errors are remembered and suppressed in src/claude_mpm/core/hook_error_memory.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-19"
+  stratum: "medium"
+  description: "Analyze git operations service and branch strategy"
+  prompt: "Analyze two independent components of version control integration: (1) how git operations are performed in src/claude_mpm/services/version_control/git_operations.py, and (2) how branching strategy is determined in src/claude_mpm/services/version_control/branch_strategy.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-20"
+  stratum: "medium"
+  description: "Research unified config and config scope systems"
+  prompt: "Research two independent configuration components: (1) how unified configuration is managed in src/claude_mpm/core/unified_config.py — what sources it merges, and (2) how configuration scope is handled in src/claude_mpm/core/config_scope.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-21"
+  stratum: "medium"
+  description: "Investigate auto-pause handler and connection pool in claude_hooks"
+  prompt: "Investigate two independent components in the claude_hooks subsystem: (1) how the auto-pause handler in src/claude_mpm/hooks/claude_hooks/auto_pause_handler.py decides when to pause execution, and (2) how the connection pool in src/claude_mpm/hooks/claude_hooks/connection_pool.py manages persistent connections."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-22"
+  stratum: "medium"
+  description: "Analyze recovery manager and error handler"
+  prompt: "Analyze two independent resilience components: (1) how the recovery manager in src/claude_mpm/services/recovery_manager.py handles failures and restores state, and (2) how errors are handled in src/claude_mpm/core/error_handler.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-23"
+  stratum: "medium"
+  description: "Research agent template format and frontmatter validator"
+  prompt: "Research two independent aspects of agent definitions: (1) what fields the agent YAML template in src/claude_mpm/agents/agent-template.yaml requires and how agents are structured, and (2) how the frontmatter validator in src/claude_mpm/agents/frontmatter_validator.py validates those definitions."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-24"
+  stratum: "medium"
+  description: "Investigate port manager and project port allocator"
+  prompt: "Investigate two independent networking components: (1) how the port manager in src/claude_mpm/services/port_manager.py tracks port usage, and (2) how the project port allocator in src/claude_mpm/services/project_port_allocator.py assigns ports per project."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-25"
+  stratum: "medium"
+  description: "Analyze skills registry and agent skills injector"
+  prompt: "Analyze two independent skills-related components: (1) how skills are registered and resolved in src/claude_mpm/skills/skills_registry.py, and (2) how skills are injected into agent context via src/claude_mpm/skills/agent_skills_injector.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-26"
+  stratum: "medium"
+  description: "Research ticket manager and ticket services"
+  prompt: "Research two independent ticketing components: (1) how the ticket manager in src/claude_mpm/services/ticket_manager.py creates and tracks tickets, and (2) how the ticket services directory is structured and what services it contains."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-27"
+  stratum: "medium"
+  description: "Investigate message check hook and validation hooks"
+  prompt: "Investigate two independent validation mechanisms: (1) what checks the message_check_hook.py in src/claude_mpm/hooks/ performs on outgoing messages, and (2) what the validation_hooks.py in src/claude_mpm/hooks/ validates and when those hooks fire."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-28"
+  stratum: "medium"
+  description: "Analyze agent name registry and unified agent registry"
+  prompt: "Analyze two independent agent registry components: (1) how agent names are normalised and stored in src/claude_mpm/core/agent_name_registry.py, and (2) how the unified agent registry in src/claude_mpm/core/unified_agent_registry.py consolidates agents from multiple sources."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-29"
+  stratum: "medium"
+  description: "Research response tracker and event aggregator"
+  prompt: "Research two independent observation components: (1) how agent responses are tracked in src/claude_mpm/services/response_tracker.py, and (2) how events are aggregated and buffered in src/claude_mpm/services/event_aggregator.py."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "medium-30"
+  stratum: "medium"
+  description: "Investigate skill recommendation engine and skill to agent mapper"
+  prompt: "Investigate two independent skill-routing components: (1) how the skill recommendation engine in src/claude_mpm/services/skills/skill_recommendation_engine.py suggests skills for a given task, and (2) how the skill-to-agent mapper in src/claude_mpm/services/skills/skill_to_agent_mapper.py decides which agent should handle a skill."
+  expected_behavior: "team_spawn"
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600

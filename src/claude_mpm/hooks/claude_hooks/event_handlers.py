@@ -66,6 +66,42 @@ except ImportError:
 DEBUG = os.environ.get("CLAUDE_MPM_HOOK_DEBUG", "false").lower() == "true"
 
 
+# Agent Teams compliance logging — always-on structured JSON for audit
+# WHY: Compliance measurement (Gate 1) requires machine-parseable event records
+# that persist across hook invocations. Each hook runs as a fresh Python process,
+# so file-based logging is the only cross-invocation state mechanism.
+from pathlib import Path as _Path
+
+_COMPLIANCE_LOG_DIR = _Path(
+    os.environ.get(
+        "CLAUDE_MPM_COMPLIANCE_LOG_DIR",
+        str(_Path.home() / ".claude-mpm" / "compliance"),
+    )
+)
+
+
+def _compliance_log(record: dict) -> None:
+    """Write a structured compliance record for Agent Teams audit.
+
+    Always-on (not DEBUG-gated). Only called when Agent Teams
+    injection fires or teammate tasks complete. Writes JSON lines
+    to ~/.claude-mpm/compliance/agent-teams-YYYY-MM-DD.jsonl.
+
+    Never raises — hook execution must not be disrupted.
+    """
+    try:
+        _COMPLIANCE_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        log_file = (
+            _COMPLIANCE_LOG_DIR
+            / f"agent-teams-{datetime.now(UTC).strftime('%Y-%m-%d')}.jsonl"
+        )
+        record["timestamp"] = datetime.now(UTC).isoformat()
+        with open(log_file, "a") as f:
+            f.write(json.dumps(record, default=str) + "\n")
+    except Exception:  # nosec B110 — intentional silent failure
+        pass  # Never disrupt hook execution
+
+
 # Import constants for configuration
 try:
     from claude_mpm.core.constants import TimeoutConfig
@@ -446,6 +482,18 @@ class EventHandlers:
             _log(
                 f"TeammateContextInjector: Injected protocol for Agent Teams spawn "
                 f"(tool_name={tool_name}, team_name={tool_input.get('team_name')})"
+            )
+            # Compliance logging: record injection event for Gate 1 audit
+            _compliance_log(
+                {
+                    "event_type": "injection",
+                    "session_id": event.get("session_id", ""),
+                    "team_name": tool_input.get("team_name", ""),
+                    "subagent_type": tool_input.get("subagent_type", "unknown"),
+                    "teammate_name": tool_input.get("name", ""),
+                    "injection_applied": True,
+                    "stratum": os.environ.get("CLAUDE_MPM_COMPLIANCE_STRATUM"),
+                }
             )
             return modified_input
 
@@ -1630,6 +1678,20 @@ class EventHandlers:
         task_title = event.get("task_title", event.get("title", ""))
         completed_by = event.get("completed_by", event.get("agent_id", ""))
         completion_status = event.get("status", "completed")
+
+        # Compliance logging: record task completion for Gate 1 audit
+        _compliance_log(
+            {
+                "event_type": "task_completed",
+                "session_id": session_id,
+                "team_name": "",  # TaskCompleted doesn't carry team_name
+                "task_id": task_id,
+                "task_title": task_title,
+                "completed_by": completed_by,
+                "completion_status": completion_status,
+                "stratum": os.environ.get("CLAUDE_MPM_COMPLIANCE_STRATUM"),
+            }
+        )
 
         # Validation logging: extracted fields at DEBUG level
         if DEBUG:
