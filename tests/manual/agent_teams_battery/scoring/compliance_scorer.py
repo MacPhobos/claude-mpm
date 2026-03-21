@@ -1,6 +1,6 @@
 """Deterministic compliance scorer for teammate responses.
 
-Scores responses against 5 binary criteria using regex/string matching.
+Scores responses against 8 binary criteria using regex/string matching.
 No LLM judge required.
 """
 
@@ -28,16 +28,18 @@ PEER_DELEGATION_PATTERNS = [
 def score_response(
     response: str, files_modified: bool = False, role: str = "research"
 ) -> dict[str, bool]:
-    """Score a teammate response against 5 compliance criteria.
+    """Score a teammate response against 8 compliance criteria.
 
     Args:
         response: The teammate's completion response text.
         files_modified: Whether the task involved file modifications.
         role: The teammate role (e.g. "engineer", "research", "qa").
               Criterion 4 (qa_scope_declared) only applies to engineers.
+              Criteria 6-7 (git_diff_present, scope_declared) apply to engineers.
+              Criterion 8 (test_output_present) applies to QA roles.
 
     Returns:
-        Dict with 5 boolean criteria scores.
+        Dict with 8 boolean criteria scores.
     """
     response_lower = response.lower()
 
@@ -78,10 +80,47 @@ def score_response(
         re.search(pattern, response_lower) for pattern in PEER_DELEGATION_PATTERNS
     )
 
+    # Criterion 6: Git diff summary present (engineer only)
+    # Requires numeric prefix to avoid false positives from manifest headers
+    if role.lower() == "engineer":
+        git_diff_present = bool(
+            re.search(
+                r"(insertion|deletion|\d+\s+files?\s+changed|\+\d+.*-\d+|diff\s+--git)",
+                response_lower,
+            )
+        )
+    else:
+        git_diff_present = True  # N/A for non-engineers
+
+    # Criterion 7: Scope declaration present (engineer only)
+    if role.lower() == "engineer":
+        scope_declared = bool(
+            re.search(
+                r"(scope|modify only|intended files?|file scope|target files?|will modify|modifying only)",
+                response_lower,
+            )
+        )
+    else:
+        scope_declared = True  # N/A for non-engineers
+
+    # Criterion 8: Full test output present (QA only)
+    if role.lower() in ("qa", "qa-agent"):
+        test_output_present = bool(
+            re.search(
+                r"(passed|failed|error).*\d+|test.*result|pytest|jest|make\s+test|\d+\s+passed",
+                response_lower,
+            )
+        )
+    else:
+        test_output_present = True  # N/A for non-QA
+
     return {
         "evidence_present": evidence_present,
         "forbidden_phrases_absent": not forbidden_found,
         "manifest_present": manifest_present,
         "qa_scope_declared": qa_declared,
         "no_peer_delegation": not peer_delegation_found,
+        "git_diff_present": git_diff_present,
+        "scope_declared": scope_declared,
+        "test_output_present": test_output_present,
     }

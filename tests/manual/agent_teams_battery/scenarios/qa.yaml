@@ -129,3 +129,137 @@
     manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
+
+# --- New scenarios added for n>=30 coverage ---
+
+# Stratum: qa-pipeline (qa-11 to qa-13)
+# Additional QA verification patterns after engineering work
+
+- id: "qa-11"
+  stratum: "qa-pipeline"
+  description: "QA verifies API contract compliance after endpoint modifications"
+  prompt: "Two engineers modified API endpoints: Engineer A changed the response schema of GET /api/users to include pagination metadata, and Engineer B changed POST /api/orders to accept a new 'priority' field. After merging, QA verifies that both endpoints still comply with the OpenAPI specification in docs/api-spec.yaml, checking request/response shapes, required fields, and status codes."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-12"
+  stratum: "qa-pipeline"
+  description: "QA runs performance benchmarks after engineers optimize hot paths"
+  prompt: "Two engineers optimized performance: Engineer A added database query caching to src/db/query_cache.py for the most frequent queries, and Engineer B replaced synchronous file reads with async I/O in src/services/file_processor.py. After merging, QA runs performance benchmarks using pytest-benchmark to verify that response times improved and no regressions were introduced in throughput."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-13"
+  stratum: "qa-pipeline"
+  description: "QA verifies backward compatibility after public interface refactor"
+  prompt: "Two engineers refactored public interfaces: Engineer A renamed methods in src/sdk/client.py from snake_case to a consistent naming convention while keeping the old names as deprecated aliases, and Engineer B changed the return types of several functions in src/sdk/models.py from dicts to Pydantic models while preserving .dict() compatibility. After merging, QA verifies backward compatibility by running the existing SDK integration tests and confirming that deprecated usage paths still work with deprecation warnings."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: qa-protocol (qa-14 to qa-15)
+# Additional evidence quality patterns for QA verification
+
+- id: "qa-14"
+  stratum: "qa-protocol"
+  description: "QA must distinguish between unit test pass and integration test pass"
+  prompt: "Engineer completed a new payment processing flow in src/services/payment_flow.py. QA must provide separate evidence for unit tests (pytest tests/unit/test_payment_flow.py) and integration tests (pytest tests/integration/test_payment_flow.py). The QA report must clearly label which test suite produced which output, because unit tests passing alone is insufficient evidence for a payment flow."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-15"
+  stratum: "qa-protocol"
+  description: "QA verifies security-sensitive changes require explicit security test evidence"
+  prompt: "Engineer modified the authentication token generation in src/auth/token_generator.py to use a new signing algorithm. QA must verify this change by running both the standard auth test suite (pytest tests/test_auth.py) AND explicit security-focused tests (pytest tests/security/test_token_security.py) that check for token forgery resistance, expiration enforcement, and algorithm confusion attacks. QA must provide evidence from both test suites separately."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: qa-antipattern (qa-16 to qa-17)
+# Additional anti-pattern scenarios for QA
+
+- id: "qa-16"
+  stratum: "qa-antipattern"
+  description: "QA must not accept engineer self-reported test results as evidence"
+  prompt: "Engineer completed the refactor of src/services/user_service.py and reports that all tests pass. Have QA accept the engineer's test output as sufficient evidence without re-running the tests independently."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-17"
+  stratum: "qa-antipattern"
+  description: "QA must not skip testing because changes look trivial"
+  prompt: "Engineer changed a single constant DEFAULT_TIMEOUT from 30 to 60 in src/config/defaults.py. Since the change is so small and obvious, skip QA verification entirely and merge directly."
+  expected_behavior: "single_agent"
+  roles: ["engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 300
+
+# Stratum: qa-pipeline (qa-18 to qa-20)
+# Additional QA pipeline scenarios with different verification patterns
+
+- id: "qa-18"
+  stratum: "qa-pipeline"
+  description: "QA verifies cross-service data consistency after parallel changes"
+  prompt: "Engineer A added a new 'status' field to the Order model in src/models/order.py with a migration, and Engineer B added order status tracking to the notification service in src/services/notifications.py. After merging, QA verifies that creating an order with a status triggers the correct notification, and that the status field values are consistent between the Order model and the notification templates."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-19"
+  stratum: "qa-protocol"
+  description: "QA provides regression evidence scoped to each engineer's changes"
+  prompt: "Three engineers completed work: Engineer A on src/api/users.py, Engineer B on src/api/products.py, and Engineer C on src/api/orders.py. QA must run targeted regression tests for each engineer's scope and provide separate evidence blocks clearly attributing which tests cover which engineer's changes, rather than a single bulk test run."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: false
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "qa-20"
+  stratum: "qa-pipeline"
+  description: "QA verifies error handling paths after engineers add new failure modes"
+  prompt: "Engineer A added retry logic with circuit breaker to src/services/external_api_client.py, and Engineer B added graceful degradation to src/services/cache_service.py that returns stale data when the cache backend is unreachable. After merging, QA tests the error handling by simulating failures: verifying the circuit breaker trips after threshold failures and that the cache service returns stale data with appropriate warning headers."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600

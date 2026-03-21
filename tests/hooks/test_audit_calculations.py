@@ -14,6 +14,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
 from audit_agent_teams_compliance import (
+    GATE_STRATA,
+    STRATUM_MAP,
     clopper_pearson_ci,
     count_teammates_per_team,
     evaluate_gate1,
@@ -111,13 +113,13 @@ class TestGate1Evaluation:
     """Tests for the Gate 1 evaluation logic."""
 
     def test_gate1_all_pass(self):
-        """Gate 1 passes when all strata have sufficient samples and high compliance.
+        """Gate 1 passes when all broad strata have sufficient samples and high compliance.
 
         n=30, k=30 gives CI lower=0.884 > 0.70 (verified by TestClopperPearsonCI).
-        n=10 is not enough: k=10/n=10 gives CI lower=0.691 < 0.70.
+        n=15 is the minimum sample size for a stratum to pass.
         """
         records = []
-        for stratum in ["trivial", "medium", "complex"]:
+        for stratum in GATE_STRATA:
             for i in range(30):
                 records.append(
                     {
@@ -128,22 +130,70 @@ class TestGate1Evaluation:
                 )
 
         results = evaluate_gate1(records)
-        for stratum in ["trivial", "medium", "complex"]:
+        for stratum in GATE_STRATA:
             assert results[stratum]["passed"] is True
             assert results[stratum]["n"] == 30
+            assert results[stratum]["data_source"] == "injection"
+
+    def test_gate1_fine_grained_strata_mapped(self):
+        """Fine-grained strata are mapped to broad gate strata via STRATUM_MAP."""
+        records = []
+        # 20 records each for fine-grained strata that map to research
+        for fine in ["trivial", "medium", "complex"]:
+            for i in range(20):
+                records.append(
+                    {
+                        "event_type": "injection",
+                        "stratum": fine,
+                        "injection_applied": True,
+                    }
+                )
+
+        results = evaluate_gate1(records)
+        # All 60 records map to "research"
+        assert results["research"]["n"] == 60
+        assert results["research"]["k"] == 60
+        assert results["research"]["passed"] is True
 
     def test_gate1_insufficient_data(self):
-        """Gate 1 fails when strata have < 10 samples."""
+        """Gate 1 fails when strata have < 15 samples."""
         records = [
             {
                 "event_type": "injection",
-                "stratum": "trivial",
+                "stratum": "research",
                 "injection_applied": True,
             },
         ]
         results = evaluate_gate1(records)
-        assert results["trivial"]["passed"] is False  # n=1 < 10
-        assert results["trivial"]["n"] == 1
+        assert results["research"]["passed"] is False  # n=1 < 15
+        assert results["research"]["n"] == 1
+
+    def test_gate1_prefers_response_scored(self):
+        """Gate 1 prefers response_scored events over injection events."""
+        records = []
+        # Add injection events
+        for i in range(20):
+            records.append(
+                {
+                    "event_type": "injection",
+                    "stratum": "research",
+                    "injection_applied": True,
+                }
+            )
+        # Add response_scored events (fewer, all passing)
+        for i in range(16):
+            records.append(
+                {
+                    "event_type": "response_scored",
+                    "stratum": "research",
+                    "all_criteria_pass": True,
+                }
+            )
+
+        results = evaluate_gate1(records)
+        # Should use response_scored, not injection
+        assert results["research"]["n"] == 16
+        assert results["research"]["data_source"] == "response_scored"
 
 
 class TestLoadComplianceLogs:

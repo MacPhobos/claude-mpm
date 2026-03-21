@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "scripts"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from audit_agent_teams_compliance import (
+    GATE_STRATA,
     clopper_pearson_ci,
     count_teammates_per_team,
     evaluate_gate1,
@@ -55,8 +56,80 @@ ALL_SCENARIOS = load_all_scenarios()
 def generate_compliant_response(scenario: dict) -> str:
     """Generate a synthetic compliant teammate response for a scenario."""
     scenario_id = scenario.get("id", "unknown")
+    scenario_roles = scenario.get("roles", ["research"])
+    primary_role = scenario_roles[0] if scenario_roles else "research"
 
-    response = f"""## Research Findings: {scenario_id}
+    if primary_role == "engineer":
+        response = f"""## Implementation: {scenario_id}
+
+**Scope:** Modifying only files in `src/hooks/` and `src/agents/` for this task.
+
+### Changes Made
+
+I modified the following files:
+
+- `/src/claude_mpm/hooks/claude_hooks/event_handlers.py` (lines 120-145): Added role routing logic
+- `/src/claude_mpm/agents/PM_INSTRUCTIONS.md` (lines 1135-1200): Updated Agent Teams section
+
+### Commands Executed
+
+```
+ruff check src/claude_mpm/hooks/claude_hooks/event_handlers.py
+```
+
+Output:
+```
+All checks passed!
+```
+
+### Git Diff Summary
+
+3 files changed, 45 insertions(+), 12 deletions(-)
+
+### Files Changed
+- src/claude_mpm/hooks/claude_hooks/event_handlers.py: modified (added role routing)
+- src/claude_mpm/agents/PM_INSTRUCTIONS.md: modified (expanded Agent Teams section)
+- tests/hooks/test_teammate_context_injector.py: modified (added role tests)
+
+QA verification has not been performed.
+
+I completed this implementation independently using available tools."""
+    elif primary_role in ("qa", "qa-agent"):
+        response = f"""## QA Verification: {scenario_id}
+
+### Verification Scope
+
+Verifying Engineer A's changes to `src/hooks/` and Engineer B's changes to `src/agents/`.
+
+### Test Execution
+
+```
+pytest tests/ -v --tb=short
+```
+
+Output:
+```
+tests/hooks/test_teammate_context_injector.py::TestTeammateContextInjector::test_injection_when_team_name_present PASSED
+tests/hooks/test_teammate_context_injector.py::TestPhase2RoleAddenda::test_engineer_addendum_injected PASSED
+tests/hooks/test_teammate_context_injector.py::TestPhase2RoleAddenda::test_qa_addendum_injected PASSED
+...
+41 passed, 0 failed in 0.28s
+```
+
+### Test Results
+
+- 41 passed, 0 failed
+- No regressions detected
+- All Phase 2 role routing tests pass
+
+### Evidence
+
+- `/src/claude_mpm/hooks/claude_hooks/teammate_context_injector.py`: Verified role addenda injection
+- `/tests/hooks/test_teammate_context_injector.py` (line 380): Confirmed test coverage
+
+I completed this verification independently on the merged code."""
+    else:
+        response = f"""## Research Findings: {scenario_id}
 
 ### Investigation
 
@@ -85,14 +158,9 @@ src/claude_mpm/hooks/claude_hooks/event_handlers.py:524:    def handle_post_tool
 
 ### Files Changed
 - docs/research/investigation-{scenario_id}.md: created (analysis report)
-"""
-    # Only include QA disclaimer for engineer roles
-    scenario_roles = scenario.get("roles", ["research"])
-    primary_role = scenario_roles[0] if scenario_roles else "research"
-    if primary_role == "engineer":
-        response += "\n\nQA verification has not been performed."
 
-    response += "\n\nI completed this investigation independently using grep and file reading tools."
+I completed this investigation independently using grep and file reading tools."""
+
     return response
 
 
@@ -333,9 +401,9 @@ class TestGate1Evaluation:
         self.compliance_dir = tmp_path / "compliance"
         self.compliance_dir.mkdir(parents=True, exist_ok=True)
 
-        # Write 30 successful injection records per stratum
+        # Write 30 successful injection records per broad gate stratum
         records = []
-        for stratum in ["trivial", "medium", "complex"]:
+        for stratum in GATE_STRATA:
             for i in range(30):
                 records.append(
                     {
@@ -352,26 +420,26 @@ class TestGate1Evaluation:
         log_file.write_text("\n".join(json.dumps(r) for r in records))
 
     def test_gate1_passes_with_full_compliance(self):
-        """Gate 1 passes when all strata have n=30 with 100% injection success."""
+        """Gate 1 passes when all broad strata have n=30 with 100% injection success."""
         records = load_compliance_logs(self.compliance_dir)
         assert len(records) == 90
 
         results = evaluate_gate1(records)
-        for stratum in ["trivial", "medium", "complex"]:
+        for stratum in GATE_STRATA:
             assert results[stratum]["passed"] is True, (
                 f"Gate 1 failed for {stratum}: "
                 f"n={results[stratum]['n']}, k={results[stratum]['k']}, "
                 f"CI=[{results[stratum]['ci_lower']:.3f}, {results[stratum]['ci_upper']:.3f}]"
             )
+            assert results[stratum]["data_source"] == "injection"
 
     def test_gate1_reports_teammate_counts(self):
         """Audit script correctly counts teammates per team from logs."""
         records = load_compliance_logs(self.compliance_dir)
         team_counts = count_teammates_per_team(records)
 
-        assert team_counts["gate1-team-trivial"] == 30
-        assert team_counts["gate1-team-medium"] == 30
-        assert team_counts["gate1-team-complex"] == 30
+        for stratum in GATE_STRATA:
+            assert team_counts[f"gate1-team-{stratum}"] == 30
 
 
 class TestLiveBattery:

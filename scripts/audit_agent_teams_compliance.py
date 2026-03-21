@@ -5,10 +5,14 @@ Reads structured JSONL compliance logs and evaluates Gate 1 criteria:
 - Per-stratum compliance rate with Clopper-Pearson exact 95% CI
 - Pass criterion: lower bound of 95% CI > 70% at ALL strata
 
+Phase 2 uses 3 broad gate strata (research, engineer, qa) mapped from
+fine-grained scenario strata via STRATUM_MAP.  Prefers response_scored
+events; falls back to injection events when scored data is unavailable.
+
 Usage:
     python scripts/audit_agent_teams_compliance.py --gate
     python scripts/audit_agent_teams_compliance.py --report
-    python scripts/audit_agent_teams_compliance.py --stratum medium
+    python scripts/audit_agent_teams_compliance.py --stratum research
     python scripts/audit_agent_teams_compliance.py --date 2026-03-20
 """
 
@@ -20,6 +24,31 @@ import math
 import sys
 from collections import Counter
 from pathlib import Path
+
+# Phase 2: Map fine-grained scenario strata to 3 broad gate strata
+STRATUM_MAP = {
+    # Research
+    "trivial": "research",
+    "medium": "research",
+    "complex": "research",
+    "adversarial": "research",
+    "research-then-eng": "research",
+    # Engineer
+    "engineer-parallel": "engineer",
+    "engineer-antipattern": "engineer",
+    "engineer-merge": "engineer",
+    "engineer-recovery": "engineer",
+    "eng-then-qa": "engineer",
+    # QA
+    "qa-pipeline": "qa",
+    "qa-antipattern": "qa",
+    "qa-protocol": "qa",
+    "full-pipeline": "qa",
+    "pipeline-antipattern": "qa",
+}
+
+# Gate strata for evaluation
+GATE_STRATA = ["research", "engineer", "qa"]
 
 
 def _binomial_cdf(k: int, n: int, p: float) -> float:
@@ -109,23 +138,48 @@ def load_compliance_logs(log_dir: Path, date_filter: str | None = None) -> list[
 def evaluate_gate1(records: list[dict], threshold: float = 0.70) -> dict[str, dict]:
     """Evaluate Gate 1: per-stratum compliance with Clopper-Pearson CI.
 
+    Prefers response_scored events (Phase 2). Falls back to injection events
+    (Phase 1) if no scored responses exist for a stratum.
+
+    Uses 3 broad strata: research, engineer, qa — mapped from fine-grained
+    scenario strata via STRATUM_MAP.
+
     Returns dict keyed by stratum with n, k, rate, ci_lower, ci_upper, passed.
     """
-    # Filter to injection events with stratum labels
+    # Separate record types
+    scored_records = [r for r in records if r.get("event_type") == "response_scored"]
     injection_records = [
         r for r in records if r.get("event_type") == "injection" and r.get("stratum")
     ]
 
     results = {}
-    for stratum in ["trivial", "medium", "complex"]:
-        stratum_records = [r for r in injection_records if r["stratum"] == stratum]
-        n = len(stratum_records)
-        # For now, count all injection events as successes
-        # (actual compliance scoring requires response analysis, done by battery runner)
-        k = sum(1 for r in stratum_records if r.get("injection_applied", False))
+    for stratum in GATE_STRATA:
+        # Prefer response_scored events
+        stratum_scored = [
+            r
+            for r in scored_records
+            if _map_stratum(r.get("stratum", "")) == stratum
+            or r.get("stratum", "") == stratum
+        ]
+
+        if stratum_scored:
+            # Use scored response data
+            n = len(stratum_scored)
+            k = sum(1 for r in stratum_scored if r.get("all_criteria_pass", False))
+        else:
+            # Fall back to injection events
+            stratum_injections = [
+                r
+                for r in injection_records
+                if _map_stratum(r.get("stratum", "")) == stratum
+                or r.get("stratum", "") == stratum
+            ]
+            n = len(stratum_injections)
+            k = sum(1 for r in stratum_injections if r.get("injection_applied", False))
+
         rate = k / n if n > 0 else 0.0
         ci_lower, ci_upper = clopper_pearson_ci(k, n)
-        passed = ci_lower > threshold and n >= 10
+        passed = ci_lower > threshold and n >= 15
 
         results[stratum] = {
             "n": n,
@@ -134,9 +188,15 @@ def evaluate_gate1(records: list[dict], threshold: float = 0.70) -> dict[str, di
             "ci_lower": ci_lower,
             "ci_upper": ci_upper,
             "passed": passed,
+            "data_source": "response_scored" if stratum_scored else "injection",
         }
 
     return results
+
+
+def _map_stratum(fine_stratum: str) -> str:
+    """Map a fine-grained scenario stratum to a broad gate stratum."""
+    return STRATUM_MAP.get(fine_stratum, fine_stratum)
 
 
 def print_report(records: list[dict], gate_results: dict | None = None) -> None:
@@ -167,11 +227,12 @@ def print_report(records: list[dict], gate_results: dict | None = None) -> None:
             if not data["passed"]:
                 all_passed = False
             if data["n"] > 0:
+                source = f" [{data.get('data_source', 'injection')}]"
                 print(
                     f"  {stratum:>10}: {data['k']}/{data['n']} "
                     f"({data['rate'] * 100:.1f}%) "
                     f"CI=[{data['ci_lower']:.3f}, {data['ci_upper']:.3f}] "
-                    f"{status}"
+                    f"{status}{source}"
                 )
             else:
                 print(f"  {stratum:>10}: no data")
@@ -189,7 +250,7 @@ def main() -> int:
     parser.add_argument(
         "--stratum",
         type=str,
-        help="Filter by stratum (trivial/medium/complex/adversarial)",
+        help="Filter by stratum (research/engineer/qa or fine-grained stratum name)",
     )
     parser.add_argument("--date", type=str, help="Filter by date (YYYY-MM-DD)")
     parser.add_argument(
@@ -204,7 +265,12 @@ def main() -> int:
     records = load_compliance_logs(log_dir, date_filter=args.date)
 
     if args.stratum:
-        records = [r for r in records if r.get("stratum") == args.stratum]
+        records = [
+            r
+            for r in records
+            if r.get("stratum") == args.stratum
+            or _map_stratum(r.get("stratum", "")) == args.stratum
+        ]
 
     if not records:
         print(f"No compliance records found in {log_dir}")

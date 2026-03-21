@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
 from audit_agent_teams_compliance import (
+    GATE_STRATA,
     evaluate_gate1,
     load_compliance_logs,
 )
@@ -59,14 +60,14 @@ class TestCompliancePipeline:
         assert "timestamp" in r  # Added by _compliance_log
 
     def test_injection_to_gate1_pipeline(self, tmp_path):
-        """30 injection records per stratum -> Gate 1 evaluation produces correct pass/fail."""
+        """30 injection records per broad stratum -> Gate 1 evaluation produces correct pass/fail."""
         log_dir = tmp_path / "compliance"
         log_dir.mkdir(parents=True)
         log_file = log_dir / "agent-teams-2026-03-20.jsonl"
 
-        # Write 30 successful injections per stratum
+        # Write 30 successful injections per broad stratum
         records = []
-        for stratum in ["trivial", "medium", "complex"]:
+        for stratum in GATE_STRATA:
             for i in range(30):
                 records.append(
                     {
@@ -86,11 +87,12 @@ class TestCompliancePipeline:
         assert len(loaded) == 90
 
         results = evaluate_gate1(loaded)
-        for stratum in ["trivial", "medium", "complex"]:
+        for stratum in GATE_STRATA:
             assert results[stratum]["n"] == 30
             assert results[stratum]["k"] == 30
             assert results[stratum]["passed"] is True
             assert results[stratum]["ci_lower"] > 0.88  # Perfect n=30 lower bound
+            assert results[stratum]["data_source"] == "injection"
 
     def test_scorer_output_keys_are_defined(self):
         """Scorer output dict keys are documented and stable."""
@@ -108,6 +110,9 @@ class TestCompliancePipeline:
             "manifest_present",
             "qa_scope_declared",
             "no_peer_delegation",
+            "git_diff_present",
+            "scope_declared",
+            "test_output_present",
         }
         assert set(result.keys()) == expected_keys
         assert all(isinstance(v, bool) for v in result.values())

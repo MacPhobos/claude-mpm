@@ -192,3 +192,161 @@
     manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 300
+
+# --- New scenarios added for n>=30 coverage ---
+
+# Stratum: engineer-parallel (eng-16 to eng-19)
+# Additional parallel engineering scenarios with different subsystem combinations
+
+- id: "eng-16"
+  stratum: "engineer-parallel"
+  description: "CLI tool and config parser parallel refactor"
+  prompt: "Refactor the CLI argument parser in src/cli/parser.py to use a declarative style with dataclass-based argument definitions, and independently refactor the configuration loader in src/config/loader.py to support TOML format in addition to JSON. These modules have completely separate codebases with no shared dependencies."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-17"
+  stratum: "engineer-parallel"
+  description: "Middleware chain and error handler parallel implementation"
+  prompt: "Implement a new request throttling middleware in src/middleware/throttle.py with configurable rate limits per endpoint, and independently implement a structured error handler in src/errors/handler.py that converts all exceptions to JSON API error responses with proper HTTP status codes. These are separate subsystems with no file overlap."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-18"
+  stratum: "engineer-parallel"
+  description: "Database migrations and seed data parallel creation"
+  prompt: "Create a new database migration in src/db/migrations/ that adds a 'teams' table with name, description, and created_at columns, and independently create a seed data loader in src/db/seeds/ that populates the existing 'users' and 'roles' tables with development fixtures. The migrations directory and seeds directory have no shared files."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-19"
+  stratum: "engineer-parallel"
+  description: "Logging infrastructure and metrics collection parallel setup"
+  prompt: "Set up a structured logging infrastructure in src/logging/ with JSON-formatted log output, log rotation, and correlation IDs per request, and independently set up a metrics collection module in src/metrics/ that tracks request latency, error rates, and active connections using counters and histograms. These are completely separate subsystems."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: engineer-merge (eng-20 to eng-22)
+# Additional merge scenarios with different conflict patterns
+
+- id: "eng-20"
+  stratum: "engineer-merge"
+  description: "Three-way merge where one branch adds new files only"
+  prompt: "Three engineers completed parallel work. Engineer A modified existing files in src/api/. Engineer B only added new files in a brand-new directory src/notifications/ with no overlap. Engineer C modified existing files in src/models/. Merge all three branches, noting that Engineer B's work should merge cleanly since it only adds new files."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-21"
+  stratum: "engineer-merge"
+  description: "Post-merge semantic conflict from shared interface change"
+  prompt: "Two engineers completed parallel work. Engineer A changed the IUserRepository interface in src/interfaces/user_repository.py to add a new required method find_by_email(). Engineer B implemented a new UserService in src/services/user_service.py that depends on IUserRepository but only uses the old interface methods. After merging, the code compiles but UserService does not implement the new required method. Detect and resolve this semantic conflict."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-22"
+  stratum: "engineer-merge"
+  description: "Merge with pre-existing test failures to distinguish from new ones"
+  prompt: "Before the team session, tests/test_legacy.py already had 2 known failing tests. Two engineers worked in parallel: Engineer A on src/api/search.py and Engineer B on src/api/filters.py. After merging, make test reports 5 failures total. Distinguish which failures are pre-existing (the 2 in test_legacy.py) and which are newly introduced by the engineers' changes, then fix only the new failures."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: engineer-recovery (eng-23 to eng-25)
+# Additional recovery scenarios with different failure patterns
+
+- id: "eng-23"
+  stratum: "engineer-recovery"
+  description: "Worktree corrupted, must recreate and retry"
+  prompt: "You spawned two engineers in worktrees. Engineer A's worktree for src/auth/ became corrupted (git index lock file present, uncommitted changes in inconsistent state). Engineer B completed successfully on src/payments/. Remove Engineer A's corrupted worktree, create a fresh one, and retry the auth work from scratch."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-24"
+  stratum: "engineer-recovery"
+  description: "Two of three engineers fail, fall back to sequential for failed scopes"
+  prompt: "You spawned three engineers: Engineer A on src/auth/, Engineer B on src/api/, Engineer C on src/notifications/. Engineer A completed successfully. Engineers B and C both failed with errors. Merge Engineer A's work, then fall back to sequential single-agent execution for the src/api/ and src/notifications/ scopes that failed."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "eng-25"
+  stratum: "engineer-recovery"
+  description: "Engineer produces code that passes lint but fails type checking"
+  prompt: "Engineer A completed work on src/services/payment_processor.py. The code passes flake8 lint checks and all unit tests, but running mypy --strict reveals 4 type errors: missing return type annotations and incompatible argument types. Identify the type errors from mypy output and fix them while preserving the passing tests."
+  expected_behavior: "team_spawn"
+  roles: ["engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+# Stratum: eng-then-qa (eng-26 to eng-27)
+# Additional pipeline patterns with engineer-then-QA flow
+
+- id: "eng-26"
+  stratum: "eng-then-qa"
+  description: "Backend API and frontend client, then QA tests the integration"
+  prompt: "Phase 1: Engineer A implements a new REST endpoint POST /api/orders in src/api/orders.py with request validation and database persistence. Engineer B implements the frontend OrderForm component in src/frontend/components/OrderForm/ that calls the new endpoint. Phase 2: After merging both, QA tests the full integration by submitting orders through the form and verifying they appear in the database."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "eng-27"
+  stratum: "eng-then-qa"
+  description: "Database schema change and migration runner, then QA verifies data integrity"
+  prompt: "Phase 1: Engineer A adds a new 'subscriptions' table with a foreign key to 'users' in src/db/migrations/add_subscriptions.py. Engineer B implements the migration runner in src/db/runner.py that applies pending migrations in order with transaction rollback on failure. Phase 2: After merging, QA verifies data integrity by running the migration on a test database, inserting sample data, and confirming foreign key constraints are enforced."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900

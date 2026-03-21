@@ -211,7 +211,7 @@ class TestEdgeCases:
         """Empty string does not crash the scorer."""
         result = score_response("")
         assert isinstance(result, dict)
-        assert len(result) == 5
+        assert len(result) == 8
         # Empty response: no evidence, no forbidden phrases, no manifest needed,
         # no QA declaration, no peer delegation
         assert result["evidence_present"] is False
@@ -275,3 +275,97 @@ the deployment before going to production."""
         assert (
             result["no_peer_delegation"] is False
         )  # "ask Engineer to", "have QA verify"
+
+
+# ============================================================================
+# Phase 2 Criteria (Criteria 6-8)
+# ============================================================================
+
+
+class TestPhase2Criteria:
+    """Tests for Phase 2-specific scoring criteria."""
+
+    def test_git_diff_present_for_engineer(self):
+        """Engineer response with diff summary passes git_diff_present."""
+        result = score_response(
+            "Changes complete. 3 files changed, 45 insertions(+), 12 deletions(-).",
+            role="engineer",
+        )
+        assert result["git_diff_present"] is True
+
+    def test_git_diff_absent_for_engineer(self):
+        """Engineer response without diff summary fails git_diff_present."""
+        result = score_response(
+            "Changes complete. All modifications committed.",
+            role="engineer",
+        )
+        assert result["git_diff_present"] is False
+
+    def test_git_diff_auto_passes_for_research(self):
+        """Non-engineer roles auto-pass git_diff_present."""
+        result = score_response(
+            "Investigation complete. Found 3 relevant files.",
+            role="research",
+        )
+        assert result["git_diff_present"] is True
+
+    def test_scope_declared_for_engineer(self):
+        """Engineer response with scope declaration passes."""
+        result = score_response(
+            "Scope: Modifying only files in src/auth/. Changes complete.",
+            role="engineer",
+        )
+        assert result["scope_declared"] is True
+
+    def test_scope_absent_for_engineer(self):
+        """Engineer response without scope declaration fails."""
+        result = score_response(
+            "I made the changes requested. All done.",
+            role="engineer",
+        )
+        assert result["scope_declared"] is False
+
+    def test_scope_auto_passes_for_qa(self):
+        """Non-engineer roles auto-pass scope_declared."""
+        result = score_response(
+            "Tests all passed. Verification complete.",
+            role="qa",
+        )
+        assert result["scope_declared"] is True
+
+    def test_test_output_present_for_qa(self):
+        """QA response with test output passes test_output_present."""
+        result = score_response(
+            "pytest tests/ -v\n41 passed, 0 failed in 0.28s",
+            role="qa",
+        )
+        assert result["test_output_present"] is True
+
+    def test_test_output_absent_for_qa(self):
+        """QA response without test output fails test_output_present."""
+        result = score_response(
+            "I verified the implementation looks correct.",
+            role="qa",
+        )
+        assert result["test_output_present"] is False
+
+    def test_test_output_auto_passes_for_engineer(self):
+        """Non-QA roles auto-pass test_output_present."""
+        result = score_response(
+            "Implementation complete. All changes committed.",
+            role="engineer",
+        )
+        assert result["test_output_present"] is True
+
+    def test_all_phase2_criteria_in_response(self):
+        """Full engineer response passes all 8 criteria."""
+        result = score_response(
+            "Scope: Modifying only files in src/auth/.\n"
+            "Changes: 3 files changed, 12 insertions(+), 5 deletions(-)\n"
+            "Files changed:\n- src/auth/login.py: modified\n"
+            "QA verification has not been performed.\n"
+            "```\nruff check src/\nAll checks passed!\n```",
+            files_modified=True,
+            role="engineer",
+        )
+        assert all(result.values()), f"Not all criteria passed: {result}"

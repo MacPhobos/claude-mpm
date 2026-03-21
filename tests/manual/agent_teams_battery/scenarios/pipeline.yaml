@@ -128,3 +128,110 @@
     manifest_required: true
     forbidden_phrases: true
     max_duration_seconds: 600
+
+# --- New scenarios added for n>=30 coverage ---
+
+# Stratum: research-then-eng (pipe-11 to pipe-12)
+# Additional research-to-implementation patterns
+
+- id: "pipe-11"
+  stratum: "research-then-eng"
+  description: "Research error handling best practices, then implement across subsystems"
+  prompt: "Phase 1: Research current error handling patterns and best practices for Python web applications — examine how errors should be structured, logged, and propagated in API and CLI contexts. Phase 2: Based on the research findings, two engineers independently implement the recommended error handling: Engineer A in src/api/ adding structured error responses with error codes and traceability, and Engineer B in src/cli/ adding user-friendly error messages with debug mode for stack traces."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+- id: "pipe-12"
+  stratum: "research-then-eng"
+  description: "Research third-party library options, then implement chosen library"
+  prompt: "Phase 1: Research available Python task queue libraries (Celery, RQ, Dramatiq, Huey) — compare features, performance characteristics, and operational complexity for our use case of processing webhook deliveries asynchronously. Phase 2: Based on the research recommendation, two engineers independently implement the chosen library: Engineer A sets up the task queue infrastructure in src/tasks/worker.py with configuration and retry logic, and Engineer B converts the synchronous webhook handlers in src/webhooks/handlers.py to enqueue tasks instead of processing inline."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 900
+
+# Stratum: full-pipeline (pipe-13 to pipe-15)
+# Additional 3-phase pipeline scenarios
+
+- id: "pipe-13"
+  stratum: "full-pipeline"
+  description: "Research accessibility, engineers implement a11y, QA verifies with screen reader tests"
+  prompt: "Phase 1: Research WCAG 2.1 AA accessibility requirements relevant to our web dashboard — identify which components in src/frontend/ need ARIA labels, keyboard navigation, color contrast fixes, and focus management. Phase 2: Two engineers implement accessibility improvements: Engineer A adds ARIA attributes and keyboard navigation to interactive components in src/frontend/components/, Engineer B fixes color contrast and adds skip-navigation links in src/frontend/layout/. Phase 3: QA verifies accessibility compliance by running axe-core automated tests and manually testing keyboard-only navigation through the critical user flows."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 1200
+
+- id: "pipe-14"
+  stratum: "full-pipeline"
+  description: "Research API rate limiting patterns, engineers implement limiters, QA load tests"
+  prompt: "Phase 1: Research API rate limiting strategies — compare token bucket, sliding window, and fixed window algorithms, and determine appropriate rate limits per endpoint category (read vs write, authenticated vs anonymous). Phase 2: Two engineers implement rate limiting: Engineer A builds the rate limiter middleware in src/middleware/rate_limiter.py with Redis-backed token bucket, Engineer B adds rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset) and 429 responses to all API routes in src/api/. Phase 3: QA load tests the implementation using locust to verify rate limits are enforced correctly, that legitimate traffic is not blocked, and that rate limit headers are accurate."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 1200
+
+- id: "pipe-15"
+  stratum: "full-pipeline"
+  description: "Research data validation gaps, engineers add validators, QA verifies edge cases"
+  prompt: "Phase 1: Research all API endpoints in src/api/ to identify which ones lack input validation — check for missing type checks, unvalidated string lengths, SQL injection vectors, and missing required field enforcement. Phase 2: Two engineers add validation: Engineer A adds Pydantic request models with field constraints to all POST/PUT endpoints in src/api/users.py and src/api/orders.py, Engineer B adds input sanitization and length limits to search and filter parameters in src/api/search.py and src/api/filters.py. Phase 3: QA tests edge cases including empty strings, extremely long inputs, special characters, Unicode edge cases, and null bytes to verify all validation is effective."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 1200
+
+# Stratum: pipeline-antipattern (pipe-16 to pipe-18)
+# Additional pipeline anti-pattern scenarios
+
+- id: "pipe-16"
+  stratum: "pipeline-antipattern"
+  description: "Attempt to start QA before all engineers have completed and merged"
+  prompt: "Two engineers are working in parallel: Engineer A on src/api/auth.py is finished, but Engineer B on src/api/payments.py is still in progress. Start QA testing on Engineer A's merged code now to save time, and QA can test Engineer B's code later when it's ready."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer", "qa"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "pipe-17"
+  stratum: "pipeline-antipattern"
+  description: "Attempt to run Research and Engineering simultaneously on same subsystem"
+  prompt: "To save time, have a researcher analyze the current authentication patterns in src/auth/ while simultaneously having an engineer start refactoring src/auth/ based on general best practices. The researcher's findings can be incorporated as the engineer works."
+  expected_behavior: "team_spawn"
+  roles: ["research", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
+
+- id: "pipe-18"
+  stratum: "pipeline-antipattern"
+  description: "Skip Research phase and jump to parallel Engineering on unfamiliar codebase"
+  prompt: "We need to refactor the event processing pipeline in src/events/ and the notification delivery system in src/notifications/. Nobody on the team has worked in these subsystems before. Skip the research phase and go straight to parallel engineering — the engineers can figure out the architecture as they code."
+  expected_behavior: "team_spawn"
+  roles: ["engineer", "engineer"]
+  scoring_criteria:
+    evidence_required: true
+    manifest_required: true
+    forbidden_phrases: true
+    max_duration_seconds: 600
