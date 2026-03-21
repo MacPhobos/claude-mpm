@@ -43,7 +43,7 @@ Before reporting completion, list ALL files you created, modified, or deleted:
 - File path
 - Action: created / modified / deleted
 - One-line summary of the change
-Omit nothing. The team lead will cross-reference against git status.
+Omit nothing. The team lead will cross-reference against your commit.
 
 ### Rule 3: Self-Execution (CB#9)
 Execute all work yourself using available tools. Never instruct the user or any teammate to run commands on your behalf.
@@ -56,8 +56,9 @@ TEAMMATE_PROTOCOL_ENGINEER = """\
 - You MUST state "QA verification has not been performed" when reporting completion. Do NOT claim your work is fully verified.
 - Declare intended file scope BEFORE starting work. Do not modify files outside that scope.
 - Run linting/formatting checks before reporting completion.
+- You MUST commit your changes with a descriptive message before reporting completion. Use: git add <your-files> && git commit -m "feat: <description>"
 - Include git diff summary (files changed, insertions, deletions) in your completion report.
-- You are working in an isolated worktree. Do not reference or modify files in the main working tree."""
+- You are in an isolated worktree. Do not modify files in the main working tree."""
 
 TEAMMATE_PROTOCOL_QA = """\
 ### QA Rules

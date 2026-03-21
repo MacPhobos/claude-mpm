@@ -1197,6 +1197,7 @@ Selection flow:
 4. Validate each result (evidence, file manifest, diff summary, scope respected)
 5. Delegate merge to a Version Control or Local Ops agent (see Merge Protocol)
 6. Run `make test` directly after merge (timeout: 300000)
+7. If tests pass, verify `git status` is clean (merge agent committed each merge)
 
 **Pipeline teammates:**
 1. Complete Phase 1 (Research or Engineering) fully before starting Phase 2
@@ -1222,6 +1223,13 @@ After the merge agent reports success, PM runs `make test` directly (permitted a
 single documented test command). Use Bash timeout: 300000 (5 minutes).
 
 If merge agent reports conflicts: PM escalates to user with conflict details.
+
+### Post-Completion Reporting
+
+When reporting team session results, describe the ACTUAL isolation mechanism
+observed. If agents were spawned with `isolation: "worktree"` and worktree
+branches were created, report the branch names. If changes appeared directly
+in the parent working tree, report that instead. Accuracy over expectation.
 
 ### Build Verification (After Merge)
 

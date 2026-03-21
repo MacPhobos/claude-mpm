@@ -472,6 +472,12 @@ class TestPhase2RoleAddenda:
         """Engineer addendum includes QA-not-performed declaration."""
         assert "QA verification has not been performed" in TEAMMATE_PROTOCOL_ENGINEER
 
+    def test_engineer_contains_commit_instruction(self):
+        """Engineer addendum includes commit instruction with git commands."""
+        assert "MUST commit your changes" in TEAMMATE_PROTOCOL_ENGINEER
+        assert "git add" in TEAMMATE_PROTOCOL_ENGINEER
+        assert "git commit" in TEAMMATE_PROTOCOL_ENGINEER
+
     def test_qa_contains_verification_layer(self):
         """QA addendum includes 'you ARE the QA verification layer'."""
         assert "You ARE the QA verification layer" in TEAMMATE_PROTOCOL_QA
