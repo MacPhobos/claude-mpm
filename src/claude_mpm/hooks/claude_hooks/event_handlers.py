@@ -20,13 +20,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-# Import _log helper to avoid stderr writes (which cause hook errors)
+# Import _log and _vlog helpers to avoid stderr writes (which cause hook errors)
 try:
-    from .hook_handler import _log
+    from .hook_handler import _log, _vlog
 except ImportError:
     # Fallback for direct execution
     def _log(message: str) -> None:
         """Fallback logger when hook_handler not available."""
+
+    def _vlog(msg: str, level: str = "INFO") -> None:
+        """Fallback verbose logger when hook_handler not available."""
 
 
 # Import tool analysis with fallback for direct execution
@@ -269,6 +272,10 @@ class EventHandlers:
         - Enables better filtering and analysis in dashboard
         """
         prompt = event.get("prompt", "")
+        # WHY: surface the incoming user prompt so verbose users can see what is being processed
+        _vlog(
+            f"event_handler entered: UserPromptSubmit session={event.get('session_id', '')[:8]} prompt_len={len(prompt)}"
+        )
 
         # Skip /mpm commands to reduce noise unless debug is enabled
         if prompt.startswith("/mpm") and not DEBUG:
@@ -385,6 +392,10 @@ class EventHandlers:
             _log(f"  - event keys: {list(event.keys())}")
 
         tool_name = event.get("tool_name", "")
+        # WHY: verbose log so users can trace tool calls in real-time
+        _vlog(
+            f"event_handler entered: PreToolUse tool={tool_name} session={session_id[:8]}"
+        )
         tool_input = event.get("tool_input", {})
 
         # Agent Teams validation logging for Agent tool interceptions
@@ -968,6 +979,10 @@ class EventHandlers:
         - Useful for understanding when and why Claude stops responding
         """
         session_id = event.get("session_id", "")
+        # WHY: Stop is a critical lifecycle transition; surface it in verbose mode
+        _vlog(
+            f"event_handler entered: Stop session={session_id[:8]} reason={event.get('reason', 'unknown')}"
+        )
 
         # Extract metadata for this stop event
         metadata = self._extract_stop_metadata(event)
@@ -1317,10 +1332,17 @@ class EventHandlers:
         - Essential for comprehensive monitoring of Claude interactions
         - Scans for delegation anti-patterns and creates autotodos
         """
+        response_text = event.get("response", "")
+        session_id = event.get("session_id", "")
+        # WHY: surface assistant response entry so verbose users see when memory integration runs
+        _vlog(
+            f"event_handler entered: AssistantResponse session={session_id[:8]} response_len={len(response_text)}"
+        )
         # Track the response for logging
         try:
             rtm = getattr(self.hook_handler, "response_tracking_manager", None)
             if rtm and hasattr(rtm, "track_assistant_response"):
+                _vlog("memory integration triggered: track_assistant_response")
                 pending_prompts = getattr(self.hook_handler, "pending_prompts", {})
                 rtm.track_assistant_response(event, pending_prompts)
         except Exception:  # nosec B110
@@ -1417,6 +1439,10 @@ class EventHandlers:
         All initialization/deployment logic runs in MPM CLI startup, not here.
         """
         session_id = event.get("session_id", "")
+        # WHY: session start is an important lifecycle event worth surfacing in verbose mode
+        _vlog(
+            f"event_handler entered: SessionStart session={session_id[:16]} cwd={event.get('cwd', '')}"
+        )
         working_dir = event.get("cwd", "")
         git_branch = self._get_git_branch(working_dir) if working_dir else "Unknown"
 
