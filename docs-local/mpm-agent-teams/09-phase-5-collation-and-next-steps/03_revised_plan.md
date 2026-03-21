@@ -3,7 +3,7 @@
 **Date:** 2026-03-21
 **Branch:** `mpm-teams`
 **Predecessor docs:** `00_collation.md`, `01_worktree_research.md`, `02_devils_advocate.md`
-**Status:** This is the LAST planning document. After this, it's execution.
+**Status:** EXPERIMENT COMPLETE — Outcome A confirmed. Proceeding with Outcome A action plan.
 
 ---
 
@@ -29,9 +29,19 @@ Session 1 agents never committed their changes. The cleanup function saw HEAD un
 
 If agents had committed, the cleanup function would have preserved the worktrees with their branches, and the PM's merge protocol would have found real branches to merge.
 
-### What the experiment will confirm
+### Experiment Result: OUTCOME A CONFIRMED (2026-03-21)
 
-Does an agent that commits inside a worktree produce a persistent worktree and branch that the PM can observe and merge?
+An agent that commits inside a worktree **does** produce a persistent worktree and branch:
+
+```
+Worktree path:   .claude/worktrees/agent-aa50b991
+Branch:          worktree-agent-aa50b991
+Commit:          48499226 test: worktree commit persistence experiment
+Parent tree:     Clean (no unstaged changes, marker file NOT in parent)
+git worktree list: 2 entries (main + agent worktree)
+```
+
+**The merge protocol works as designed.** Session 1 failed because agents didn't commit, not because worktrees don't work. The fix is a one-line addition to TEAMMATE_PROTOCOL_ENGINEER: instruct agents to commit before reporting completion.
 
 ---
 
