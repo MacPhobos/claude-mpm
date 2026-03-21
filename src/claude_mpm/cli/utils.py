@@ -172,13 +172,27 @@ def setup_logging(args) -> object:
     if not hasattr(args, "logging") or args.logging is None:
         args.logging = LogLevel.OFF.value
 
-    # Handle deprecated --verbose flag
+    # Handle --verbose flag (first-class flag, maps to INFO level)
     if hasattr(args, "verbose") and args.verbose and args.logging == LogLevel.OFF.value:
         args.logging = LogLevel.INFO.value
 
-    # Handle deprecated --debug flag
+    # Handle --debug flag (maps to DEBUG level, takes precedence over --verbose)
     if hasattr(args, "debug") and args.debug:
         args.logging = LogLevel.DEBUG.value
+
+    # WHY: Propagate the effective log level to hook subprocesses so that
+    # hook_handler.py and any other spawned subprocesses inherit the user's
+    # verbosity preference without requiring them to re-parse CLI args.
+    import os
+
+    if args.logging not in (LogLevel.OFF.value,):
+        os.environ["CLAUDE_MPM_VERBOSE"] = "1"
+        os.environ["CLAUDE_MPM_LOG_LEVEL"] = args.logging  # e.g. "INFO", "DEBUG"
+
+    # WHY: Expose verbose_mode on args so that downstream code in main() (and
+    # callers of setup_logging) can check verbosity without re-examining the
+    # logging level string.
+    args.verbose_mode = args.logging not in (LogLevel.OFF.value,)
 
     # Only setup logging if not OFF
     if args.logging != LogLevel.OFF.value:
