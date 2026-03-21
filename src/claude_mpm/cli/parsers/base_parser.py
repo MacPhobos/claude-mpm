@@ -164,7 +164,7 @@ def add_common_arguments(
         "-v",
         "--verbose",
         action="store_true",
-        help="Enable verbose/INFO-level logging output",
+        help="Enable verbose logging (deprecated, use --logging INFO)",
     )
     logging_group.add_argument(
         "-q",

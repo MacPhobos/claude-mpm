@@ -121,28 +121,6 @@ visibility into event flow, timing, and error conditions when enabled.
 """
 DEBUG = os.environ.get("CLAUDE_MPM_HOOK_DEBUG", "false").lower() == "true"
 
-# ---------------------------------------------------------------------------
-# Verbose-mode stderr logging (bypasses NullHandler suppression)
-# ---------------------------------------------------------------------------
-import os as _os_verbose
-
-_VERBOSE = _os_verbose.environ.get("CLAUDE_MPM_VERBOSE", "0") == "1"
-_VERBOSE_LEVEL = _os_verbose.environ.get("CLAUDE_MPM_LOG_LEVEL", "INFO").upper()
-
-
-def _vlog(msg: str, level: str = "INFO") -> None:
-    """Write a verbose log line to stderr when CLAUDE_MPM_VERBOSE=1.
-
-    WHY: Python logging is suppressed via NullHandler to prevent REPL pollution.
-    Verbose mode writes directly to stderr, which Claude Code surfaces only when
-    the user opts in via --verbose.
-    """
-    if _VERBOSE:
-        import sys
-
-        ts = datetime.now(UTC).strftime("%H:%M:%S.%f")[:-3]
-        print(f"[claude_hooks:{level}] {ts} {msg}", file=sys.stderr, flush=True)
-
 
 def _log(message: str) -> None:
     """Log message to file if DEBUG enabled. Never write to stderr.
@@ -407,12 +385,8 @@ class ClaudeHookHandler:
             signal.alarm(10)
 
             # Read and parse event
-            _vlog("hook_handler started: reading event from stdin")
             event = self._read_hook_event()
             if not event:
-                _vlog(
-                    "hook_handler: no event received, emitting continue", level="DEBUG"
-                )
                 if not _continue_sent:
                     self._continue_execution()
                     _continue_sent = True
@@ -431,7 +405,6 @@ class ClaudeHookHandler:
 
             # Debug: Log that we're processing an event
             hook_type = event.get("hook_event_name", "unknown")
-            _vlog(f"hook_handler started: event={hook_type} pid={os.getpid()}")
             _log(
                 f"\n[{datetime.now(UTC).isoformat()}] Processing hook event: {hook_type} (PID: {os.getpid()})"
             )
@@ -454,15 +427,9 @@ class ClaudeHookHandler:
                 # Check if this is a Stop hook decision (block/allow)
                 if isinstance(handler_result, dict) and "decision" in handler_result:
                     # Stop hook returned a decision - output it directly
-                    _vlog(
-                        f"hook_handler done: event={hook_type} decision={handler_result.get('decision', 'unknown')}"
-                    )
                     print(json.dumps(handler_result), flush=True)
                 else:
                     # Normal continue (with optional modified input for PreToolUse)
-                    _vlog(
-                        f"hook_handler done: event={hook_type} exit_code=0 action=continue"
-                    )
                     self._continue_execution(handler_result)
                 _continue_sent = True
 
@@ -577,8 +544,6 @@ class ClaudeHookHandler:
         # Call appropriate handler if exists
         handler = event_handlers.get(hook_type)
         if handler:
-            # WHY: log the dispatch so verbose users can trace which handler runs
-            _vlog(f"dispatching event type={hook_type}")
             # Track execution timing for hook emission
             start_time = time.time()
             success = False
@@ -599,23 +564,9 @@ class ClaudeHookHandler:
                     return_value = result
                 else:
                     return_value = None
-
-                # WHY: log delegation detection for PreToolUse Task calls so verbose
-                # users can see when an agent delegation is being routed
-                if hook_type == "PreToolUse":
-                    tool_name = event.get("tool_name", "")
-                    if tool_name == "Task":
-                        tool_input = event.get("tool_input", {})
-                        agent_name = tool_input.get("subagent_type", "unknown")
-                        _vlog(
-                            f"delegation detected: tool={tool_name} agent={agent_name}"
-                        )
-                    else:
-                        _vlog(f"dispatched PreToolUse: tool={tool_name}")
             except Exception as e:
                 error_message = str(e)
                 return_value = None
-                _vlog(f"hook_handler error: event={hook_type} error={e}", level="ERROR")
                 _log(f"Error handling {hook_type}: {e}")
             finally:
                 # Calculate duration
@@ -875,12 +826,8 @@ def main():
         with _handler_lock:
             if _global_handler is None:
                 _global_handler = ClaudeHookHandler()
-                _vlog(
-                    f"hook_handler process started: pid={os.getpid()} version={version}"
-                )
                 _log(f"✅ Created new ClaudeHookHandler singleton (pid: {os.getpid()})")
             else:
-                _vlog(f"hook_handler reusing singleton: pid={os.getpid()}")
                 _log(
                     f"♻️ Reusing existing ClaudeHookHandler singleton (pid: {os.getpid()})"
                 )
@@ -893,7 +840,6 @@ def main():
 
         # handler.handle() already calls _continue_execution(), so we don't need to do it again
         # Just exit cleanly
-        _vlog("hook_handler process exiting cleanly")
         sys.exit(0)
 
     except Exception as e:
@@ -902,7 +848,6 @@ def main():
             print(json.dumps({"continue": True}), flush=True)
             _continue_printed = True
         # Log error for debugging
-        _vlog(f"hook_handler fatal error: {e}", level="ERROR")
         _log(f"Hook handler error: {e}")
         sys.exit(0)  # Exit cleanly even on error
 

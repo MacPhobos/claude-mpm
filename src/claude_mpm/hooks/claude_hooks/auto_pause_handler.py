@@ -44,15 +44,12 @@ from claude_mpm.services.infrastructure.context_usage_tracker import (
     ContextUsageTracker,
 )
 
-# Try to import _log and _vlog from hook_handler, fall back to no-ops
+# Try to import _log from hook_handler, fall back to no-op
 try:
-    from claude_mpm.hooks.claude_hooks.hook_handler import _log, _vlog
+    from claude_mpm.hooks.claude_hooks.hook_handler import _log
 except ImportError:
 
     def _log(msg: str) -> None:
-        pass  # Silent fallback
-
-    def _vlog(msg: str, level: str = "INFO") -> None:
         pass  # Silent fallback
 
 
@@ -178,12 +175,6 @@ class AutoPauseHandler:
                     new_threshold_crossed = current_threshold
                     self._previous_threshold = current_threshold
 
-                    # WHY: threshold crossings are significant state changes worth
-                    # surfacing in verbose mode so users can anticipate auto-pause
-                    _vlog(
-                        f"auto_pause threshold crossed: {current_threshold} "
-                        f"usage={state.percentage_used:.1f}%"
-                    )
                     if DEBUG:
                         _log(
                             f"Context threshold crossed: {current_threshold} "
@@ -336,11 +327,8 @@ class AutoPauseHandler:
             # Finalize the pause session
             session_path = self.pause_manager.finalize_pause(create_full_snapshot=True)
 
-            if session_path:
-                # WHY: session finalization is a state transition worth surfacing in verbose mode
-                _vlog(f"auto_pause session finalized: file={session_path.name}")
-                if DEBUG:
-                    _log(f"✅ Session finalized: {session_path.name}")
+            if session_path and DEBUG:
+                _log(f"✅ Session finalized: {session_path.name}")
 
             return session_path
 
@@ -440,12 +428,6 @@ class AutoPauseHandler:
                 initial_state=state.__dict__,
             )
 
-            # WHY: auto-pause activation is a critical state change; surface it
-            # in verbose mode so users know recording has begun
-            _vlog(
-                f"auto_pause activated: session={session_id} "
-                f"usage={state.percentage_used:.1f}%"
-            )
             if DEBUG:
                 _log(
                     f"✅ Auto-pause triggered: {session_id} "
