@@ -1,3 +1,42 @@
+## v5.10.15 (2026-03-21)
+
+### Fix
+
+- skills deploy crashes iterating sync_results top-level ints (#346)
+
+## v5.10.14 (2026-03-20)
+
+### Fix
+
+- SkillSourceConfiguration.load() called on class without instance (#345)
+
+## v5.10.13 (2026-03-20)
+
+## v5.10.12 (2026-03-20)
+
+### Feat
+
+- rebuild PM_INSTRUCTIONS_DEPLOYED.md on every startup
+- unify agent deployment pipelines (#343)
+
+### Fix
+
+- implement additive block override semantics and include AGENT_DELEGATION in deployer
+- implement additive block override semantics and include AGENT_DELEGATION in deployer
+
+## v5.10.11 (2026-03-19)
+
+### Feat
+
+- rebuild PM_INSTRUCTIONS_DEPLOYED.md on every startup
+
+## v5.10.10 (2026-03-19)
+
+### Fix
+
+- implement additive block override semantics and include AGENT_DELEGATION in deployer
+- implement additive block override semantics and include AGENT_DELEGATION in deployer
+
 ## v5.10.9 (2026-03-19)
 
 ## v5.10.8 (2026-03-19)

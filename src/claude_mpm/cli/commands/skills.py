@@ -221,7 +221,7 @@ class SkillsManagementCommand(BaseCommand):
             console.print("\n[bold cyan]Deploying skills...[/bold cyan]\n")
 
             # Initialize git skill source manager
-            config = SkillSourceConfiguration.load()
+            config = SkillSourceConfiguration()
             git_skill_manager = GitSkillSourceManager(config)
             project_dir = Path.cwd()
 
@@ -230,7 +230,9 @@ class SkillsManagementCommand(BaseCommand):
             sync_results = git_skill_manager.sync_all_sources(force=force)
 
             synced_count = sum(
-                1 for result in sync_results.values() if result.get("synced")
+                1
+                for result in sync_results.get("sources", {}).values()
+                if result.get("synced")
             )
             console.print(f"[dim]Synced {synced_count} skill source(s)[/dim]\n")
 
@@ -1620,7 +1622,7 @@ class SkillsManagementCommand(BaseCommand):
                 GitSkillSourceManager,
             )
 
-            config = SkillSourceConfiguration.load()
+            config = SkillSourceConfiguration()
             git_skill_manager = GitSkillSourceManager(config)
 
             # Sync sources first
