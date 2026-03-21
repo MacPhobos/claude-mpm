@@ -3,7 +3,7 @@
 **Date:** 2026-03-21
 **Branch:** mpm-teams
 **Issue:** #290
-**Status:** GATE A PASSED — GATE B PENDING LIVE OBSERVATION
+**Status:** GATE A PASSED — GATE B PASSED — READY FOR PR
 
 ---
 
@@ -133,7 +133,7 @@ not appropriate as a blocking gate for Phase 2 because:
 
 ---
 
-## Gate B: PM Behavioral Compliance — PENDING
+## Gate B: PM Behavioral Compliance — PASSED
 
 ### Checklist (all must be observed at least once in live sessions)
 
@@ -142,7 +142,7 @@ not appropriate as a blocking gate for Phase 2 because:
 | 1 | PM spawns 2+ Engineers with `isolation: "worktree"` | Session 1b (`ec689ea5`) | 3 Agent calls with `isolation=worktree`, explicit file scope, worktree branches created | ✅ PASS |
 | 2 | PM delegates merge to Version Control / Local Ops agent | Session 1b (`ec689ea5`) | `Agent(subagent_type=version control, desc=Merge two worktree branches sequentially)` at L116 | ✅ PASS |
 | 3 | PM runs `make test` after merge (single command) | Session 1b (`ec689ea5`) | `Bash(command=make test)` at L189, verified pre-existing failure | ✅ PASS |
-| 4 | PM sequences Research phase before Engineer phase | | | ⬜ PENDING |
+| 4 | PM sequences Research phase before Engineer phase | Session 2 (`5c587e29`) | Research agent (L37) completed before Engineer (L104); PM stated "Research complete, moving to Phase 2" | ✅ PASS |
 | 5 | PM delegates worktree cleanup (not running 4+ commands) | Session 1b (`ec689ea5`) | `Agent(subagent_type=version control, desc=Remove both session worktrees and branches)` at L209 | ✅ PASS |
 | 6 | PM rejects team for sub-15-minute task | Session 1b (`ec689ea5`) | 5 Agent calls without team_name; PM used direct Agent delegation, no TeamCreate | ✅ PASS |
 
@@ -198,11 +198,31 @@ branches to merge → merge protocol works as designed.
 did not use Agent Teams orchestration (TeamCreate) for this task, confirming it
 treats small-to-medium parallel work without full team ceremony.
 
-### Remaining Sessions Needed
+### Session 2 Results: Research→Engineer Pipeline (`5c587e29`)
 
-| Session | Target | Status |
-|---------|--------|--------|
-| Session 2: Research→Engineer Pipeline | B4 | ⬜ PENDING (last item) |
+**Prompt:** "Improve error handling in the webhook processing pipeline. First, research
+what error patterns currently exist, then have an engineer implement improvements."
+
+**What the PM did:**
+1. Spawned Research agent (L37) — investigated 9 files, found 12 gaps
+2. Waited for research to complete (7m 37s)
+3. Synthesized research findings into engineering task description
+4. Spawned Python Engineer (L104) with `isolation: worktree` and research context
+5. Engineer implemented fixes (7 files, 463 insertions), committed, tests passed
+6. PM committed the merged result
+
+**B4 PASS evidence:** Research agent at L37 completed and returned findings BEFORE
+Engineer agent was spawned at L104. PM explicitly stated "Research complete. Updating
+tasks and moving to Phase 2 — implementation." Clear sequential pipeline.
+
+### All Gate B Sessions Complete
+
+| Session | ID | Checklist Items | Result |
+|---------|-----|----------------|--------|
+| Session 1 | `f2a8e7f9` | B1, B3 (initial) | 2/6 (pre-commit-fix) |
+| Session 1b | `ec689ea5` | B1, B2, B3, B5, B6 | 5/6 (post-commit-fix) |
+| Session 2 | `5c587e29` | B4 | 1/1 (pipeline sequencing) |
+| **Combined** | | **B1-B6** | **6/6 ✅** |
 
 ---
 
