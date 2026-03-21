@@ -75,16 +75,17 @@ def load_scenarios() -> list[dict]:
     return scenarios
 
 
-def build_prompt(scenario: dict) -> tuple[str, str]:
-    """Assemble TEAMMATE_PROTOCOL + scenario prompt. Returns (full_prompt, role)."""
-    roles = scenario.get("roles", ["research"])
-    role = roles[0] if roles else "research"
+def build_prompt(scenario: dict, role: str) -> str:
+    """Assemble TEAMMATE_PROTOCOL + scenario prompt. Returns full_prompt."""
     protocol = TEAMMATE_PROTOCOL_BASE
     addendum = _ROLE_ADDENDA.get(role.lower(), "")
     if addendum:
         protocol += "\n\n" + addendum
-    full_prompt = protocol + "\n\n---\n\n" + scenario["prompt"]
-    return full_prompt, role
+    return protocol + "\n\n---\n\n" + scenario["prompt"]
+
+
+# Map broad strata to the role we are testing
+STRATUM_ROLE = {"research": "research", "engineer": "engineer", "qa": "qa"}
 
 
 def call_haiku(prompt: str) -> str:
@@ -97,7 +98,7 @@ def call_haiku(prompt: str) -> str:
 
     client = Anthropic()
     response = client.messages.create(
-        model="claude-haiku-4-20250414",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -133,8 +134,9 @@ def main() -> int:
     print("=" * 60)
 
     for i, scenario in enumerate(scenarios, 1):
-        prompt, role = build_prompt(scenario)
         broad_stratum = STRATUM_MAP.get(scenario["stratum"], "research")
+        role = STRATUM_ROLE.get(broad_stratum, "research")
+        prompt = build_prompt(scenario, role)
 
         print(
             f"[{i}/{total}] {scenario['id']} (stratum={broad_stratum}, role={role})",

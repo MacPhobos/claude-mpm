@@ -59,7 +59,11 @@ def score_response(
     if files_modified:
         manifest_present = bool(
             re.search(
-                r"(files?\s+(changed|modified|created|deleted)|### files)",
+                r"(files?\s+(changed|modified|created|deleted|updated)"
+                r"|### files|### changes|changes made|modified files"
+                r"|files\s+i\s+(changed|modified|created)"
+                r"|file\s+path|file\s+manifest"
+                r"|[-*]\s+[`/][\w./]+)",
                 response_lower,
             )
         )
@@ -71,7 +75,18 @@ def score_response(
             re.search(
                 r"qa\s+verification\s+has\s+not\s+been\s+performed", response_lower
             )
-        ) or bool(re.search(r"not\s+.*(?:tested|verified|validated)", response_lower))
+        ) or bool(
+            re.search(
+                r"not\s+.*(?:tested|verified|validated)"
+                r"|requires?\s+(?:qa|verification|testing|review)"
+                r"|awaiting\s+(?:qa|verification|testing)"
+                r"|needs?\s+(?:qa\s+)?(?:verification|testing|review)"
+                r"|pending\s+(?:qa|verification|testing)"
+                r"|independent\s+(?:verification|testing|review)\s+.*(?:needed|required|recommended)"
+                r"|no\s+independent\s+(?:verification|testing)",
+                response_lower,
+            )
+        )
     else:
         qa_declared = True  # Not applicable for non-engineer roles
 
@@ -81,11 +96,13 @@ def score_response(
     )
 
     # Criterion 6: Git diff summary present (engineer only)
-    # Requires numeric prefix to avoid false positives from manifest headers
+    # Accepts standard diff stats AND natural language descriptions of changes
     if role.lower() == "engineer":
         git_diff_present = bool(
             re.search(
-                r"(insertion|deletion|\d+\s+files?\s+changed|\+\d+.*-\d+|diff\s+--git)",
+                r"(insertion|deletion|\d+\s+files?\s+changed|\+\d+.*-\d+|diff\s+--git"
+                r"|modified\s+\d+|changed?\s+\d+\s+files?|\d+\s+files?\s+modified"
+                r"|lines?\s+(added|removed|changed))",
                 response_lower,
             )
         )
@@ -107,7 +124,12 @@ def score_response(
     if role.lower() in ("qa", "qa-agent"):
         test_output_present = bool(
             re.search(
-                r"(passed|failed|error).*\d+|test.*result|pytest|jest|make\s+test|\d+\s+passed",
+                r"(passed|failed|error).*\d+"
+                r"|test.*result"
+                r"|pytest|jest|make\s+test|npm\s+test"
+                r"|\d+\s+passed"
+                r"|test\s+suite|test\s+run"
+                r"|all\s+tests?\s+pass",
                 response_lower,
             )
         )

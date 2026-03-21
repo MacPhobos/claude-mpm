@@ -33,6 +33,37 @@ from audit_agent_teams_compliance import (
 from scoring.compliance_scorer import score_response
 
 # ============================================================================
+# Stratum-to-role mapping (mirrors scripts/run_compliance_battery.py)
+# ============================================================================
+
+STRATUM_MAP = {
+    "trivial": "research",
+    "medium": "research",
+    "complex": "research",
+    "adversarial": "research",
+    "research-then-eng": "research",
+    "engineer-parallel": "engineer",
+    "engineer-antipattern": "engineer",
+    "engineer-merge": "engineer",
+    "engineer-recovery": "engineer",
+    "eng-then-qa": "engineer",
+    "qa-pipeline": "qa",
+    "qa-antipattern": "qa",
+    "qa-protocol": "qa",
+    "full-pipeline": "qa",
+    "pipeline-antipattern": "qa",
+}
+
+
+def _role_for_scenario(scenario: dict) -> str:
+    """Derive the role to test from the broad stratum, not from roles[0]."""
+    broad = STRATUM_MAP.get(scenario.get("stratum", ""), "research")
+    return {"research": "research", "engineer": "engineer", "qa": "qa"}.get(
+        broad, "research"
+    )
+
+
+# ============================================================================
 # Fixtures
 # ============================================================================
 
@@ -53,13 +84,18 @@ def load_all_scenarios():
 ALL_SCENARIOS = load_all_scenarios()
 
 
-def generate_compliant_response(scenario: dict) -> str:
-    """Generate a synthetic compliant teammate response for a scenario."""
-    scenario_id = scenario.get("id", "unknown")
-    scenario_roles = scenario.get("roles", ["research"])
-    primary_role = scenario_roles[0] if scenario_roles else "research"
+def generate_compliant_response(scenario: dict, role: str | None = None) -> str:
+    """Generate a synthetic compliant teammate response for a scenario.
 
-    if primary_role == "engineer":
+    Args:
+        scenario: The scenario dict from YAML.
+        role: The role to generate for. If None, derived from stratum.
+    """
+    scenario_id = scenario.get("id", "unknown")
+    if role is None:
+        role = _role_for_scenario(scenario)
+
+    if role == "engineer":
         response = f"""## Implementation: {scenario_id}
 
 **Scope:** Modifying only files in `src/hooks/` and `src/agents/` for this task.
@@ -94,7 +130,7 @@ All checks passed!
 QA verification has not been performed.
 
 I completed this implementation independently using available tools."""
-    elif primary_role in ("qa", "qa-agent"):
+    elif role in ("qa", "qa-agent"):
         response = f"""## QA Verification: {scenario_id}
 
 ### Verification Scope
@@ -342,17 +378,17 @@ class TestBatteryPipelineValidation:
         stratum = scenario["stratum"]
         criteria = scenario.get("scoring_criteria", {})
 
+        # Derive role from broad stratum, not from roles[0]
+        primary_role = _role_for_scenario(scenario)
+
         # Generate synthetic response
         if compliant:
-            response = generate_compliant_response(scenario)
+            response = generate_compliant_response(scenario, role=primary_role)
         else:
             response = generate_non_compliant_response(scenario)
 
         # Score the response
         files_modified = criteria.get("manifest_required", False)
-        # Extract role for scoring (first role in the list, or default to "research")
-        scenario_roles = scenario.get("roles", ["research"])
-        primary_role = scenario_roles[0] if scenario_roles else "research"
         scores = score_response(
             response, files_modified=files_modified, role=primary_role
         )
