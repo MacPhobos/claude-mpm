@@ -100,6 +100,7 @@ dependencies = [
  "mcp>=1.0.0",
  "huey>=2.5.0",
  "commitizen>=4.13.9",
+ "anthropic>=0.86.0",
 ]
 [[project.authors]]
 name = "Bob Matsuoka"
