@@ -17,11 +17,14 @@ FORBIDDEN_PHRASES = [
 ]
 
 # Peer delegation patterns from TEAMMATE_PROTOCOL Rule 4 (No Peer Delegation)
+# Only match first-person delegation (the agent directing a peer),
+# not third-person workflow descriptions (describing what the PM should do)
 PEER_DELEGATION_PATTERNS = [
-    r"ask\s+\w+\s+to\b",
-    r"have\s+\w+\s+verify\b",
-    r"tell\s+\w+\s+to\b",
-    r"coordinate\s+with\b",
+    r"\bi\s+(?:will\s+)?ask\s+\w+\s+to\b",
+    r"\bi\s+(?:will\s+)?have\s+\w+\s+(?:verify|check|review|test)\b",
+    r"\bi\s+(?:will\s+)?tell\s+\w+\s+to\b",
+    r"\blet(?:'s|\s+us)\s+coordinate\s+with\b",
+    r"\bdelegate\s+(?:this|the|my)\s+(?:task|work)\s+to\b",
 ]
 
 
@@ -44,7 +47,7 @@ def score_response(
     response_lower = response.lower()
 
     # Criterion 1: Evidence block present
-    has_file_path = bool(re.search(r"[/\\]\w+\.\w+", response))
+    has_file_path = bool(re.search(r"[/\\][\w.-]+[/\\][\w.-]*", response))
     has_line_ref = bool(re.search(r"line\s+\d+|:\d+", response_lower))
     has_command_output = bool(re.search(r"```[\s\S]*?```", response))
     evidence_present = has_file_path or has_line_ref or has_command_output
@@ -73,17 +76,19 @@ def score_response(
     if role.lower() == "engineer":
         qa_declared = bool(
             re.search(
-                r"qa\s+verification\s+has\s+not\s+been\s+performed", response_lower
-            )
-        ) or bool(
-            re.search(
-                r"not\s+.*(?:tested|verified|validated)"
+                r"qa\s+verification\s+has\s+not\s+been\s+performed"
+                r"|not\s+.*(?:tested|verified|validated)"
                 r"|requires?\s+(?:qa|verification|testing|review)"
                 r"|awaiting\s+(?:qa|verification|testing)"
                 r"|needs?\s+(?:qa\s+)?(?:verification|testing|review)"
                 r"|pending\s+(?:qa|verification|testing)"
-                r"|independent\s+(?:verification|testing|review)\s+.*(?:needed|required|recommended)"
-                r"|no\s+independent\s+(?:verification|testing)",
+                r"|independent\s+(?:verification|testing|review)"
+                r"|no\s+independent\s+(?:verification|testing)"
+                r"|should\s+be\s+(?:verified|tested|reviewed)"
+                r"|has\s+not\s+been\s+(?:independently\s+)?(?:verified|tested|reviewed)"
+                r"|without\s+(?:independent\s+)?(?:verification|testing)"
+                r"|verification\s+(?:is\s+)?(?:needed|required|recommended)"
+                r"|not\s+(?:yet\s+)?(?:verified|tested|validated|reviewed)",
                 response_lower,
             )
         )

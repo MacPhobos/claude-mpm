@@ -206,7 +206,7 @@ def generate_non_compliant_response(scenario: dict) -> str:
 The implementation looks correct and everything should work after the changes.
 I believe this fixes the issues mentioned in the prompt.
 
-You might want to ask Engineer to do a more thorough review of the code quality."""
+I will ask Engineer to do a more thorough review of the code quality."""
 
 
 # ============================================================================

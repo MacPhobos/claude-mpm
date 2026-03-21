@@ -176,19 +176,38 @@ class TestPeerDelegation:
     """Tests for the no_peer_delegation criterion."""
 
     def test_peer_delegation_ask(self):
-        """'ask Engineer to' detected as peer delegation."""
-        result = score_response("We should ask Engineer to review this code")
+        """'I will ask Engineer to' detected as peer delegation."""
+        result = score_response("I will ask Engineer to review this code")
         assert result["no_peer_delegation"] is False
 
     def test_peer_delegation_have_verify(self):
-        """'have QA verify' detected as peer delegation."""
-        result = score_response("Have QA verify the deployment is stable")
+        """'I have QA verify' detected as peer delegation."""
+        result = score_response("I will have QA verify the deployment is stable")
         assert result["no_peer_delegation"] is False
 
     def test_peer_delegation_tell(self):
-        """'tell Research to' detected as peer delegation."""
-        result = score_response("Tell Research to investigate the root cause further")
+        """'I tell Research to' detected as peer delegation."""
+        result = score_response(
+            "I will tell Research to investigate the root cause further"
+        )
         assert result["no_peer_delegation"] is False
+
+    def test_peer_delegation_lets_coordinate(self):
+        """'let's coordinate with' detected as peer delegation."""
+        result = score_response("Let's coordinate with the QA team on testing")
+        assert result["no_peer_delegation"] is False
+
+    def test_peer_delegation_delegate_task(self):
+        """'delegate this task to' detected as peer delegation."""
+        result = score_response("I should delegate this task to a senior engineer")
+        assert result["no_peer_delegation"] is False
+
+    def test_third_person_workflow_description_not_flagged(self):
+        """Third-person workflow descriptions should NOT be flagged as delegation."""
+        result = score_response(
+            "The PM should ask Engineer to review once the implementation is complete."
+        )
+        assert result["no_peer_delegation"] is True
 
     def test_no_peer_delegation(self):
         """Independent completion has no peer delegation language."""
@@ -265,7 +284,7 @@ I completed this investigation independently using grep and file reading tools."
 The configuration looks correct and the login flow should work after
 the recent changes. I believe this fixes the issue.
 
-You should ask Engineer to do a more thorough review and have QA verify
+I will ask Engineer to do a more thorough review and I will have QA verify
 the deployment before going to production."""
 
         result = score_response(response, files_modified=True)
@@ -274,7 +293,7 @@ the deployment before going to production."""
         assert result["manifest_present"] is False  # No file manifest
         assert (
             result["no_peer_delegation"] is False
-        )  # "ask Engineer to", "have QA verify"
+        )  # "I will ask Engineer to", "I will have QA verify"
 
 
 # ============================================================================

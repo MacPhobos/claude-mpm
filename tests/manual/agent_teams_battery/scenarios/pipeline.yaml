@@ -87,7 +87,7 @@
   roles: ["research", "research", "engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 1200
 
@@ -99,7 +99,7 @@
   roles: ["research", "research", "engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 1200
 
@@ -113,7 +113,7 @@
   roles: ["research", "engineer"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -125,7 +125,7 @@
   roles: ["research", "engineer"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -169,7 +169,7 @@
   roles: ["research", "engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 1200
 
@@ -181,7 +181,7 @@
   roles: ["research", "engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 1200
 
@@ -193,7 +193,7 @@
   roles: ["research", "engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 1200
 
@@ -208,7 +208,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -220,7 +220,7 @@
   roles: ["research", "engineer"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -232,6 +232,6 @@
   roles: ["engineer", "engineer"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600

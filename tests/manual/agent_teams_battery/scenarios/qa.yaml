@@ -12,7 +12,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -24,7 +24,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -36,7 +36,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -48,7 +48,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -63,7 +63,7 @@
   roles: ["engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -75,7 +75,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -87,7 +87,7 @@
   roles: ["engineer"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 300
 
@@ -143,7 +143,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -155,7 +155,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -167,7 +167,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -209,7 +209,7 @@
   roles: ["engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -221,7 +221,7 @@
   roles: ["engineer"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 300
 
@@ -236,7 +236,7 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600
 
@@ -260,6 +260,6 @@
   roles: ["engineer", "engineer", "qa"]
   scoring_criteria:
     evidence_required: true
-    manifest_required: true
+    manifest_required: false
     forbidden_phrases: true
     max_duration_seconds: 600

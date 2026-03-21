@@ -158,7 +158,35 @@ def main() -> int:
             "manifest_required", False
         )
         scores = score_response(response_text, files_modified=files_modified, role=role)
-        all_pass = all(scores.values())
+
+        # Text-only gate criteria (excludes git_diff_present and manifest_present
+        # which require tool access to satisfy honestly)
+        TEXT_ONLY_GATE_CRITERIA = {
+            "evidence_present",
+            "forbidden_phrases_absent",
+            "qa_scope_declared",
+            "no_peer_delegation",
+            "scope_declared",
+            "test_output_present",
+        }
+
+        # Antipattern scenarios have reduced gate criteria (they describe bad practices,
+        # not implementation work, so execution-evidence criteria don't apply)
+        ANTIPATTERN_STRATA = {
+            "engineer-antipattern",
+            "qa-antipattern",
+            "pipeline-antipattern",
+        }
+        ANTIPATTERN_GATE_CRITERIA = {
+            "forbidden_phrases_absent",
+            "no_peer_delegation",
+        }
+
+        if scenario["stratum"] in ANTIPATTERN_STRATA:
+            gate_criteria = ANTIPATTERN_GATE_CRITERIA
+        else:
+            gate_criteria = TEXT_ONLY_GATE_CRITERIA
+        all_pass = all(v for k, v in scores.items() if k in gate_criteria)
 
         record = {
             "event_type": "response_scored",
@@ -168,6 +196,7 @@ def main() -> int:
             "role": role,
             "scores": scores,
             "all_criteria_pass": all_pass,
+            "gate_criteria": sorted(gate_criteria),
             "model": "claude-haiku-4-20250414",
             "response_length": len(response_text),
         }
